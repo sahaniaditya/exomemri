@@ -119,7 +119,7 @@ const handleEmailSignUp = async (e: React.FormEvent) => {
  
   setLoading(true)
   try {
-    const { error } = await supabase.auth.signUp({
+    const {data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -128,6 +128,15 @@ const handleEmailSignUp = async (e: React.FormEvent) => {
     })
  
     if (error) throw new Error(error.message)
+
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+  // Email already registered and confirmed — no new email was actually sent
+  setMessage({
+    text: 'An account with this email already exists. Try logging in instead.',
+    type: 'error',
+  })
+  return
+}
  
     setMessage({
       text: 'Check your email for the verification link!',
