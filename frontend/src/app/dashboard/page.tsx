@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
+
+import { apiFetch } from "@/lib/api"
 
 interface Profile {
   full_name: string
@@ -13,48 +14,45 @@ interface Profile {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const supabase = createClient()
+ 
   
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-  // 🚀 Listen directly to the auth state container stream
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+useEffect(() => {
+  let isMounted = true;
+  const loadProfile = async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (isMounted) setProfile(data);
+      } else {
+        console.error("Failed to load profile details");
+      }
+    } catch (error) {
+      console.error("Failed to load profile details:", error);
+    } finally {
+      if (isMounted) setLoading(false);
+    }
+  };
+  loadProfile();
+  return () => { isMounted = false; };
+}, []);
+
+const handleLogout = async () => {
+  try {
+    // Our route reads the httpOnly cookie server-side, tells FastAPI to
+    // destroy the session, and clears both cookies — none of which
+    // client JS can actually do for httpOnly cookies on its own.
+    await fetch("/api/auth/logout", { method: "POST" })
+  } catch (error) {
+    console.error("Logout failed:", error)
+  } finally {
     
-    // 1. If no session exists at all, instantly boot to login
-    if (!session) {
-      router.push('/login')
-      return
-    }
-
-    // 2. Fetch profile from our table using the active session user ID
-    const { data, error: dbError } = await supabase
-      .from('profiles')
-      .select('full_name, username, primary_role, domain_of_focus')
-      .eq('id', session.user.id)
-      .maybeSingle() // Use maybeSingle to prevent unhandled crashing errors
-
-    // 3. If no profile exists, they skipped onboarding. Force them back!
-    if (dbError || !data) {
-      router.push('/onboarding')
-      return
-    }
-
-    // 4. Data is safe and user is authorized
-    setProfile(data)
-    setLoading(false)
-  })
-
-  // Clean up the subscription when the component unmounts to prevent memory leaks
-  return () => subscription.unsubscribe()
-}, [router, supabase])
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
     router.push('/login')
   }
-
+}
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
+
+import { apiFetch } from "@/lib/api"
 
 function Glyph({ size = 28 }: { size?: number }) {
   return (
@@ -204,7 +205,7 @@ function NavButtons({
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const supabase = createClient()
+  
 
   // Form states
   const [fullName, setFullName]             = useState('')
@@ -218,88 +219,79 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState<string | null>(null)
 
-  // Username availability
-  const [checkingAuth, setCheckingAuth] = useState(true)
+
   const [usernameState, setUsernameState] = useState<'idle' | 'checking' | 'taken' | 'available'>('idle')
   const [usernameTimer, setUsernameTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
- useEffect(() => {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if (!session) {
-      router.push('/login')
-    } else {
-      setCheckingAuth(false)
+
+ const handleUsernameChange = (val: string) => {
+  // Force lowercase immediately — mirrors DB constraint ^[a-z0-9_]+$
+  const lowered = val.toLowerCase()
+  setUsername(lowered)
+  setUsernameState('idle')
+
+  if (usernameTimer) clearTimeout(usernameTimer)
+  if (lowered.trim().length < 3) return
+  const timer = setTimeout(async () => {
+    setUsernameState('checking')
+
+    try {
+     
+      const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(lowered)}`)
+
+      if (!res.ok) throw new Error("Network validation error")
+
+      const data = await res.json()
+
+      if (data.is_taken) {
+        setUsernameState('taken')
+      } else {
+        setUsernameState('available')
+      }
+    } catch (error) {
+      console.error('Username verification failed:', error)
+      setUsernameState('idle') // Reset to idle smoothly on failure
     }
-  })
+  }, 500)
+  setUsernameTimer(timer)
+}
 
-  return () => subscription.unsubscribe()
-}, [router, supabase])
-
-  const handleUsernameChange = (val: string) => {
-    // Force lowercase immediately — mirrors DB constraint ^[a-z0-9_]+$
-    const lowered = val.toLowerCase()
-    setUsername(lowered)
-    setUsernameState('idle')
-    if (usernameTimer) clearTimeout(usernameTimer)
-    if (lowered.trim().length < 3) return
-    const timer = setTimeout(async () => {
-      setUsernameState('checking')
-     const { data: isTaken, error } = await supabase
-      .rpc('check_username_exists', { target_username: lowered })
-
-    if (error) {
-      console.error('Username verification failed:', error.message)
-      setUsernameState('idle')
-      return
-    }
-
-  
-    if (isTaken) {
-      setUsernameState('taken')
-    } else {
-      setUsernameState('available')
-    }
-    }, 500)
-    setUsernameTimer(timer)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      setError('Your session has expired. Please log in again.')
-      setLoading(false)
-      return
-    }
-
-    const { error: dbError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: user.id,
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setLoading(true)
+  setError(null)
+  try {
+    const res = await fetch("/api/auth/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         full_name: fullName.trim(),
         username: username.trim().toLowerCase(),
         primary_role: primaryRole,
         domain_of_focus: domainOfFocus,
         referral_source: referralSource,
-        updated_at: new Date().toISOString(),
-      })
-
-    setLoading(false)
-
-    if (dbError) {
-      if (dbError.code === '23505') {
-        setError('This username is already taken. Please choose another.')
-        setStep(0)
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      if (res.status === 401) {
+        setError(data.detail || 'Your session has expired. Please log in again.')
+      } else if (res.status === 409) {
+        setError(data.detail || 'This username is already taken. Please choose another.')
+        setStep(0) // Rollback to username step view if using multi-step system
       } else {
-        setError(dbError.message)
+        throw new Error(data.detail || "Profile registration failed.")
       }
-    } else {
-      router.push('/dashboard')
+      return
     }
+    router.push('/dashboard')
+  } catch (err: any) {
+    console.error("Profile submission error:", err)
+    setError(err.message || 'An unexpected server error occurred.')
+  } finally {
+    setLoading(false)
   }
+}
 
   const canAdvanceStep0 =
     fullName.trim().length >= 2 &&

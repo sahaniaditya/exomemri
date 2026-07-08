@@ -1,32 +1,55 @@
+// app/onboarding/layout.tsx
 import { redirect } from 'next/navigation'
-import { createClient } from '../../utils/supabase/server' // Adjust path if needed
+import { cookies } from 'next/headers' 
+import { apiFetch } from '@/lib/api'
 
 export default async function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
+  // 1. Extract the active access token directly from the server-side cookies
+  const cookieStore = await cookies()
+  const token = cookieStore.get('atlas_token')?.value
 
-  // 1. Get the session directly on the server
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
+  // If no token exists at all on the server, boot them back to login immediately
+  if (!token) {
     redirect('/login')
   }
 
-  // 2. Query the database row on the server before anything renders
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('id', user.id)
-    .maybeSingle()
+  let shouldRedirectTo: string | null = null
 
-  // 3. If they already completed onboarding, block the page and redirect instantly
-  if (profile) {
-    redirect('/dashboard')
+  try {
+    // 2. Query the dedicated profile status route to see if they're onboarded
+    const statusResponse = await apiFetch('/api/v1/auth/profile-status', {}, token)
+
+    
+
+    if (statusResponse.ok) {
+      const statusData = await statusResponse.json()
+
+      console.log('[LOGIN LAYOUT]', { token: token?.slice(0, 12), status: statusResponse.status, statusData })
+
+
+      // 3. If they already completed onboarding, block this page and kick them to dashboard
+      if (statusData.has_completed_onboarding) {
+        shouldRedirectTo = '/dashboard'
+      }
+    } else {
+      // If the backend rejects the token outright, treat them as logged out
+      shouldRedirectTo = '/login'
+    }
+  } catch (error) {
+    console.error("Onboarding layout gate failure:", error)
+    // Fallback safely to login if your backend architecture is unreachable
+    shouldRedirectTo = '/login'
   }
 
-  // 4. If they are a true new user, safely render the page.tsx form
+  // 4. Execute the redirect smoothly outside of the try/catch context 🚀
+  if (shouldRedirectTo) {
+    redirect(shouldRedirectTo)
+  }
+
+  // 5. If they have a valid token but NO profile yet, safely render the onboarding steps
   return <>{children}</>
 }

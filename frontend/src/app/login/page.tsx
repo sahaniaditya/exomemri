@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/utils/supabase/client'
+
 import { useRouter } from 'next/navigation'
+import { apiFetch } from "@/lib/api"
 import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
 
 function Glyph({ size = 28 }: { size?: number }) {
   return (
@@ -46,30 +48,42 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
-
-  const handleGoogleLogin = async () => {
-    setLoading(true)
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback` },
-    })
+ 
+ const handleGoogleLogin = async () => {
+  setLoading(true)
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${location.origin}/auth/callback`,
+    },
+  })
+  if (error) {
+    setMessage({ text: error.message, type: 'error' })
     setLoading(false)
   }
+}
 
-  const handleEmailSignIn = async (e: React.FormEvent) => {
+const handleEmailSignIn = async (e: React.FormEvent) => {
   e.preventDefault()
   setLoading(true)
   setMessage(null)
-  
-  // 1. Authenticate credentials locally
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-  
-  if (error) {
-    setLoading(false)
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || "Invalid credentials.")
+
+   
+   
+
+    router.push(data.redirectTo)
+  } catch (error: any) {
     setMessage({ text: error.message, type: 'error' })
-  } else {
-    // 2. Force the browser through your centralized server checkpoint!
-    router.push('/auth/callback')
+  } finally {
+    setLoading(false)
   }
 }
 
@@ -142,6 +156,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogleLogin}
+              suppressHydrationWarning
               disabled={loading}
               style={{
                 width: '100%',
@@ -191,6 +206,7 @@ export default function LoginPage() {
                   Email
                 </label>
                 <input
+                  suppressHydrationWarning
                   id="email"
                   type="email"
                   required
@@ -227,6 +243,7 @@ export default function LoginPage() {
                   </a>
                 </div>
                 <input
+                  suppressHydrationWarning
                   id="password"
                   type="password"
                   required
@@ -262,6 +279,7 @@ export default function LoginPage() {
               )}
 
               <button
+                suppressHydrationWarning
                 type="submit"
                 disabled={loading}
                 style={{

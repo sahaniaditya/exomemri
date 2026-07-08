@@ -1,32 +1,42 @@
+// app/signup/layout.tsx
 import { redirect } from 'next/navigation'
-import { createClient } from '../../utils/supabase/server' // Adjust path if needed
+import { cookies } from 'next/headers'
+import { apiFetch } from '@/lib/api'
 
 export default async function SignupLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
+  const cookieStore = await cookies()
+  const token = cookieStore.get('atlas_token')?.value
 
-  // 1. Check if the user already has a valid session on the server
-  const { data: { user } } = await supabase.auth.getUser()
+  if (token) {
+    let shouldRedirectTo: string | null = null
 
-  if (user) {
-    // 2. Double-check if they have finished onboarding
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle()
+    try {
+      const statusResponse = await apiFetch('/api/v1/auth/profile-status', {}, token)
 
-    // 🚀 Forward them straight to where they belong!
-    if (profile) {
-      redirect('/dashboard')
-    } else {
-      redirect('/onboarding')
+      if (statusResponse.ok) {
+        const statusData = await statusResponse.json()
+
+        // 1. Instead of executing redirect() inside try, just save the route string
+        if (statusData.has_completed_onboarding) {
+          shouldRedirectTo = '/dashboard'
+        } else {
+          shouldRedirectTo = '/onboarding'
+        }
+      }
+    } catch (error) {
+      // Real API network crashes get caught safely here
+      console.error("Layout session gate check failed:", error)
+    }
+
+    // 2. Execute the redirect completely OUTSIDE the try/catch block 🚀
+    if (shouldRedirectTo) {
+      redirect(shouldRedirectTo)
     }
   }
 
-  // If they are not logged in, let them see the login/signup form safely
   return <>{children}</>
 }

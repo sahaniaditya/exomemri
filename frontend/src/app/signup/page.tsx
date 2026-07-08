@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+
+import { apiFetch } from "@/lib/api"
 import Link from 'next/link'
 
 function Glyph({ size = 28 }: { size?: number }) {
@@ -84,41 +86,59 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null)
   const [loading, setLoading] = useState(false)
+
   const supabase = createClient()
+ 
 
   const handleGoogleSignup = async () => {
-    setLoading(true)
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback` },
-    })
+  setLoading(true)
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${location.origin}/auth/callback`,
+    },
+  })
+  if (error) {
+    setMessage({ text: error.message, type: 'error' })
     setLoading(false)
   }
+}
 
-  const handleEmailSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setMessage(null)
-
-    if (password !== confirmPassword) {
-      setMessage({ text: "Passwords don't match.", type: 'error' })
-      return
-    }
-    if (password.length < 6) {
-      setMessage({ text: 'Password must be at least 6 characters.', type: 'error' })
-      return
-    }
-
-    setLoading(true)
+const handleEmailSignUp = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setMessage(null)
+ 
+  if (password !== confirmPassword) {
+    setMessage({ text: "Passwords don't match.", type: 'error' })
+    return
+  }
+  if (password.length < 6) {
+    setMessage({ text: 'Password must be at least 6 characters.', type: 'error' })
+    return
+  }
+ 
+  setLoading(true)
+  try {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback`,
+      },
     })
+ 
+    if (error) throw new Error(error.message)
+ 
+    setMessage({
+      text: 'Check your email for the verification link!',
+      type: 'success',
+    })
+  } catch (error: any) {
+    setMessage({ text: error.message, type: 'error' })
+  } finally {
     setLoading(false)
-
-    if (error) setMessage({ text: error.message, type: 'error' })
-    else setMessage({ text: 'Check your email for the verification link!', type: 'success' })
   }
+}
 
   return (
     <>
@@ -186,6 +206,7 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={handleGoogleSignup}
+              suppressHydrationWarning
               disabled={loading}
               style={{
                 width: '100%',
@@ -236,6 +257,7 @@ export default function SignupPage() {
                   Email
                 </label>
                 <input
+                  suppressHydrationWarning
                   id="email"
                   type="email"
                   required
@@ -267,6 +289,7 @@ export default function SignupPage() {
                   Password
                 </label>
                 <input
+                  suppressHydrationWarning
                   id="password"
                   type="password"
                   required
@@ -299,6 +322,7 @@ export default function SignupPage() {
                   Confirm password
                 </label>
                 <input
+                  suppressHydrationWarning
                   id="confirm"
                   type="password"
                   required
@@ -345,6 +369,7 @@ export default function SignupPage() {
               )}
 
               <button
+                suppressHydrationWarning
                 type="submit"
                 disabled={loading}
                 style={{

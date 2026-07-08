@@ -1,6 +1,7 @@
 
 'use client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react';
 /* ---------------------------------------------------------------
    Atlas — "Never lose anything you learn online again."
@@ -153,6 +154,12 @@ const FAQS = [
 ];
 export default function Home() {
   const { typed, done } = useTypewriter(FULL_ANSWER);
+
+  const router = useRouter()
+
+ 
+
+ 
   return (
     <>
       <style jsx global>{`
