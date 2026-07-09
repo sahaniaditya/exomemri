@@ -1,33 +1,37 @@
-This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
+# Atlas Extension (Phase 0)
 
-## Getting Started
+MV3 browser extension (WXT + React + TypeScript) that captures a source from a
+supported page and writes its raw artifact to storage via the Atlas capture
+backend. See [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md).
 
-First, run the development server:
+## Architecture
 
-```bash
-pnpm dev
-# or
-npm run dev
-```
+- **One brain** — only `src/background/` holds the session and talks to the
+  network/storage. `src/content/` and `src/popup/` are dumb UI that send typed
+  messages (`src/lib/messaging.ts`).
+- **Pure extractors** — `src/lib/extractors/` turn a DOM into a normalized
+  capture payload with no side effects, so they are unit-tested in jsdom.
+- **Generated contract** — `src/lib/types.ts` is generated from the backend
+  OpenAPI schema (`npm run gen:types`); never hand-edit it.
+- WXT requires browser entrypoints under `src/entrypoints/`; those are thin
+  adapters that delegate into the modules above.
 
-Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
-
-You can start editing the popup by modifying `popup.tsx`. It should auto-update as you make changes. To add an options page, simply add a `options.tsx` file to the root of the project, with a react component default exported. Likewise to add a content page, add a `content.ts` file to the root of the project, importing some module and do some logic, then reload the extension on your browser.
-
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
-
-## Making production build
-
-Run the following:
+## Develop
 
 ```bash
-pnpm build
-# or
-npm run build
+npm install
+npm run gen:types   # regenerate types from ../backend/openapi.json
+npm run dev         # launches a dev browser with the extension loaded
 ```
 
-This should create a production bundle for your extension, ready to be zipped and published to the stores.
+Set the backend URL in `.env` (`WXT_BACKEND_URL`, default `http://localhost:8000`).
 
-## Submit to the webstores
+## Checks
 
-The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
+```bash
+npm run lint
+npm run typecheck
+npm run test        # vitest: extractor units
+npm run build       # production MV3 build -> .output/chrome-mv3
+npm run e2e         # Playwright capture-flow gate (needs the built extension)
+```
