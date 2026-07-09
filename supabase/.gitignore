@@ -1,0 +1,7 @@
+# Local CLI cache and temporary files
+.temp/
+.branches/
+
+# Edge function local import mappings
+functions/.import_map.json
+
