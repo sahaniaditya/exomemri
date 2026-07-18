@@ -1,6 +1,24 @@
 {
   "components": {
     "schemas": {
+      "AuthUser": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email"
+        ],
+        "title": "AuthUser",
+        "type": "object"
+      },
       "CaptureRequest": {
         "description": "Payload the extension background worker POSTs to ``/v1/sources``.\n\n``content`` carries small text payloads (a YouTube transcript JSON string,\nan AI-chat thread JSON string, or an article's cleaned text). ``raw_html``\nis an optional companion for articles so the server can persist both\n``raw/page.html`` and ``raw/extracted.txt`` (design \u00a72.4 capture table).\nLarge binary sources (PDF) do not use this endpoint \u2014 see\n``/v1/sources/upload-url``.",
         "properties": {
@@ -130,6 +148,54 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "LoginResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "refresh_token": {
+            "title": "Refresh Token",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUser"
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "user"
+        ],
+        "title": "LoginResponse",
+        "type": "object"
+      },
+      "MessageResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "MessageResponse",
+        "type": "object"
+      },
+      "OnboardingStatusResponse": {
+        "properties": {
+          "has_completed_onboarding": {
+            "title": "Has Completed Onboarding",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "has_completed_onboarding"
+        ],
+        "title": "OnboardingStatusResponse",
+        "type": "object"
+      },
       "ProcessingStatus": {
         "description": "Lifecycle of a source.\n\nPhase 0 only ever emits ``queued`` (nothing processes it yet); the full\nset is declared here so the generated client contract is stable across\nphases.",
         "enum": [
@@ -144,6 +210,43 @@
         ],
         "title": "ProcessingStatus",
         "type": "string"
+      },
+      "ProfileUpsertRequest": {
+        "description": "Onboarding/profile write payload.",
+        "properties": {
+          "domain_of_focus": {
+            "title": "Domain Of Focus",
+            "type": "string"
+          },
+          "full_name": {
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "primary_role": {
+            "title": "Primary Role",
+            "type": "string"
+          },
+          "referral_source": {
+            "title": "Referral Source",
+            "type": "string"
+          },
+          "username": {
+            "minLength": 3,
+            "pattern": "^[a-z0-9_]+$",
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "full_name",
+          "username",
+          "primary_role",
+          "domain_of_focus",
+          "referral_source"
+        ],
+        "title": "ProfileUpsertRequest",
+        "type": "object"
       },
       "SessionResponse": {
         "description": "Current user + the active learning space (may be null).",
@@ -330,6 +433,43 @@
         "title": "User",
         "type": "object"
       },
+      "UserLogin": {
+        "description": "Payload when a user signs in.",
+        "properties": {
+          "email": {
+            "examples": [
+              "user@atlas-app.com"
+            ],
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserLogin",
+        "type": "object"
+      },
+      "UsernameAvailabilityResponse": {
+        "properties": {
+          "is_taken": {
+            "title": "Is Taken",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "is_taken"
+        ],
+        "title": "UsernameAvailabilityResponse",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -399,6 +539,281 @@
         "summary": "Health",
         "tags": [
           "meta"
+        ]
+      }
+    },
+    "/v1/auth/check-username": {
+      "get": {
+        "operationId": "check_username_v1_auth_check_username_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "minLength": 3,
+              "pattern": "^[a-z0-9_]+$",
+              "title": "Username",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsernameAvailabilityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Username",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "operationId": "login_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "operationId": "logout_v1_auth_logout_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/me": {
+      "get": {
+        "description": "Return the full profile row for the authenticated user.",
+        "operationId": "get_me_v1_auth_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Me V1 Auth Me Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/profile": {
+      "post": {
+        "operationId": "upsert_profile_v1_auth_profile_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpsertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upsert Profile",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/profile-status": {
+      "get": {
+        "operationId": "profile_status_v1_auth_profile_status_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Profile Status",
+        "tags": [
+          "auth"
         ]
       }
     },
