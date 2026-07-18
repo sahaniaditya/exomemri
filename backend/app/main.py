@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import Settings, get_settings
 from app.errors import register_exception_handlers
 from app.logging import RequestIdMiddleware, configure_logging
+from app.routers import auth as auth_router
 from app.routers import session as session_router
 from app.routers import sources as sources_router
 
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     _configure_cors(app, settings)
     register_exception_handlers(app)
 
+    app.include_router(auth_router.router, prefix=API_PREFIX)
     app.include_router(session_router.router, prefix=API_PREFIX)
     app.include_router(sources_router.router, prefix=API_PREFIX)
 

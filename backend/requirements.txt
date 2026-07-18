@@ -8,9 +8,11 @@ pydantic>=2.6
 pydantic-settings>=2.2
 python-dotenv>=1.0
 
-# --- Object store (Supabase Storage) ---
+# --- Object store (Supabase Storage) + Auth ---
 # Pulls in storage3, gotrue, postgrest, realtime.
 supabase>=2.4
+# EmailStr validation for auth payloads.
+email-validator>=2.1
 
 # --- Dev / test ---
 ruff>=0.4

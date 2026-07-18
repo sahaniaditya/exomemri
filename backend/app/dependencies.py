@@ -4,11 +4,16 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from fastapi import Depends
+from fastapi import Depends, Header
 
 from app.config import Settings, get_settings
+from app.errors import AuthError
+from app.repositories.profile_repo import ProfileRepo
 from app.repositories.storage_repo import StorageRepo, get_storage_repo
+from app.repositories.supabase_client import get_auth_client, get_service_client
+from app.schemas.auth import AuthUser
 from app.schemas.common import User
+from app.services.auth_service import AuthService
 from app.services.capture_service import CaptureService
 from app.services.session_service import SessionService
 
@@ -32,3 +37,39 @@ def get_current_user(settings: Settings = Depends(get_settings)) -> User:
     auth without touching routers or services.
     """
     return User(id=settings.dev_user_id, email=settings.dev_user_email)
+
+
+# --- Auth (real Supabase JWT; used by the /auth routes) ---
+
+
+def get_profile_repo() -> ProfileRepo:
+    return ProfileRepo(get_service_client())
+
+
+def get_auth_service(
+    profiles: ProfileRepo = Depends(get_profile_repo),
+) -> AuthService:
+    return AuthService(profiles, get_service_client())
+
+
+def get_bearer_token(authorization: str = Header(None)) -> str:
+    """Extract the raw bearer token from the Authorization header."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise AuthError(
+            "Missing or malformed Authorization header. Expected 'Bearer <JWT>'."
+        )
+    return authorization.split(" ", 1)[1]
+
+
+def get_authenticated_user(token: str = Depends(get_bearer_token)) -> AuthUser:
+    """Verify the caller's Supabase JWT and return the authenticated user.
+
+    A fresh auth client is used per request so no session state is shared.
+    """
+    try:
+        user = get_auth_client().auth.get_user(token).user
+    except Exception as exc:  # noqa: BLE001 - normalize SDK/auth errors
+        raise AuthError("Invalid or expired authentication session token.") from exc
+    if user is None:
+        raise AuthError("Invalid or expired authentication session token.")
+    return AuthUser(id=user.id, email=user.email)
