@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Understanding Write-Ahead Logging</title>
+    <meta name="author" content="Jane Researcher" />
+  </head>
+  <body>
+    <nav>Home About Contact</nav>
+    <article>
+      <h1>Understanding Write-Ahead Logging</h1>
+      <p class="byline">By Jane Researcher</p>
+      <p>
+        Write-ahead logging (WAL) is a family of techniques for providing atomicity and
+        durability in database systems. The central idea is that changes to data files must
+        be written only after those changes have been logged, that is, after the log records
+        describing the changes have been flushed to permanent storage.
+      </p>
+      <p>
+        Because the log is written sequentially, it is far cheaper than flushing every changed
+        page to disk on each transaction commit. On recovery, the system replays the log to
+        bring the database back to a consistent state, redoing committed transactions and
+        undoing those that never committed.
+      </p>
+      <p>
+        This approach underlies crash recovery in PostgreSQL, SQLite, and many other engines,
+        and it is the reason a durable commit does not require a full data-file sync.
+      </p>
+    </article>
+    <footer>Copyright 2026</footer>
+  </body>
+</html>
