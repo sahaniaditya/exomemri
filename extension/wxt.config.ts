@@ -10,6 +10,13 @@ export default defineConfig({
   manifest: {
     name: "Atlas",
     description: "Capture what you learn online into a Learning Space.",
+    // Single source icon (public/icon.png) reused for each size; Chrome scales.
+    icons: {
+      16: "/icon.png",
+      32: "/icon.png",
+      48: "/icon.png",
+      128: "/icon.png",
+    },
     permissions: ["storage", "activeTab", "scripting"],
     host_permissions: [
       // Backend capture endpoint (dev). Phase 2: add "https://*.atlas.ai/*".

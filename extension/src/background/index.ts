@@ -1,20 +1,25 @@
 /**
  * Background service worker boot: wires the typed message router.
  *
- * This is the extension's only network/auth surface. Content scripts and the
- * popup reach it exclusively through these typed messages.
+ * This is the extension's only network/auth surface. The popup and content
+ * script reach it exclusively through these typed messages.
  */
+import type { CaptureResult } from "../lib/messaging"
 import { onMessage } from "../lib/messaging"
-import { capturePdf, captureText } from "./capture"
-import { fetchSession, getActiveSpace, setActiveSpace } from "./session"
+import { captureActiveTab } from "./capture"
+import { fetchSession, setActiveSpace } from "./session"
 
 export function bootBackground(): void {
-  onMessage("capture", ({ data }) => captureText(data))
-  onMessage("capturePdf", ({ data }) => capturePdf(data))
   onMessage("getSession", () => fetchSession())
-  onMessage("getActiveSpace", () => getActiveSpace())
   onMessage("setActiveSpace", async ({ data }) => {
     await setActiveSpace(data)
     return { ok: true }
   })
+  onMessage("captureActiveTab", () => captureActiveTab())
+
+  // Test hook: lets the E2E drive the capture from the service worker without
+  // opening the browser-action popup (harmless — the SW global is not
+  // reachable from web pages).
+  ;(globalThis as unknown as { __atlasCaptureActiveTab?: () => Promise<CaptureResult> })
+    .__atlasCaptureActiveTab = captureActiveTab
 }

@@ -1,20 +1,28 @@
 /**
  * Phase 0 Definition-of-Done gate.
  *
- * Loads the built extension into Chromium, opens a served article page, waits
- * for the auto-surfacing capture card, clicks Save, and asserts the capture
- * hit POST /v1/sources and the card shows "Saved ✓".
+ * Loads the built extension into Chromium, opens a served article page, and
+ * drives the popup's Save action (via the background's capture entry) — the
+ * background asks the tab's content script to extract, then persists. Asserts
+ * the capture hit POST /v1/sources with the expected payload.
  */
 import { fileURLToPath } from "node:url"
 
-import { type BrowserContext, chromium, expect, test } from "@playwright/test"
+import { type BrowserContext, chromium, expect, test, type Worker } from "@playwright/test"
 
 import { startMockBackend, type MockBackend } from "./mock-backend"
+
+type CaptureResult = { ok: boolean; source_id?: string; error?: string }
 
 const EXTENSION_PATH = fileURLToPath(new URL("../../.output/chrome-mv3", import.meta.url))
 
 let backend: MockBackend
 let context: BrowserContext
+
+async function backgroundWorker(): Promise<Worker> {
+  const existing = context.serviceWorkers()[0]
+  return existing ?? (await context.waitForEvent("serviceworker"))
+}
 
 test.beforeAll(async () => {
   backend = await startMockBackend(8000)
@@ -28,11 +36,7 @@ test.beforeAll(async () => {
       `--load-extension=${EXTENSION_PATH}`,
     ],
   })
-  // Best-effort: give the background service worker a moment to register. It
-  // also auto-wakes on the first message, so we don't fail if it isn't up yet.
-  if (context.serviceWorkers().length === 0) {
-    await context.waitForEvent("serviceworker", { timeout: 5_000 }).catch(() => {})
-  }
+  await backgroundWorker()
 })
 
 test.afterAll(async () => {
@@ -40,19 +44,25 @@ test.afterAll(async () => {
   await backend?.close()
 })
 
-test("captures an article and shows Saved ✓", async () => {
+test("captures the active tab's article and returns Saved", async () => {
+  // Open the article page and make it the active tab.
   const page = await context.newPage()
   await page.goto("http://localhost:8000/article")
+  await page.bringToFront()
+  // Give the content script a moment to register its extractor.
+  await page.waitForTimeout(500)
 
-  // The capture card auto-surfaces (in an open shadow root; locators pierce it).
-  const card = page.getByTestId("atlas-capture-card")
-  await expect(card).toBeVisible()
+  // Drive the exact path the popup's "Save this page" button triggers.
+  const sw = await backgroundWorker()
+  const result = (await sw.evaluate(() => {
+    const g = globalThis as unknown as {
+      __atlasCaptureActiveTab: () => Promise<CaptureResult>
+    }
+    return g.__atlasCaptureActiveTab()
+  })) as CaptureResult
 
-  const save = page.getByTestId("atlas-save")
-  await expect(save).toHaveText("Save")
-  await save.click()
-
-  await expect(save).toHaveText("Saved ✓")
+  expect(result.ok).toBe(true)
+  expect(result.source_id).toBeTruthy()
 
   // The capture actually hit the backend with the expected shape.
   const captures = backend.requests.filter((r) => r.path === "/v1/sources")
