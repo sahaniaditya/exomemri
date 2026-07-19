@@ -1,0 +1,30 @@
+# Render Blueprint for the Atlas backend.
+# Deploy: point Render at this repo; it reads this file. The service builds and
+# runs from the `backend/` root (rootDir), so `supabase/` migrations are left
+# to the Supabase project and are not part of the web service.
+services:
+  - type: web
+    name: atlas-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      # Set these in the Render dashboard (marked sync:false so they are not
+      # baked into the repo). Service-role key must stay server-side only.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      # Comma-separated allowed extension origins (e.g. chrome-extension://<id>).
+      - key: CORS_EXTENSION_ORIGINS
+        sync: false
+      # Disable the permissive "any chrome-extension" CORS in production.
+      - key: CORS_ALLOW_ANY_EXTENSION
+        value: "false"
+      - key: ENV
+        value: production
