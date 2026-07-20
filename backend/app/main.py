@@ -18,17 +18,17 @@ API_PREFIX = "/v1"
 def _configure_cors(app: FastAPI, settings: Settings) -> None:
     kwargs: dict = {
         "allow_methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["content-type", "x-request-id"],
+        "allow_headers": ["authorization", "content-type", "x-request-id"],
         "allow_credentials": True,
     }
+    # Explicit origins: pinned extension ids + web app origins (e.g. Vercel).
+    allow_origins = [*settings.cors_extension_origins, *settings.cors_web_origins]
     if settings.cors_allow_any_extension:
         # Reflect any chrome-extension:// origin (dev convenience). Cannot use
         # "*" together with allow_credentials, so match via regex instead.
         kwargs["allow_origin_regex"] = r"chrome-extension://.*"
-        if settings.cors_extension_origins:
-            kwargs["allow_origins"] = settings.cors_extension_origins
-    else:
-        kwargs["allow_origins"] = settings.cors_extension_origins
+    if allow_origins:
+        kwargs["allow_origins"] = allow_origins
     app.add_middleware(CORSMiddleware, **kwargs)
 
 
