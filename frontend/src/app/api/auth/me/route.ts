@@ -11,7 +11,7 @@ export async function GET() {
   }
  
   try {
-    const res = await apiFetch('/api/v1/auth/me', {}, token)
+    const res = await apiFetch('/v1/auth/me', {}, token)
     const data = await res.json()
     return NextResponse.json(data, { status: res.status })
   } catch (error) {

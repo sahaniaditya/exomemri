@@ -15,7 +15,7 @@ export default async function SignupLayout({
     let shouldRedirectTo: string | null = null
 
     try {
-      const statusResponse = await apiFetch('/api/v1/auth/profile-status', {}, token)
+      const statusResponse = await apiFetch('/v1/auth/profile-status', {}, token)
 
       if (statusResponse.ok) {
         const statusData = await statusResponse.json()

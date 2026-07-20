@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json()
  
-    const res = await apiFetch('/api/v1/auth/login', {
+    const res = await apiFetch('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })

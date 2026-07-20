@@ -21,7 +21,7 @@ export default async function OnboardingLayout({
 
   try {
     // 2. Query the dedicated profile status route to see if they're onboarded
-    const statusResponse = await apiFetch('/api/v1/auth/profile-status', {}, token)
+    const statusResponse = await apiFetch('/v1/auth/profile-status', {}, token)
 
     
 

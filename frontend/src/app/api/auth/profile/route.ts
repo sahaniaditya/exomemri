@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const res = await apiFetch(
-      '/api/v1/auth/profile',
+      '/v1/auth/profile',
       {
         method: 'POST',
         body: JSON.stringify(body),
