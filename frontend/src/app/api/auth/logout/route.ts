@@ -10,7 +10,7 @@ export async function POST() {
   try {
     if (token) {
       // Alert FastAPI to destroy the session server-side
-      await apiFetch('/api/v1/auth/logout', { method: 'POST' }, token)
+      await apiFetch('/v1/auth/logout', { method: 'POST' }, token)
     }
   } catch (error) {
     // Fail silently on the network request — even if the backend call

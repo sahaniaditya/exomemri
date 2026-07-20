@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const refreshToken = data.session.refresh_token
 
     // 3. Determine the landing page directly by checking user profile status
-    const statusResponse = await apiFetch('/api/v1/auth/profile-status', {}, accessToken)
+    const statusResponse = await apiFetch('/v1/auth/profile-status', {}, accessToken)
     
     let destination = '/onboarding'
     if (statusResponse.ok) {

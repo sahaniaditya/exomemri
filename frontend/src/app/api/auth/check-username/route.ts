@@ -19,7 +19,7 @@ export async function GET(request: Request) {
  
   try {
     const res = await apiFetch(
-      `/api/v1/auth/check-username?username=${encodeURIComponent(username)}`,
+      `/v1/auth/check-username?username=${encodeURIComponent(username)}`,
       {},
       token
     )

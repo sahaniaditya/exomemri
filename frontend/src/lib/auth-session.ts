@@ -14,7 +14,7 @@ import { apiFetch } from '@/lib/api'
  * apart in their profile-status check or cookie settings again.
  */
 export async function establishSession(accessToken: string, refreshToken: string) {
-  const statusResponse = await apiFetch('/api/v1/auth/profile-status', {}, accessToken)
+  const statusResponse = await apiFetch('/v1/auth/profile-status', {}, accessToken)
   if (!statusResponse.ok) {
     throw new Error('Invalid session')
   }
