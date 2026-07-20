@@ -23,6 +23,9 @@ services:
       # Comma-separated allowed extension origins (e.g. chrome-extension://<id>).
       - key: CORS_EXTENSION_ORIGINS
         sync: false
+      # Comma-separated web app origins (scheme+host, NO trailing slash).
+      - key: CORS_WEB_ORIGINS
+        value: https://atlas-ai-puce-xi.vercel.app
       # Disable the permissive "any chrome-extension" CORS in production.
       - key: CORS_ALLOW_ANY_EXTENSION
         value: "false"

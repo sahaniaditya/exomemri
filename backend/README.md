@@ -60,7 +60,12 @@ project. Render config:
 - **Start:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT` (also in [`Procfile`](Procfile))
 - **Health check:** `/health`
 - **Env vars (dashboard):** `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
-  `CORS_EXTENSION_ORIGINS`, `CORS_ALLOW_ANY_EXTENSION=false`, `ENV=production`
+  `CORS_EXTENSION_ORIGINS`, `CORS_WEB_ORIGINS`, `CORS_ALLOW_ANY_EXTENSION=false`,
+  `ENV=production`
+
+`CORS_WEB_ORIGINS` is a comma-separated list of web app origins allowed to call
+the API (e.g. `https://atlas-ai-puce-xi.vercel.app`). Use scheme + host only —
+**no trailing slash or path**, since the browser's `Origin` header never has one.
 
 ## Checks
 
