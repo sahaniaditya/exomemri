@@ -7,11 +7,19 @@
  */
 import { browser } from "wxt/browser"
 
-import { api } from "../lib/api"
+import { ApiError, api } from "../lib/api"
 import type { CaptureRequest, ExtractedCapture } from "../lib/contracts"
 import { contentHash } from "../lib/hash"
 import { sendMessage, type CaptureResult, type PdfCaptureInput } from "../lib/messaging"
 import { requireActiveSpaceId } from "./session"
+
+/** Turn a backend error into user-facing copy, calling out expired sessions. */
+function captureErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.status === 401) {
+    return "Session expired — reopen atlas.ai to refresh."
+  }
+  return err instanceof Error ? err.message : fallback
+}
 
 /**
  * Capture the page in the active tab: ask its content script to extract, then
@@ -63,7 +71,7 @@ export async function captureText(extracted: ExtractedCapture): Promise<CaptureR
     const resp = await api.captureSource(payload)
     return { ok: true, source_id: resp.source_id }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Capture failed" }
+    return { ok: false, error: captureErrorMessage(err, "Capture failed") }
   }
 }
 
@@ -91,6 +99,6 @@ export async function capturePdf(input: PdfCaptureInput): Promise<CaptureResult>
 
     return { ok: true, source_id: signed.source_id }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "PDF capture failed" }
+    return { ok: false, error: captureErrorMessage(err, "PDF capture failed") }
   }
 }

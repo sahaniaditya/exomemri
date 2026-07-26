@@ -1,9 +1,9 @@
 /**
  * Typed client for the Atlas capture backend.
  *
- * Only the background worker imports this. All calls include credentials so
- * the session cookie (Phase 2) is attached; in Phase 0 the backend uses a
- * dev-stub session and ignores it.
+ * Only the background worker imports this. Every request carries the logged-in
+ * user's Supabase JWT (from the stored session) as a Bearer token; the backend
+ * verifies it on all `/v1/session` and `/v1/sources` routes.
  */
 import type {
   CaptureRequest,
@@ -12,6 +12,7 @@ import type {
   UploadUrlRequest,
   UploadUrlResponse,
 } from "./contracts"
+import { getAccessToken } from "./session-store"
 
 const BASE_URL: string = import.meta.env.WXT_BACKEND_URL ?? "http://localhost:8000"
 
@@ -27,12 +28,17 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await getAccessToken()
   let resp: Response
   try {
     resp = await fetch(`${BASE_URL}${path}`, {
       ...init,
       credentials: "include",
-      headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(init?.headers ?? {}),
+      },
     })
   } catch {
     throw new ApiError(`Network error calling ${path}`, 0)

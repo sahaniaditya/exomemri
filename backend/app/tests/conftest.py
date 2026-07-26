@@ -12,9 +12,14 @@ os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.dependencies import get_capture_service, get_session_service  # noqa: E402
+from app.dependencies import (  # noqa: E402
+    get_authenticated_app_user,
+    get_capture_service,
+    get_session_service,
+)
 from app.main import create_app  # noqa: E402
 from app.repositories.storage_repo import get_storage_repo  # noqa: E402
+from app.schemas.common import User  # noqa: E402
 from app.services.capture_service import CaptureService  # noqa: E402
 from app.services.session_service import SessionService  # noqa: E402
 
@@ -57,8 +62,14 @@ def client(storage: FakeStorage) -> TestClient:
     session_svc = SessionService(get_settings())
     capture_svc = CaptureService(get_settings(), storage)  # type: ignore[arg-type]
 
+    # Real routes now require a verified Supabase JWT; inject the fixed dev
+    # user so tests stay hermetic (no live token verification).
+    settings = get_settings()
+    dev_user = User(id=settings.dev_user_id, email=settings.dev_user_email)
+
     app.dependency_overrides[get_storage_repo] = lambda: storage
     app.dependency_overrides[get_capture_service] = lambda: capture_svc
     app.dependency_overrides[get_session_service] = lambda: session_svc
+    app.dependency_overrides[get_authenticated_app_user] = lambda: dev_user
 
     return TestClient(app)

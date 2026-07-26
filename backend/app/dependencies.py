@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from uuid import UUID
 
 from fastapi import Depends, Header
 
@@ -30,16 +31,7 @@ def get_capture_service(
     return CaptureService(settings, storage)
 
 
-def get_current_user(settings: Settings = Depends(get_settings)) -> User:
-    """Phase 0 dev-stub: always the fixed dev user.
-
-    Structured as a dependency so Phase 2 can swap in real cookie/Supabase
-    auth without touching routers or services.
-    """
-    return User(id=settings.dev_user_id, email=settings.dev_user_email)
-
-
-# --- Auth (real Supabase JWT; used by the /auth routes) ---
+# --- Auth (real Supabase JWT) ---
 
 
 def get_profile_repo() -> ProfileRepo:
@@ -73,3 +65,15 @@ def get_authenticated_user(token: str = Depends(get_bearer_token)) -> AuthUser:
     if user is None:
         raise AuthError("Invalid or expired authentication session token.")
     return AuthUser(id=user.id, email=user.email)
+
+
+def get_authenticated_app_user(
+    auth_user: AuthUser = Depends(get_authenticated_user),
+) -> User:
+    """Adapt the verified Supabase identity to the app's ``User`` model.
+
+    The session and capture routes (and their services) are typed against
+    ``User`` (UUID id); this maps the auth-layer ``AuthUser`` (string id) onto
+    it so a real, verified user flows through unchanged.
+    """
+    return User(id=UUID(auth_user.id), email=auth_user.email)

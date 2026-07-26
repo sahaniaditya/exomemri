@@ -9,6 +9,7 @@
 import { defineExtensionMessaging } from "@webext-core/messaging"
 
 import type { ExtractedCapture, SessionResponse } from "./contracts"
+import type { StoredSession } from "./session-blob"
 
 /** Input for a PDF capture: the background fetches + PUTs the bytes itself. */
 export interface PdfCaptureInput {
@@ -30,6 +31,10 @@ export interface ProtocolMap {
   extractCurrentPage(): ExtractedCapture | null
   /** Capture the active tab's page — handled by the background worker. */
   captureActiveTab(): CaptureResult
+  /** Relay the web app's stored session (from the bridge content script). */
+  syncSession(blob: StoredSession): { ok: boolean }
+  /** Clear the stored session — signed out on the web app. */
+  clearSession(): { ok: boolean }
 }
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>()

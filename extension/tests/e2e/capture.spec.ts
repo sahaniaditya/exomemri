@@ -16,6 +16,20 @@ type CaptureResult = { ok: boolean; source_id?: string; error?: string }
 
 const EXTENSION_PATH = fileURLToPath(new URL("../../.output/chrome-mv3", import.meta.url))
 
+// The session the web app would have mirrored into localStorage and the bridge
+// content script relayed into the extension. Seeded directly into
+// storage.local here so the capture path has an active space + bearer token.
+const SESSION_BLOB = {
+  version: 1,
+  access_token: "test-access-token",
+  refresh_token: "test-refresh-token",
+  user: { id: "00000000-0000-0000-0000-0000000000a1", email: "aditya@kimaru.ai" },
+  space_id: "00000000-0000-0000-0000-0000000000b1",
+  space_name: "System Design",
+  expires_at: 9999999999,
+  updated_at: 1700000000,
+}
+
 let backend: MockBackend
 let context: BrowserContext
 
@@ -52,8 +66,16 @@ test("captures the active tab's article and returns Saved", async () => {
   // Give the content script a moment to register its extractor.
   await page.waitForTimeout(500)
 
-  // Drive the exact path the popup's "Save this page" button triggers.
+  // Seed the logged-in session the bridge would normally relay from the web app.
   const sw = await backgroundWorker()
+  await sw.evaluate(async (blob) => {
+    const g = globalThis as unknown as {
+      chrome: { storage: { local: { set: (items: object) => Promise<void> } } }
+    }
+    await g.chrome.storage.local.set({ "atlas.session": blob })
+  }, SESSION_BLOB)
+
+  // Drive the exact path the popup's "Save this page" button triggers.
   const result = (await sw.evaluate(() => {
     const g = globalThis as unknown as {
       __atlasCaptureActiveTab: () => Promise<CaptureResult>

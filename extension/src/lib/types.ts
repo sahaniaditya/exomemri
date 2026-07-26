@@ -649,7 +649,9 @@ export interface operations {
     get_session_v1_session_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -664,12 +666,23 @@ export interface operations {
                     "application/json": components["schemas"]["SessionResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     set_active_space_v1_session_active_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -700,7 +713,9 @@ export interface operations {
     capture_source_v1_sources_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -733,7 +748,9 @@ export interface operations {
     create_upload_url_v1_sources_upload_url_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string;
+            };
             path?: never;
             cookie?: never;
         };
