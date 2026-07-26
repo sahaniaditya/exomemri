@@ -37,10 +37,14 @@ export function Popup() {
 
   async function setActive() {
     setSpaceSaved(false)
-    await sendMessage("setActiveSpace", spaceId)
-    await refresh()
-    setSpaceSaved(true)
-    setTimeout(() => setSpaceSaved(false), 1500)
+    try {
+      await sendMessage("setActiveSpace", spaceId)
+      await refresh()
+      setSpaceSaved(true)
+      setTimeout(() => setSpaceSaved(false), 1500)
+    } catch {
+      setError("Couldn't set the space — reopen atlas.ai to refresh your session.")
+    }
   }
 
   async function saveCurrentPage() {

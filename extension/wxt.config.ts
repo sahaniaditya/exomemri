@@ -19,10 +19,16 @@ export default defineConfig({
     },
     permissions: ["storage", "activeTab", "scripting"],
     host_permissions: [
-      // Backend capture endpoint (dev). Phase 2: add "https://*.atlas.ai/*".
+      // Backend capture endpoint (dev). In prod, add the deployed API origin.
       "http://localhost:8000/*",
       // Supabase Storage host for the direct client-side PDF PUT.
       "https://*.supabase.co/*",
+      // The Atlas web app: the bridge content script (atlas-bridge.content.ts)
+      // reads the logged-in session from its localStorage. Its `matches` cover
+      // these origins; listed here too for prod clarity.
+      "http://localhost:3000/*",
+      "https://atlas-ai-puce-xi.vercel.app/*",
+      "https://*.atlas.ai/*",
     ],
   },
 })

@@ -5,8 +5,9 @@ write its raw artifact to Supabase Storage. No Postgres, no queue, no LLM.
 See [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md).
 
 Layering: `router → service → repository`. Only `repositories/storage_repo.py`
-touches Supabase. The session is a dev-stub (`dependencies.get_current_user`)
-so the capture flow is exercisable locally; real auth arrives in Phase 2.
+touches Supabase. All routes verify a real Supabase JWT: `/auth` routes take the
+`AuthUser` directly, while `/session` and `/sources` map it to the app's `User`
+via `dependencies.get_authenticated_app_user`.
 
 ## Setup
 
@@ -40,14 +41,13 @@ venv/Scripts/uvicorn app.main:app --reload   # http://localhost:8000
 | GET | `/v1/auth/profile-status` | Whether onboarding/profile is complete |
 | GET | `/v1/auth/check-username` | Whether a username is already taken |
 | POST | `/v1/auth/profile` | Upsert the authenticated user's profile |
-| GET | `/v1/session` | Current user + active space (dev-stub) |
+| GET | `/v1/session` | Current user + active space |
 | POST | `/v1/session/active` | Set active space |
 | POST | `/v1/sources` | Capture a text source → raw artifact in Storage |
 | POST | `/v1/sources/upload-url` | Pre-signed upload for PDFs |
 
-The `/auth` routes verify a real Supabase JWT (`get_authenticated_user`); the
-`/session` and `/sources` routes still use the Phase 0 dev-stub user. Both are
-DI seams, so Phase 2 can converge them without touching services.
+All routes require `Authorization: Bearer <supabase-jwt>`. The active space is
+still backend-defaulted (`dev_space_name`) until a real spaces store lands.
 
 ## Deploy (Render)
 

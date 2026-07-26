@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { apiFetch } from "@/lib/api"
+import { clearExtensionSession } from "@/lib/extension-session"
 
 interface Profile {
   full_name: string
@@ -49,7 +50,9 @@ const handleLogout = async () => {
   } catch (error) {
     console.error("Logout failed:", error)
   } finally {
-    
+    // The server clears the httpOnly cookies; the extension mirror lives in
+    // localStorage, so the client must clear it here.
+    clearExtensionSession()
     router.push('/login')
   }
 }

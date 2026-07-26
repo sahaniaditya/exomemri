@@ -1,0 +1,71 @@
+/**
+ * Bridge to the Atlas browser extension.
+ *
+ * The web app stores auth in httpOnly cookies, which the extension cannot read.
+ * To let the extension pick up the logged-in session, we mirror a minimal,
+ * client-readable copy into `localStorage` under `atlas.session`. A content
+ * script the extension injects on this origin reads that key and relays it to
+ * the extension's background worker.
+ *
+ * Deliberate tradeoff: the access/refresh tokens become readable by page JS
+ * (an XSS exposure the httpOnly cookies avoid). Keep tokens short-lived and the
+ * origin's CSP tight.
+ */
+
+/** localStorage key. Mirrors the extension's `atlas.*` namespace. */
+export const EXTENSION_SESSION_KEY = "atlas.session"
+
+/** Shape returned by GET /api/auth/bridge-session. */
+export interface BridgeSessionResponse {
+  access_token: string
+  refresh_token: string | null
+  user: { id: string; email: string }
+  space_id: string | null
+  space_name: string | null
+}
+
+/** The JSON blob written to localStorage for the extension to consume. */
+export interface StoredExtensionSession extends BridgeSessionResponse {
+  version: 1
+  /** Access-token expiry, epoch seconds (from the JWT `exp` claim). */
+  expires_at: number
+  /** When this blob was written, epoch seconds. */
+  updated_at: number
+}
+
+/** Decode a JWT's `exp` (epoch seconds); fall back to now + 1h on any error. */
+function jwtExpirySeconds(token: string): number {
+  const fallback = Math.floor(Date.now() / 1000) + 3600
+  try {
+    const payload = token.split(".")[1]
+    if (!payload) return fallback
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/")
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=")
+    const claims = JSON.parse(atob(padded)) as { exp?: number }
+    return typeof claims.exp === "number" ? claims.exp : fallback
+  } catch {
+    return fallback
+  }
+}
+
+/** Build the stored blob from a bridge-session response. */
+export function buildStoredSession(data: BridgeSessionResponse): StoredExtensionSession {
+  return {
+    version: 1,
+    ...data,
+    expires_at: jwtExpirySeconds(data.access_token),
+    updated_at: Math.floor(Date.now() / 1000),
+  }
+}
+
+/** Write the session blob to localStorage (no-op outside the browser). */
+export function writeExtensionSession(data: BridgeSessionResponse): void {
+  if (typeof window === "undefined") return
+  localStorage.setItem(EXTENSION_SESSION_KEY, JSON.stringify(buildStoredSession(data)))
+}
+
+/** Remove the session blob (call on logout / when signed out). */
+export function clearExtensionSession(): void {
+  if (typeof window === "undefined") return
+  localStorage.removeItem(EXTENSION_SESSION_KEY)
+}

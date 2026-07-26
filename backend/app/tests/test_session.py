@@ -1,8 +1,17 @@
-"""Session endpoint tests (dev-stub)."""
+"""Session endpoint tests."""
 
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+
+from app.main import create_app
+
+
+def test_get_session_requires_authentication() -> None:
+    # A fresh app WITHOUT the conftest auth override: no bearer token → 401.
+    resp = TestClient(create_app()).get("/v1/session")
+    assert resp.status_code == 401
+    assert resp.json()["error"]["code"] == "unauthorized"
 
 
 def test_get_session_returns_dev_user_and_active_space(client: TestClient) -> None:
