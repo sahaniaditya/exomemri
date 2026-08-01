@@ -2,11 +2,7 @@
 
 import { useEffect } from 'react'
 
-import {
-  clearExtensionSession,
-  writeExtensionSession,
-  type BridgeSessionResponse,
-} from '@/lib/extension-session'
+import { refreshExtensionSession } from '@/lib/extension-session'
 
 /**
  * Invisible bridge for the browser extension. On mount (i.e. whenever a
@@ -18,29 +14,14 @@ import {
  *
  * This one mechanism covers all flows uniformly, including the OAuth callback
  * (a pure server redirect that never hands the token to client JS).
+ *
+ * This runs on mount only. Anything that changes the session mid-visit — such
+ * as creating a Learning Space — must call `refreshExtensionSession()` itself,
+ * since `router.refresh()` re-renders server components without remounting.
  */
 export default function SessionSync() {
   useEffect(() => {
-    let cancelled = false
-
-    void (async () => {
-      try {
-        const res = await fetch('/api/auth/bridge-session')
-        if (cancelled) return
-        if (res.ok) {
-          const data = (await res.json()) as BridgeSessionResponse
-          writeExtensionSession(data)
-        } else {
-          clearExtensionSession()
-        }
-      } catch {
-        // Network hiccup: leave any existing blob untouched.
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
+    void refreshExtensionSession()
   }, [])
 
   return null

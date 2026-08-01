@@ -9,6 +9,16 @@
 /** Shared key: the page's localStorage key AND the extension storage key. */
 export const STORED_SESSION_KEY = "atlas.session"
 
+/**
+ * Event the web app dispatches on `window` right after it writes the blob.
+ *
+ * A same-tab `localStorage` write fires no `storage` event, so without this the
+ * bridge would not notice a session change (e.g. a space created on the
+ * dashboard) until the tab next became visible — which opening the extension's
+ * popup does not do. Keep in sync with `frontend/src/lib/extension-session.ts`.
+ */
+export const SESSION_UPDATED_EVENT = "atlas:session-updated"
+
 export interface StoredSession {
   version: number
   access_token: string

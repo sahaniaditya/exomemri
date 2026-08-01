@@ -9,7 +9,7 @@ import { onMessage } from "../lib/messaging"
 import { parseStoredSession } from "../lib/session-blob"
 import { clearSession, writeSession } from "../lib/session-store"
 import { captureActiveTab } from "./capture"
-import { fetchSession, setActiveSpace } from "./session"
+import { fetchSession, listSpaces, setActiveSpace } from "./session"
 
 // Origins allowed to push a session into the extension. Keep in sync with the
 // bridge content script's `matches` (src/entrypoints/atlas-bridge.content.ts).
@@ -35,6 +35,7 @@ function isTrustedSender(sender: { origin?: string; url?: string }): boolean {
 
 export function bootBackground(): void {
   onMessage("getSession", () => fetchSession())
+  onMessage("listSpaces", () => listSpaces())
   onMessage("setActiveSpace", async ({ data }) => {
     await setActiveSpace(data)
     return { ok: true }

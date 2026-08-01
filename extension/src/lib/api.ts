@@ -9,6 +9,7 @@ import type {
   CaptureRequest,
   CaptureResponse,
   SessionResponse,
+  SpaceListResponse,
   UploadUrlRequest,
   UploadUrlResponse,
 } from "./contracts"
@@ -56,6 +57,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getSession: () => request<SessionResponse>("/v1/session"),
+
+  listSpaces: () => request<SpaceListResponse>("/v1/spaces"),
 
   setActiveSpace: (spaceId: string) =>
     request<void>("/v1/session/active", {

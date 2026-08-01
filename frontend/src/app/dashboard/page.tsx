@@ -2,9 +2,14 @@ import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 
 import { apiFetch } from '@/lib/api'
-import { getDashboardData } from '@/lib/dashboard-data'
+import {
+  getDashboardData,
+  toCapturedSource,
+  toLearningSpace,
+} from '@/lib/dashboard-data'
 import { atlasFontVars } from '@/lib/fonts'
 import { firstName, type Profile } from '@/lib/profile'
+import { listRecentSources, listSpaces } from '@/lib/spaces'
 
 import styles from '@/components/dashboard/dashboard.module.css'
 import AskBar from '@/components/dashboard/AskBar'
@@ -25,10 +30,7 @@ export const metadata: Metadata = {
   description: 'Your learning memory at a glance.',
 }
 
-async function loadProfile(): Promise<Profile | null> {
-  const token = (await cookies()).get('atlas_token')?.value
-  if (!token) return null
-
+async function loadProfile(token: string): Promise<Profile | null> {
   try {
     const res = await apiFetch('/v1/auth/me', {}, token)
     if (!res.ok) return null
@@ -40,15 +42,27 @@ async function loadProfile(): Promise<Profile | null> {
 }
 
 export default async function DashboardPage() {
-  // The layout already gated auth/onboarding; this is the profile for display.
-  const profile = await loadProfile()
-  const data = getDashboardData()
+  // The layout already gated auth/onboarding, so a token is expected here.
+  const token = (await cookies()).get('atlas_token')?.value ?? ''
+
+  const [profile, apiSpaces, recentSources] = await Promise.all([
+    loadProfile(token),
+    listSpaces(token),
+    listRecentSources(token),
+  ])
+
+  const spaces = apiSpaces.map(toLearningSpace)
+  const captures = recentSources.map(toCapturedSource)
+  const data = getDashboardData({
+    spaceCount: spaces.length,
+    sourceCount: apiSpaces.reduce((sum, space) => sum + space.source_counts.total, 0),
+  })
 
   return (
     <div className={`${styles.app} ${atlasFontVars}`}>
       <Sidebar
         profile={profile}
-        spaceCount={data.spaces.length}
+        spaceCount={spaces.length}
         reviewCount={data.review.total}
         totalSources={data.totalSources}
         plan={data.plan}
@@ -78,12 +92,12 @@ export default async function DashboardPage() {
             title="Your Learning Spaces"
             link={{ label: 'View all →', href: '/dashboard' }}
           />
-          <SpacesGrid spaces={data.spaces} />
+          <SpacesGrid spaces={spaces} />
 
           <div className={styles.cols}>
             <div>
               <Plate num="03" title="Recently captured" />
-              <CaptureFeed sources={data.captures} />
+              <CaptureFeed sources={captures} />
             </div>
 
             <div className={styles.rail}>

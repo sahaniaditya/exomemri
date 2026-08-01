@@ -15,6 +15,23 @@
 /** localStorage key. Mirrors the extension's `atlas.*` namespace. */
 export const EXTENSION_SESSION_KEY = "atlas.session"
 
+/**
+ * Dispatched on `window` after every write, so the extension's bridge content
+ * script re-reads immediately.
+ *
+ * Necessary because a same-tab `localStorage` write fires no `storage` event:
+ * without this, a space created on the dashboard would stay invisible to the
+ * extension until the tab next became visible, and opening the toolbar popup
+ * does not make the page visible again. Keep in sync with
+ * `extension/src/lib/session-blob.ts`.
+ */
+export const EXTENSION_SESSION_EVENT = "atlas:session-updated"
+
+function announce(): void {
+  if (typeof window === "undefined") return
+  window.dispatchEvent(new Event(EXTENSION_SESSION_EVENT))
+}
+
 /** Shape returned by GET /api/auth/bridge-session. */
 export interface BridgeSessionResponse {
   access_token: string
@@ -62,10 +79,32 @@ export function buildStoredSession(data: BridgeSessionResponse): StoredExtension
 export function writeExtensionSession(data: BridgeSessionResponse): void {
   if (typeof window === "undefined") return
   localStorage.setItem(EXTENSION_SESSION_KEY, JSON.stringify(buildStoredSession(data)))
+  announce()
 }
 
 /** Remove the session blob (call on logout / when signed out). */
 export function clearExtensionSession(): void {
   if (typeof window === "undefined") return
   localStorage.removeItem(EXTENSION_SESSION_KEY)
+  announce()
+}
+
+/**
+ * Re-fetch the session and mirror it for the extension.
+ *
+ * Call this after anything that changes what the extension should know — most
+ * importantly the active space, since that is what capture writes into. On 401
+ * the cached blob is cleared; a network hiccup leaves it untouched.
+ */
+export async function refreshExtensionSession(): Promise<void> {
+  try {
+    const res = await fetch("/api/auth/bridge-session")
+    if (res.ok) {
+      writeExtensionSession((await res.json()) as BridgeSessionResponse)
+    } else {
+      clearExtensionSession()
+    }
+  } catch {
+    // Leave any existing blob alone.
+  }
 }

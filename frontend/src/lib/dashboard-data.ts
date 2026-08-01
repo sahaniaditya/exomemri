@@ -1,12 +1,13 @@
 /**
  * Dashboard view model.
  *
- * The backend currently exposes only auth/profile and source *capture*
- * (`POST /v1/sources`) — there are no read endpoints for spaces, stats,
- * review queue or the activity timeline yet. Everything below is placeholder
- * data shaped like the eventual API response, so swapping in real fetches
- * later means replacing `getDashboardData()` and nothing else.
+ * Spaces and captured sources are real now (`GET /v1/spaces`, `GET /v1/sources`)
+ * and reach the page through the mappers at the bottom of this file. Stats, the
+ * review queue, study gaps and the activity timeline still have no read
+ * endpoints, so `getDashboardData()` remains placeholder data shaped like the
+ * eventual API response for those sections only.
  */
+import type { Source, Space, SourceType } from '@/lib/spaces'
 
 export type SourceKind = 'video' | 'pdf' | 'chat' | 'article' | 'note'
 
@@ -39,8 +40,10 @@ export interface StatCard {
 export interface LearningSpace {
   id: string
   name: string
+  slug: string
+  /** No coverage signal exists yet — real spaces report 0 until one does. */
   coverage: number
-  counts: { video: number; pdf: number; chat: number; note: number }
+  counts: { video: number; article: number; pdf: number; chat: number; note: number }
   lastActive: string
 }
 
@@ -72,11 +75,11 @@ export interface ActivityDay {
   isToday?: boolean
 }
 
+/** The sections still awaiting read endpoints. Spaces and captures come from
+ * the API via the mappers below, so they are deliberately absent here. */
 export interface DashboardData {
   resume: ResumeItem | null
   stats: StatCard[]
-  spaces: LearningSpace[]
-  captures: CapturedSource[]
   review: ReviewQueue
   gaps: StudyGap[]
   week: { days: ActivityDay[]; deltaLabel: string }
@@ -86,7 +89,13 @@ export interface DashboardData {
   extensionTabs: number
 }
 
-export function getDashboardData(): DashboardData {
+/** Real totals the caller already fetched, folded into the placeholder view. */
+export interface DashboardTotals {
+  spaceCount: number
+  sourceCount: number
+}
+
+export function getDashboardData(totals: DashboardTotals): DashboardData {
   return {
     resume: {
       spaceName: 'System Design',
@@ -98,94 +107,11 @@ export function getDashboardData(): DashboardData {
       unreadInSpace: 2,
     },
     stats: [
-      { value: '82', label: 'Sources captured', delta: '+7 this week', deltaPositive: true },
+      // Real. The other two still have no signal behind them.
+      { value: String(totals.sourceCount), label: 'Sources captured', delta: 'all time' },
       { value: '241', label: 'Concepts learned', delta: '+12 this week', deltaPositive: true },
-      { value: '6', label: 'Learning Spaces', delta: '2 active today' },
+      { value: String(totals.spaceCount), label: 'Learning Spaces', delta: 'all time' },
       { value: '68', unit: '%', label: 'Avg. coverage', delta: 'across all spaces' },
-    ],
-    spaces: [
-      {
-        id: 'system-design',
-        name: 'System Design',
-        coverage: 70,
-        counts: { video: 9, pdf: 3, chat: 5, note: 4 },
-        lastActive: 'active today',
-      },
-      {
-        id: 'distributed-databases',
-        name: 'Distributed Databases',
-        coverage: 54,
-        counts: { video: 6, pdf: 5, chat: 2, note: 1 },
-        lastActive: '2 days ago',
-      },
-      {
-        id: 'react-frontend',
-        name: 'React & Frontend',
-        coverage: 88,
-        counts: { video: 12, pdf: 1, chat: 8, note: 6 },
-        lastActive: '5 days ago',
-      },
-      {
-        id: 'machine-learning',
-        name: 'Machine Learning',
-        coverage: 41,
-        counts: { video: 8, pdf: 7, chat: 3, note: 2 },
-        lastActive: '1 week ago',
-      },
-      {
-        id: 'behavioral-prep',
-        name: 'Behavioral Prep',
-        coverage: 63,
-        counts: { video: 4, pdf: 2, chat: 6, note: 3 },
-        lastActive: '3 days ago',
-      },
-    ],
-    captures: [
-      {
-        id: 'c1',
-        title: 'Consistent Hashing Explained',
-        spaceName: 'System Design',
-        kind: 'video',
-        meta: 'YouTube · 14:22',
-        capturedAt: '2h ago',
-        status: 'summarized',
-      },
-      {
-        id: 'c2',
-        title: 'ChatGPT — load balancer trade-offs',
-        spaceName: 'System Design',
-        kind: 'chat',
-        meta: 'AI chat · 22 msgs',
-        capturedAt: '3h ago',
-        status: 'summarized',
-      },
-      {
-        id: 'c3',
-        title: 'Designing Data-Intensive Apps — ch. 6',
-        spaceName: 'Distributed Databases',
-        kind: 'pdf',
-        meta: 'PDF · p.184',
-        capturedAt: '5h ago',
-        status: 'summarizing',
-      },
-      {
-        id: 'c4',
-        title: 'The Log: What every engineer should know',
-        spaceName: 'Distributed Databases',
-        kind: 'article',
-        meta: 'Article · 18 min',
-        capturedAt: 'Yesterday',
-        status: 'summarized',
-      },
-      {
-        id: 'c5',
-        title: 'Kafka Internals Deep Dive',
-        spaceName: 'Distributed Databases',
-        kind: 'video',
-        meta: 'YouTube · 41:09',
-        capturedAt: 'Yesterday',
-        status: 'summarized',
-      },
     ],
     review: {
       total: 18,
@@ -228,8 +154,84 @@ export function getDashboardData(): DashboardData {
       deltaLabel: '↑ 23% vs last week',
     },
     streakDays: 12,
-    totalSources: 82,
+    totalSources: totals.sourceCount,
     plan: 'FREE',
     extensionTabs: 4,
+  }
+}
+
+// --- API → view model ---
+
+const SOURCE_KIND: Record<SourceType, SourceKind> = {
+  youtube: 'video',
+  article: 'article',
+  ai_chat: 'chat',
+  pdf: 'pdf',
+  note: 'note',
+}
+
+const SOURCE_LABEL: Record<SourceType, string> = {
+  youtube: 'YouTube',
+  article: 'Article',
+  ai_chat: 'AI chat',
+  pdf: 'PDF',
+  note: 'Note',
+}
+
+/** Coarse "2h ago" style label. Rendered on the server, so the reference point
+ * is request time — good enough for a feed, and no client/server drift since
+ * nothing re-renders it. */
+export function relativeTime(iso: string | null): string {
+  if (!iso) return 'never'
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return 'never'
+
+  const minutes = Math.max(0, Math.round((Date.now() - then) / 60_000))
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+
+  const days = Math.round(hours / 24)
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days} days ago`
+
+  const weeks = Math.round(days / 7)
+  return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`
+}
+
+export function toLearningSpace(space: Space): LearningSpace {
+  const counts = space.source_counts
+  return {
+    id: space.id,
+    name: space.name,
+    slug: space.slug,
+    coverage: 0,
+    counts: {
+      video: counts.youtube,
+      article: counts.article,
+      pdf: counts.pdf,
+      chat: counts.ai_chat,
+      note: counts.note,
+    },
+    lastActive: space.last_captured_at
+      ? relativeTime(space.last_captured_at)
+      : 'no captures yet',
+  }
+}
+
+export function toCapturedSource(source: Source): CapturedSource {
+  return {
+    id: source.id,
+    title: source.title,
+    spaceName: source.space_name ?? '—',
+    kind: SOURCE_KIND[source.type],
+    meta: source.author
+      ? `${SOURCE_LABEL[source.type]} · ${source.author}`
+      : SOURCE_LABEL[source.type],
+    capturedAt: relativeTime(source.captured_at),
+    // Nothing processes captures yet, so anything not `ready` is still in flight.
+    status: source.processing_status === 'ready' ? 'summarized' : 'summarizing',
   }
 }

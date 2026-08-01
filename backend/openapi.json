@@ -1,6 +1,25 @@
 {
   "components": {
     "schemas": {
+      "ArtifactUrlResponse": {
+        "description": "A short-lived signed GET URL for one artifact in the private bucket.",
+        "properties": {
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "expires_in"
+        ],
+        "title": "ArtifactUrlResponse",
+        "type": "object"
+      },
       "AuthUser": {
         "properties": {
           "email": {
@@ -133,6 +152,34 @@
           "processing_status"
         ],
         "title": "CaptureResponse",
+        "type": "object"
+      },
+      "CreateSpaceRequest": {
+        "description": "Payload for creating a Learning Space, e.g. ``{\"name\": \"Claude Code\"}``.",
+        "properties": {
+          "goal_text": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Text"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateSpaceRequest",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -285,6 +332,138 @@
         "title": "SetActiveSpaceRequest",
         "type": "object"
       },
+      "SourceCounts": {
+        "description": "Per-type capture counts for a space, as returned by the counts RPC.",
+        "properties": {
+          "ai_chat": {
+            "default": 0,
+            "title": "Ai Chat",
+            "type": "integer"
+          },
+          "article": {
+            "default": 0,
+            "title": "Article",
+            "type": "integer"
+          },
+          "note": {
+            "default": 0,
+            "title": "Note",
+            "type": "integer"
+          },
+          "pdf": {
+            "default": 0,
+            "title": "Pdf",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "youtube": {
+            "default": 0,
+            "title": "Youtube",
+            "type": "integer"
+          }
+        },
+        "title": "SourceCounts",
+        "type": "object"
+      },
+      "SourceListResponse": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceSummary"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sources"
+        ],
+        "title": "SourceListResponse",
+        "type": "object"
+      },
+      "SourceSummary": {
+        "description": "A captured source. ``storage_prefix`` is deliberately not exposed \u2014\nartifacts are reached through ``GET /v1/sources/{id}/artifact-url``.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "processing_status": {
+            "$ref": "#/components/schemas/ProcessingStatus"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          },
+          "space_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Space Name"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "space_id",
+          "type",
+          "title",
+          "processing_status"
+        ],
+        "title": "SourceSummary",
+        "type": "object"
+      },
       "SourceType": {
         "description": "The kind of artifact being captured.",
         "enum": [
@@ -298,7 +477,7 @@
         "type": "string"
       },
       "Space": {
-        "description": "A goal-scoped Learning Space.",
+        "description": "A goal-scoped Learning Space (the identity slice embedded in a session).",
         "properties": {
           "id": {
             "format": "uuid",
@@ -310,6 +489,17 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
           }
         },
         "required": [
@@ -317,6 +507,93 @@
           "name"
         ],
         "title": "Space",
+        "type": "object"
+      },
+      "SpaceListResponse": {
+        "properties": {
+          "spaces": {
+            "items": {
+              "$ref": "#/components/schemas/SpaceSummary"
+            },
+            "title": "Spaces",
+            "type": "array"
+          }
+        },
+        "required": [
+          "spaces"
+        ],
+        "title": "SpaceListResponse",
+        "type": "object"
+      },
+      "SpaceSummary": {
+        "description": "A space plus enough aggregate detail to render a dashboard tile.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "goal_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Text"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Captured At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "source_counts": {
+            "$ref": "#/components/schemas/SourceCounts",
+            "default": {
+              "ai_chat": 0,
+              "article": 0,
+              "note": 0,
+              "pdf": 0,
+              "total": 0,
+              "youtube": 0
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "title": "SpaceSummary",
         "type": "object"
       },
       "UploadUrlRequest": {
@@ -414,7 +691,7 @@
         "type": "object"
       },
       "User": {
-        "description": "The authenticated user (Phase 0: a fixed dev user).",
+        "description": "The authenticated user.",
         "properties": {
           "email": {
             "title": "Email",
@@ -905,6 +1182,59 @@
       }
     },
     "/v1/sources": {
+      "get": {
+        "description": "Recent captures across every space \u2014 the dashboard's capture feed.",
+        "operationId": "list_sources_v1_sources_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sources",
+        "tags": [
+          "sources"
+        ]
+      },
       "post": {
         "operationId": "capture_source_v1_sources_post",
         "parameters": [
@@ -1005,6 +1335,224 @@
         "summary": "Create Upload Url",
         "tags": [
           "sources"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/artifact-url": {
+      "get": {
+        "operationId": "get_artifact_url_v1_sources__source_id__artifact_url_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "default": "raw/meta.json",
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactUrlResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Artifact Url",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/spaces": {
+      "get": {
+        "operationId": "list_spaces_v1_spaces_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Spaces",
+        "tags": [
+          "spaces"
+        ]
+      },
+      "post": {
+        "operationId": "create_space_v1_spaces_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSpaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Space",
+        "tags": [
+          "spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/sources": {
+      "get": {
+        "operationId": "list_space_sources_v1_spaces__space_id__sources_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Space Sources",
+        "tags": [
+          "spaces"
         ]
       }
     }

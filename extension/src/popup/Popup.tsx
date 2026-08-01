@@ -9,7 +9,7 @@
  */
 import { useEffect, useState } from "react"
 
-import type { SessionResponse } from "../lib/contracts"
+import type { SessionResponse, SpaceSummary } from "../lib/contracts"
 import { sendMessage } from "../lib/messaging"
 import { ContourBg, Glyph, Wordmark } from "./Glyph"
 import { color, font } from "./theme"
@@ -18,9 +18,10 @@ type SaveStatus = "idle" | "saving" | "saved" | "error"
 
 export function Popup() {
   const [session, setSession] = useState<SessionResponse | null>(null)
-  const [spaceId, setSpaceId] = useState("")
+  const [spaces, setSpaces] = useState<SpaceSummary[] | null>(null)
   const [error, setError] = useState("")
   const [spaceSaved, setSpaceSaved] = useState(false)
+  const [switching, setSwitching] = useState(false)
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const [saveError, setSaveError] = useState("")
@@ -29,26 +30,40 @@ export function Popup() {
     try {
       const s = await sendMessage("getSession", undefined)
       setSession(s)
-      setSpaceId(s.active_space?.id ?? "")
       setError("")
     } catch {
       setError("Signed out — open atlas.ai to sign in.")
     }
   }
 
+  async function refreshSpaces() {
+    try {
+      setSpaces(await sendMessage("listSpaces", undefined))
+    } catch {
+      // Leave the picker in its loading state; the session error (if any)
+      // already explains a signed-out popup.
+      setSpaces(null)
+    }
+  }
+
   useEffect(() => {
     void refresh()
+    void refreshSpaces()
   }, [])
 
-  async function setActive() {
+  async function selectSpace(spaceId: string) {
+    if (!spaceId || spaceId === session?.active_space?.id) return
     setSpaceSaved(false)
+    setSwitching(true)
     try {
       await sendMessage("setActiveSpace", spaceId)
       await refresh()
       setSpaceSaved(true)
       setTimeout(() => setSpaceSaved(false), 1500)
     } catch {
-      setError("Couldn't set the space — reopen atlas.ai to refresh your session.")
+      setError("Couldn't switch space — reopen atlas.ai to refresh your session.")
+    } finally {
+      setSwitching(false)
     }
   }
 
@@ -152,26 +167,38 @@ export function Popup() {
             </div>
 
             <section style={styles.card}>
-              <label htmlFor="space-id" style={styles.label}>
-                Space id
+              <label htmlFor="space-picker" style={styles.label}>
+                {spaceSaved ? "Switched ✓" : "Capturing into"}
               </label>
-              <input
-                id="space-id"
-                value={spaceId}
-                onChange={(e) => setSpaceId(e.target.value)}
-                placeholder="paste a space id"
-                style={styles.input}
-                onFocus={(e) => (e.target.style.borderColor = color.green)}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(27,26,22,.16)")}
-              />
-              <button
-                onClick={setActive}
-                style={styles.secondary}
-                onMouseOver={(e) => (e.currentTarget.style.borderColor = "rgba(27,26,22,.38)")}
-                onMouseOut={(e) => (e.currentTarget.style.borderColor = color.lineStrong)}
-              >
-                {spaceSaved ? "Set ✓" : "Set active space"}
-              </button>
+
+              {spaces === null && <div style={styles.hint}>Loading spaces…</div>}
+
+              {spaces !== null && spaces.length === 0 && (
+                <div style={styles.hint}>
+                  No spaces yet — create one on atlas.ai to start capturing.
+                </div>
+              )}
+
+              {spaces !== null && spaces.length > 0 && (
+                <select
+                  id="space-picker"
+                  value={session.active_space?.id ?? ""}
+                  disabled={switching}
+                  onChange={(e) => void selectSpace(e.target.value)}
+                  style={styles.input}
+                  data-testid="atlas-space-picker"
+                  onFocus={(e) => (e.target.style.borderColor = color.green)}
+                  onBlur={(e) => (e.target.style.borderColor = "rgba(27,26,22,.16)")}
+                >
+                  {/* Only reachable when the session has no active space. */}
+                  {!session.active_space && <option value="">Choose a space…</option>}
+                  {spaces.map((space) => (
+                    <option key={space.id} value={space.id}>
+                      {space.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </section>
 
             <footer style={styles.footer}>{session.user.email}</footer>
@@ -256,21 +283,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     transition: "background .18s",
   },
-  secondary: {
-    marginTop: 10,
-    width: "100%",
-    padding: "9px 16px",
-    border: `1px solid ${color.lineStrong}`,
-    borderRadius: 4,
-    background: "#fff",
-    color: color.ink,
-    fontFamily: font.sans,
-    fontSize: 13.5,
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "border-color .15s",
-  },
-
   label: {
     display: "block",
     fontFamily: font.mono,
@@ -293,6 +305,7 @@ const styles: Record<string, React.CSSProperties> = {
     outline: "none",
     transition: "border-color .15s",
   },
+  hint: { fontSize: 13, lineHeight: 1.45, color: color.inkMuted },
 
   error: {
     fontFamily: font.mono,

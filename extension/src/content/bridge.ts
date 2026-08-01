@@ -7,12 +7,16 @@
  * live on a different origin and cannot read that localStorage directly — this
  * bridge is the crossing point.
  *
- * It relays on load, on cross-tab `storage` events (login/logout elsewhere),
- * and when the tab becomes visible again (covers same-tab writes the `storage`
- * event does not fire for).
+ * It relays on load, on the web app's own `atlas:session-updated` event
+ * (same-tab writes, which fire no `storage` event), on cross-tab `storage`
+ * events (login/logout elsewhere), and when the tab becomes visible again.
  */
 import { sendMessage } from "../lib/messaging"
-import { parseStoredSession, STORED_SESSION_KEY } from "../lib/session-blob"
+import {
+  parseStoredSession,
+  SESSION_UPDATED_EVENT,
+  STORED_SESSION_KEY,
+} from "../lib/session-blob"
 
 function readAndRelay(): void {
   const blob = parseStoredSession(window.localStorage.getItem(STORED_SESSION_KEY))
@@ -25,6 +29,11 @@ function readAndRelay(): void {
 
 export function runBridge(): void {
   readAndRelay()
+
+  // The web app announcing its own write, in this tab. The event carries no
+  // payload on purpose — we re-read and re-validate localStorage ourselves
+  // rather than trust anything the page hands us.
+  window.addEventListener(SESSION_UPDATED_EVENT, () => readAndRelay())
 
   // Login/logout in another tab of this origin (fires only in other tabs).
   window.addEventListener("storage", (e) => {

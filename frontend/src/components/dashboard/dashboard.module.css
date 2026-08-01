@@ -722,6 +722,124 @@
   color: var(--sage);
 }
 
+/* new-space dialog (native <dialog>, opened with showModal()) */
+.dialog {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--ink);
+  padding: 0;
+  width: min(440px, calc(100vw - 32px));
+  box-shadow: 0 40px 80px -40px rgba(27, 26, 22, 0.5);
+}
+
+.dialog::backdrop {
+  background: rgba(27, 26, 22, 0.42);
+}
+
+.dialogForm {
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dialogTitle {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 24px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.dialogSub {
+  font-size: 13.5px;
+  color: var(--muted);
+  margin: -8px 0 0;
+}
+
+.dialogLabel {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sage);
+  margin-bottom: -8px;
+}
+
+.dialogInput,
+.dialogTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px solid rgba(27, 26, 22, 0.16);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.dialogTextarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.dialogInput:focus,
+.dialogTextarea:focus {
+  border-color: var(--forest);
+}
+
+.dialogError {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--clay);
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.dialogCancel,
+.dialogSubmit {
+  padding: 9px 18px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s, border-color 0.16s;
+}
+
+.dialogCancel {
+  border: 1px solid rgba(27, 26, 22, 0.22);
+  background: transparent;
+  color: var(--ink);
+}
+
+.dialogCancel:hover {
+  border-color: rgba(27, 26, 22, 0.42);
+}
+
+.dialogSubmit {
+  border: none;
+  background: var(--forest);
+  color: var(--paper);
+}
+
+.dialogSubmit:hover:enabled {
+  background: #24503f;
+}
+
+.dialogSubmit:disabled {
+  background: rgba(44, 93, 79, 0.45);
+  cursor: not-allowed;
+}
+
 /* two-col */
 .cols {
   display: grid;

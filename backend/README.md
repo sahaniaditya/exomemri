@@ -41,13 +41,19 @@ venv/Scripts/uvicorn app.main:app --reload   # http://localhost:8000
 | GET | `/v1/auth/profile-status` | Whether onboarding/profile is complete |
 | GET | `/v1/auth/check-username` | Whether a username is already taken |
 | POST | `/v1/auth/profile` | Upsert the authenticated user's profile |
-| GET | `/v1/session` | Current user + active space |
-| POST | `/v1/session/active` | Set active space |
-| POST | `/v1/sources` | Capture a text source → raw artifact in Storage |
+| GET | `/v1/session` | Current user + active space (null until one exists) |
+| POST | `/v1/session/active` | Set active space (must be owned by the caller) |
+| POST | `/v1/spaces` | Create a Learning Space |
+| GET | `/v1/spaces` | The caller's spaces + per-type capture counts |
+| GET | `/v1/spaces/{space_id}/sources` | Sources captured into one space |
+| POST | `/v1/sources` | Capture a text source → raw artifact in Storage + row |
 | POST | `/v1/sources/upload-url` | Pre-signed upload for PDFs |
+| GET | `/v1/sources` | Recent captures across all spaces |
+| GET | `/v1/sources/{source_id}/artifact-url` | Short-lived signed GET for one artifact |
 
 All routes require `Authorization: Bearer <supabase-jwt>`. The active space is
-still backend-defaulted (`dev_space_name`) until a real spaces store lands.
+persisted as `profiles.active_space_id`, and every space-scoped request is
+authorized against `spaces.user_id` before any storage or table write.
 
 ## Deploy (Render)
 

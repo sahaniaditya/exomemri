@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
 from uuid import UUID
 
 from fastapi import Depends, Header
@@ -10,6 +9,7 @@ from fastapi import Depends, Header
 from app.config import Settings, get_settings
 from app.errors import AuthError
 from app.repositories.profile_repo import ProfileRepo
+from app.repositories.space_repo import SpaceRepo
 from app.repositories.storage_repo import StorageRepo, get_storage_repo
 from app.repositories.supabase_client import get_auth_client, get_service_client
 from app.schemas.auth import AuthUser
@@ -17,18 +17,32 @@ from app.schemas.common import User
 from app.services.auth_service import AuthService
 from app.services.capture_service import CaptureService
 from app.services.session_service import SessionService
+from app.services.space_service import SpaceService
 
 
-@lru_cache
-def get_session_service() -> SessionService:
-    return SessionService(get_settings())
+def get_space_repo() -> SpaceRepo:
+    return SpaceRepo(get_service_client())
+
+
+def get_space_service(
+    spaces: SpaceRepo = Depends(get_space_repo),
+) -> SpaceService:
+    return SpaceService(spaces)
+
+
+def get_session_service(
+    spaces: SpaceRepo = Depends(get_space_repo),
+    space_service: SpaceService = Depends(get_space_service),
+) -> SessionService:
+    return SessionService(spaces, space_service)
 
 
 def get_capture_service(
     settings: Settings = Depends(get_settings),
     storage: StorageRepo = Depends(get_storage_repo),
+    space_service: SpaceService = Depends(get_space_service),
 ) -> CaptureService:
-    return CaptureService(settings, storage)
+    return CaptureService(settings, storage, space_service)
 
 
 # --- Auth (real Supabase JWT) ---
