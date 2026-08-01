@@ -3,11 +3,16 @@
  *
  * Talks only to the background worker via typed messages. The background
  * captures the active tab's page; the popup just reflects status.
+ *
+ * Styling mirrors the web app's design system (see ./theme.ts) so the
+ * extension reads as the same product as atlas.ai.
  */
 import { useEffect, useState } from "react"
 
 import type { SessionResponse } from "../lib/contracts"
 import { sendMessage } from "../lib/messaging"
+import { ContourBg, Glyph, Wordmark } from "./Glyph"
+import { color, font } from "./theme"
 
 type SaveStatus = "idle" | "saving" | "saved" | "error"
 
@@ -60,81 +65,247 @@ export function Popup() {
     }
   }
 
+  const saveDisabled = saveStatus === "saving" || !session?.active_space
+
   return (
     <div style={styles.root}>
-      <h1 style={styles.h1}>Atlas</h1>
-      {error && <div style={styles.error}>{error}</div>}
-      {session && (
-        <>
-          <div style={styles.email}>{session.user.email}</div>
+      <ContourBg />
 
-          {/* Primary action: save the current tab into the active space. */}
-          <button
-            onClick={saveCurrentPage}
-            disabled={saveStatus === "saving" || !session.active_space}
-            style={{ ...styles.primary, ...(saveStatus === "saved" ? styles.primarySaved : {}) }}
-            data-testid="atlas-save"
-          >
-            {saveStatus === "idle" && "Save this page"}
-            {saveStatus === "saving" && "Saving…"}
-            {saveStatus === "saved" && "Saved ✓"}
-            {saveStatus === "error" && "Retry"}
-          </button>
-          <div style={styles.saveTo}>
-            into <strong>{session.active_space?.name ?? "no space"}</strong>
-          </div>
-          {saveStatus === "error" && (
-            <div style={styles.error} data-testid="atlas-error">
-              {saveError}
+      <div style={styles.content}>
+        {/* Brand row — the exact mark and wordmark from the web app. */}
+        <header style={styles.brand}>
+          <Glyph size={22} />
+          <Wordmark size={17} />
+          <span style={styles.spacer} />
+          <span style={styles.status}>
+            <span
+              style={{
+                ...styles.dot,
+                background: session ? color.green : color.clay,
+              }}
+            />
+            {session ? "Connected" : "Signed out"}
+          </span>
+        </header>
+
+        {error && <div style={styles.error}>{error}</div>}
+
+        {session && (
+          <>
+            {/* Plate label — the numbered mono eyebrow used across atlas.ai. */}
+            <div style={styles.plate}>
+              <span style={styles.plateNum}>01</span>
+              <span style={styles.plateLabel}>Capture</span>
+              <span style={styles.rule} />
             </div>
-          )}
 
-          <hr style={styles.hr} />
+            <section style={styles.card}>
+              <h1 style={styles.h1}>Save this page.</h1>
+              <p style={styles.sub}>
+                Into <strong style={styles.strong}>{session.active_space?.name ?? "no space"}</strong>
+              </p>
 
-          <label style={styles.label}>Space id</label>
-          <input
-            value={spaceId}
-            onChange={(e) => setSpaceId(e.target.value)}
-            style={styles.input}
-          />
-          <button onClick={setActive} style={styles.secondary}>
-            {spaceSaved ? "Set ✓" : "Set active space"}
-          </button>
-        </>
-      )}
+              {/* Primary action: save the current tab into the active space. */}
+              <button
+                onClick={saveCurrentPage}
+                disabled={saveDisabled}
+                style={{
+                  ...styles.primary,
+                  background:
+                    saveStatus === "saved"
+                      ? color.greenDeep
+                      : saveDisabled
+                        ? color.greenSoft
+                        : color.green,
+                  cursor: saveDisabled ? "not-allowed" : "pointer",
+                }}
+                onMouseOver={(e) => {
+                  if (!saveDisabled) e.currentTarget.style.background = color.greenDeep
+                }}
+                onMouseOut={(e) => {
+                  if (!saveDisabled && saveStatus !== "saved")
+                    e.currentTarget.style.background = color.green
+                }}
+                data-testid="atlas-save"
+              >
+                {saveStatus === "idle" && (
+                  <>
+                    Save this page <span aria-hidden="true">→</span>
+                  </>
+                )}
+                {saveStatus === "saving" && "Saving…"}
+                {saveStatus === "saved" && "Saved ✓"}
+                {saveStatus === "error" && "Retry"}
+              </button>
+
+              {saveStatus === "error" && (
+                <div style={styles.error} data-testid="atlas-error">
+                  {saveError}
+                </div>
+              )}
+            </section>
+
+            <div style={styles.plate}>
+              <span style={styles.plateNum}>02</span>
+              <span style={styles.plateLabel}>Active space</span>
+              <span style={styles.rule} />
+            </div>
+
+            <section style={styles.card}>
+              <label htmlFor="space-id" style={styles.label}>
+                Space id
+              </label>
+              <input
+                id="space-id"
+                value={spaceId}
+                onChange={(e) => setSpaceId(e.target.value)}
+                placeholder="paste a space id"
+                style={styles.input}
+                onFocus={(e) => (e.target.style.borderColor = color.green)}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(27,26,22,.16)")}
+              />
+              <button
+                onClick={setActive}
+                style={styles.secondary}
+                onMouseOver={(e) => (e.currentTarget.style.borderColor = "rgba(27,26,22,.38)")}
+                onMouseOut={(e) => (e.currentTarget.style.borderColor = color.lineStrong)}
+              >
+                {spaceSaved ? "Set ✓" : "Set active space"}
+              </button>
+            </section>
+
+            <footer style={styles.footer}>{session.user.email}</footer>
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  root: { width: 280, padding: 16, fontFamily: "system-ui, sans-serif", fontSize: 14 },
-  h1: { fontSize: 16, margin: "0 0 12px" },
-  email: { color: "#6b7280", fontSize: 12, marginBottom: 12 },
-  saveTo: { fontSize: 12, color: "#6b7280", textAlign: "center", marginTop: 6 },
-  error: { color: "#b91c1c", fontSize: 12, marginTop: 8 },
-  hr: { border: "none", borderTop: "1px solid #e5e7eb", margin: "16px 0 12px" },
-  label: { display: "block", fontSize: 12, color: "#6b7280" },
-  input: { width: "100%", padding: 6, boxSizing: "border-box", marginTop: 4 },
+  root: {
+    position: "relative",
+    width: 330,
+    background: color.paper,
+    color: color.ink,
+    fontFamily: font.sans,
+    fontSize: 14,
+    overflow: "hidden",
+    WebkitFontSmoothing: "antialiased",
+  },
+  content: { position: "relative", zIndex: 1, padding: "16px 18px 14px" },
+
+  brand: { display: "flex", alignItems: "center", gap: 9, marginBottom: 18 },
+  spacer: { flex: 1 },
+  status: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    color: color.sage,
+  },
+  dot: { width: 6, height: 6, borderRadius: "50%", display: "inline-block" },
+
+  plate: { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 },
+  plateNum: { fontFamily: font.mono, fontSize: 11, fontWeight: 500, color: color.green },
+  plateLabel: {
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: color.sage,
+  },
+  rule: { height: 1, flex: 1, background: "rgba(27,26,22,.14)" },
+
+  card: {
+    background: color.surface,
+    border: `1px solid ${color.line}`,
+    borderRadius: 8,
+    boxShadow: "0 1px 0 rgba(27,26,22,.04), 0 18px 40px -28px rgba(27,26,22,.22)",
+    padding: 16,
+    marginBottom: 18,
+  },
+
+  h1: {
+    fontFamily: font.serif,
+    fontSize: 22,
+    fontWeight: 400,
+    letterSpacing: "-0.02em",
+    lineHeight: 1.15,
+    color: color.ink,
+    margin: "0 0 4px",
+  },
+  sub: { fontSize: 13, color: color.inkMuted, margin: "0 0 14px" },
+  strong: { color: color.ink, fontWeight: 600 },
+
   primary: {
     width: "100%",
-    padding: "10px 0",
+    padding: "11px 16px",
     border: "none",
-    borderRadius: 8,
-    background: "#4f46e5",
-    color: "#fff",
-    fontWeight: 700,
-    cursor: "pointer",
+    borderRadius: 4,
+    color: color.paper,
+    fontFamily: font.sans,
+    fontSize: 14.5,
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    transition: "background .18s",
   },
-  primarySaved: { background: "#16a34a" },
   secondary: {
-    marginTop: 8,
+    marginTop: 10,
     width: "100%",
-    padding: "8px 0",
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
+    padding: "9px 16px",
+    border: `1px solid ${color.lineStrong}`,
+    borderRadius: 4,
     background: "#fff",
-    color: "#111827",
+    color: color.ink,
+    fontFamily: font.sans,
+    fontSize: 13.5,
     fontWeight: 600,
     cursor: "pointer",
+    transition: "border-color .15s",
+  },
+
+  label: {
+    display: "block",
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    color: color.sage,
+    marginBottom: 6,
+  },
+  input: {
+    width: "100%",
+    padding: "9px 12px",
+    boxSizing: "border-box",
+    background: color.paper,
+    border: "1px solid rgba(27,26,22,.16)",
+    borderRadius: 4,
+    fontFamily: font.sans,
+    fontSize: 13.5,
+    color: color.ink,
+    outline: "none",
+    transition: "border-color .15s",
+  },
+
+  error: {
+    fontFamily: font.mono,
+    fontSize: 11.5,
+    lineHeight: 1.45,
+    color: color.clay,
+    marginTop: 10,
+  },
+  footer: {
+    fontFamily: font.mono,
+    fontSize: 10,
+    letterSpacing: "0.06em",
+    color: color.sageLight,
+    textAlign: "center",
   },
 }
