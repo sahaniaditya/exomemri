@@ -8,7 +8,7 @@
  */
 import { defineExtensionMessaging } from "@webext-core/messaging"
 
-import type { ExtractedCapture, SessionResponse } from "./contracts"
+import type { ExtractedCapture, SessionResponse, SpaceSummary } from "./contracts"
 import type { StoredSession } from "./session-blob"
 
 /** Input for a PDF capture: the background fetches + PUTs the bytes itself. */
@@ -25,6 +25,8 @@ export type CaptureResult =
 export interface ProtocolMap {
   /** Current session (user + active space). */
   getSession(): SessionResponse
+  /** The user's learning spaces, for the popup's space picker. */
+  listSpaces(): SpaceSummary[]
   /** Set the active learning space (from the popup). */
   setActiveSpace(spaceId: string): { ok: boolean }
   /** Extract the current page — handled by the content script in a tab. */

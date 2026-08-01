@@ -1,0 +1,152 @@
+"""Data access for the ``spaces`` and ``sources`` tables.
+
+Uses the service-role client, which bypasses RLS — so every read and write here
+carries an explicit ``user_id`` filter. That filter is the authorization
+boundary for Learning Spaces; nothing above this layer may query without it.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from supabase import Client
+
+logger = logging.getLogger(__name__)
+
+
+class SpaceRepo:
+    def __init__(self, client: Client) -> None:
+        self._client = client
+
+    # --- spaces ---
+
+    def create_space(
+        self, *, user_id: str, name: str, slug: str, goal_text: str | None
+    ) -> dict:
+        """Insert a space and return the created row."""
+        res = (
+            self._client.table("spaces")
+            .insert(
+                {
+                    "user_id": user_id,
+                    "name": name,
+                    "slug": slug,
+                    "goal_text": goal_text,
+                }
+            )
+            .execute()
+        )
+        return res.data[0]
+
+    def list_spaces(self, user_id: str) -> list[dict]:
+        """Spaces plus per-type source counts, newest activity first."""
+        res = self._client.rpc(
+            "list_spaces_with_counts", {"target_user": user_id}
+        ).execute()
+        return res.data or []
+
+    def get_space(self, *, user_id: str, space_id: str) -> dict | None:
+        """Return the space only if it belongs to ``user_id`` (authorization)."""
+        res = (
+            self._client.table("spaces")
+            .select("*")
+            .eq("id", space_id)
+            .eq("user_id", user_id)
+            .maybe_single()
+            .execute()
+        )
+        return res.data if res else None
+
+    def slug_exists(self, *, user_id: str, slug: str) -> bool:
+        res = (
+            self._client.table("spaces")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("slug", slug)
+            .limit(1)
+            .execute()
+        )
+        return bool(res.data)
+
+    def count_spaces(self, user_id: str) -> int:
+        res = (
+            self._client.table("spaces")
+            .select("id")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        return len(res.data or [])
+
+    # --- active space (a column on profiles) ---
+
+    def get_active_space_id(self, user_id: str) -> str | None:
+        res = (
+            self._client.table("profiles")
+            .select("active_space_id")
+            .eq("id", user_id)
+            .maybe_single()
+            .execute()
+        )
+        return (res.data or {}).get("active_space_id") if res else None
+
+    def set_active_space(self, *, user_id: str, space_id: str | None) -> None:
+        (
+            self._client.table("profiles")
+            .update({"active_space_id": space_id})
+            .eq("id", user_id)
+            .execute()
+        )
+
+    # --- sources ---
+
+    def upsert_source(self, row: dict) -> dict:
+        """Insert a source, or update it when the same content lands twice.
+
+        Conflict target is the ``(space_id, content_hash)`` unique index, so a
+        re-capture of the same page into the same space refreshes the existing
+        row instead of duplicating it.
+        """
+        res = (
+            self._client.table("sources")
+            .upsert(row, on_conflict="space_id,content_hash")
+            .execute()
+        )
+        return res.data[0]
+
+    def get_source_by_hash(self, *, space_id: str, content_hash: str) -> dict | None:
+        """Existing capture of the same content in the same space, if any."""
+        res = (
+            self._client.table("sources")
+            .select("*")
+            .eq("space_id", space_id)
+            .eq("content_hash", content_hash)
+            .maybe_single()
+            .execute()
+        )
+        return res.data if res else None
+
+    def list_sources(
+        self, *, user_id: str, space_id: str | None = None, limit: int = 20
+    ) -> list[dict]:
+        """Recent sources for the user, optionally scoped to one space."""
+        query = (
+            self._client.table("sources")
+            .select("*, spaces(name, slug)")
+            .eq("user_id", user_id)
+        )
+        if space_id is not None:
+            query = query.eq("space_id", space_id)
+        res = query.order("captured_at", desc=True).limit(limit).execute()
+        return res.data or []
+
+    def get_source(self, *, user_id: str, source_id: str) -> dict | None:
+        """Return the source only if it belongs to ``user_id`` (authorization)."""
+        res = (
+            self._client.table("sources")
+            .select("*")
+            .eq("id", source_id)
+            .eq("user_id", user_id)
+            .maybe_single()
+            .execute()
+        )
+        return res.data if res else None

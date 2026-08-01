@@ -10,12 +10,13 @@ export default defineConfig({
   manifest: {
     name: "Atlas",
     description: "Capture what you learn online into a Learning Space.",
-    // Single source icon (public/icon.png) reused for each size; Chrome scales.
+    // The Atlas mark (public/icon.svg — identical to the web app's glyph),
+    // rasterized per size so Chrome never has to downscale a 128px source.
     icons: {
-      16: "/icon.png",
-      32: "/icon.png",
-      48: "/icon.png",
-      128: "/icon.png",
+      16: "/icon-16.png",
+      32: "/icon-32.png",
+      48: "/icon-48.png",
+      128: "/icon-128.png",
     },
     permissions: ["storage", "activeTab", "scripting"],
     host_permissions: [

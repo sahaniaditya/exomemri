@@ -55,6 +55,25 @@ class StorageRepo:
     async def upload_text(self, path: str, text: str, content_type: str) -> None:
         await self.upload(path, text.encode("utf-8"), content_type)
 
+    async def create_signed_url(self, path: str, expires_in: int) -> str:
+        """Create a short-lived signed GET URL for reading a private object."""
+
+        def _do() -> dict:
+            return self._bucket.create_signed_url(path, expires_in)
+
+        try:
+            result = await anyio.to_thread.run_sync(_do)
+        except Exception as exc:  # noqa: BLE001 - normalize SDK errors
+            logger.error("signed_url_failed", extra={"path": path})
+            raise StorageError("Failed to create signed URL") from exc
+
+        # storage3 returns signedURL/signedUrl/signed_url depending on version.
+        url = result.get("signedURL") or result.get("signedUrl") or result.get("signed_url")
+        if not url:
+            logger.error("signed_url_missing", extra={"path": path})
+            raise StorageError("Failed to create signed URL")
+        return url
+
     async def create_signed_upload_url(self, path: str) -> dict:
         """Create a single-use tokenized upload URL for a client-side PUT.
 

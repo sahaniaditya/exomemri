@@ -7,10 +7,15 @@ import json
 
 from fastapi.testclient import TestClient
 
-from app.tests.conftest import FakeStorage
+from app.tests.conftest import (
+    OTHER_USER_SPACE_ID,
+    SEEDED_SPACE_ID,
+    FakeSpaceRepo,
+    FakeStorage,
+)
 
 DEV_USER = "00000000-0000-0000-0000-0000000000a1"
-SPACE = "00000000-0000-0000-0000-0000000000b1"
+SPACE = SEEDED_SPACE_ID
 
 
 def _key(source_id: str, leaf: str) -> str:
@@ -102,3 +107,69 @@ def test_capture_rejects_missing_title(client: TestClient) -> None:
         json={"space_id": SPACE, "type": "article", "content": "x"},
     )
     assert resp.status_code == 422
+
+
+def test_capture_records_a_source_row(
+    client: TestClient, storage: FakeStorage, space_repo: FakeSpaceRepo
+) -> None:
+    resp = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/post",
+            "title": "Post",
+            "content": "cleaned article text",
+        },
+    )
+    source_id = resp.json()["source_id"]
+
+    row = space_repo.sources[source_id]
+    assert row["space_id"] == SPACE
+    assert row["user_id"] == DEV_USER
+    assert row["type"] == "article"
+    assert row["processing_status"] == "queued"
+    # The prefix embeds the row id, so the artifacts are reachable from the row.
+    assert row["storage_prefix"] == f"users/{DEV_USER}/spaces/{SPACE}/sources/{source_id}"
+    assert _key(source_id, "raw/extracted.txt") in storage.uploads
+
+
+def test_capture_into_an_unowned_space_writes_nothing(
+    client: TestClient, storage: FakeStorage, space_repo: FakeSpaceRepo
+) -> None:
+    resp = client.post(
+        "/v1/sources",
+        json={
+            "space_id": OTHER_USER_SPACE_ID,
+            "type": "article",
+            "url": "https://example.com/post",
+            "title": "Post",
+            "content": "text",
+        },
+    )
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "not_found"
+    # Authorization happens before any write, so neither storage nor Postgres
+    # was touched.
+    assert storage.uploads == {}
+    assert space_repo.sources == {}
+
+
+def test_recapturing_the_same_page_updates_one_row(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    payload = {
+        "space_id": SPACE,
+        "type": "article",
+        "url": "https://example.com/post",
+        "title": "Post",
+        "content": "cleaned article text",
+    }
+    first = client.post("/v1/sources", json=payload).json()["source_id"]
+    second = client.post("/v1/sources", json={**payload, "title": "Post (v2)"}).json()[
+        "source_id"
+    ]
+
+    assert second == first
+    assert len(space_repo.sources) == 1
+    assert space_repo.sources[first]["title"] == "Post (v2)"

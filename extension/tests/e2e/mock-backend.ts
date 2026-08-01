@@ -51,7 +51,34 @@ export function startMockBackend(port = 8000): Promise<MockBackend> {
       if (url === "/v1/session") {
         json(200, {
           user: { id: "00000000-0000-0000-0000-0000000000a1", email: "aditya@kimaru.ai" },
-          active_space: { id: "00000000-0000-0000-0000-0000000000b1", name: "System Design" },
+          active_space: {
+            id: "00000000-0000-0000-0000-0000000000b1",
+            name: "System Design",
+            slug: "system-design",
+          },
+        })
+        return
+      }
+      if (url === "/v1/spaces") {
+        json(200, {
+          spaces: [
+            {
+              id: "00000000-0000-0000-0000-0000000000b1",
+              name: "System Design",
+              slug: "system-design",
+              goal_text: null,
+              created_at: "2026-07-01T00:00:00+00:00",
+              last_captured_at: null,
+              source_counts: {
+                youtube: 0,
+                article: 0,
+                ai_chat: 0,
+                pdf: 0,
+                note: 0,
+                total: 0,
+              },
+            },
+          ],
         })
         return
       }

@@ -37,17 +37,18 @@ class ProcessingStatus(StrEnum):
 
 
 class User(BaseModel):
-    """The authenticated user (Phase 0: a fixed dev user)."""
+    """The authenticated user."""
 
     id: UUID
     email: str
 
 
 class Space(BaseModel):
-    """A goal-scoped Learning Space."""
+    """A goal-scoped Learning Space (the identity slice embedded in a session)."""
 
     id: UUID
     name: str = Field(min_length=1, max_length=200)
+    slug: str | None = None
 
 
 class ErrorDetail(BaseModel):

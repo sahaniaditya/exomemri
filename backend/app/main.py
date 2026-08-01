@@ -11,6 +11,7 @@ from app.logging import RequestIdMiddleware, configure_logging
 from app.routers import auth as auth_router
 from app.routers import session as session_router
 from app.routers import sources as sources_router
+from app.routers import spaces as spaces_router
 
 API_PREFIX = "/v1"
 
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router.router, prefix=API_PREFIX)
     app.include_router(session_router.router, prefix=API_PREFIX)
+    app.include_router(spaces_router.router, prefix=API_PREFIX)
     app.include_router(sources_router.router, prefix=API_PREFIX)
 
     @app.get("/health", tags=["meta"])
