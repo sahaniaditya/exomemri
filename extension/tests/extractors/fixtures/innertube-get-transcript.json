@@ -1,0 +1,64 @@
+{
+  "_fixture_note": "SYNTHETIC. Hand-authored from the documented shape of POST /youtubei/v1/get_transcript, not captured from YouTube. It proves the parser handles the shape we believe in, not the shape YouTube actually sends. Replace with a real DevTools capture (trimmed to a few segments) and date it. Authored 2026-08-02.",
+  "responseContext": { "visitorData": "REDACTED" },
+  "actions": [
+    {
+      "clickTrackingParams": "REDACTED",
+      "updateEngagementPanelAction": {
+        "targetId": "engagement-panel-searchable-transcript",
+        "content": {
+          "transcriptRenderer": {
+            "content": {
+              "transcriptSearchPanelRenderer": {
+                "body": {
+                  "transcriptSegmentListRenderer": {
+                    "initialSegments": [
+                      {
+                        "transcriptSectionHeaderRenderer": {
+                          "startMs": "0",
+                          "snippet": { "runs": [{ "text": "Introduction" }] }
+                        }
+                      },
+                      {
+                        "transcriptSegmentRenderer": {
+                          "startMs": "0",
+                          "endMs": "4200",
+                          "snippet": { "runs": [{ "text": "Welcome to this talk on " }, { "text": "consistent hashing." }] },
+                          "startTimeText": { "simpleText": "0:00" }
+                        }
+                      },
+                      {
+                        "transcriptSegmentRenderer": {
+                          "startMs": "65000",
+                          "endMs": "69000",
+                          "snippet": { "simpleText": "The   ring   is  the  key idea." },
+                          "startTimeText": { "simpleText": "1:05" }
+                        }
+                      },
+                      {
+                        "transcriptSegmentRenderer": {
+                          "startMs": "70000",
+                          "endMs": "71000",
+                          "snippet": { "runs": [{ "text": "   " }] },
+                          "startTimeText": { "simpleText": "1:10" }
+                        }
+                      },
+                      {
+                        "transcriptSegmentRenderer": {
+                          "startMs": "3723000",
+                          "endMs": "3728000",
+                          "snippet": { "runs": [{ "text": "Thanks for watching." }] },
+                          "startTimeText": { "simpleText": "1:02:03" }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
