@@ -167,7 +167,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Sources
+         * @description Recent captures across every space — the dashboard's capture feed.
+         */
+        get: operations["list_sources_v1_sources_get"];
         put?: never;
         /** Capture Source */
         post: operations["capture_source_v1_sources_post"];
@@ -194,10 +198,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sources/{source_id}/artifact-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Artifact Url */
+        get: operations["get_artifact_url_v1_sources__source_id__artifact_url_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Spaces */
+        get: operations["list_spaces_v1_spaces_get"];
+        put?: never;
+        /** Create Space */
+        post: operations["create_space_v1_spaces_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Space Sources */
+        get: operations["list_space_sources_v1_spaces__space_id__sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ArtifactUrlResponse
+         * @description A short-lived signed GET URL for one artifact in the private bucket.
+         */
+        ArtifactUrlResponse: {
+            /** Expires In */
+            expires_in: number;
+            /** Url */
+            url: string;
+        };
         /** AuthUser */
         AuthUser: {
             /** Email */
@@ -248,6 +314,16 @@ export interface components {
              * Format: uuid
              */
             source_id: string;
+        };
+        /**
+         * CreateSpaceRequest
+         * @description Payload for creating a Learning Space, e.g. ``{"name": "Claude Code"}``.
+         */
+        CreateSpaceRequest: {
+            /** Goal Text */
+            goal_text?: string | null;
+            /** Name */
+            name: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -315,6 +391,76 @@ export interface components {
             space_id: string;
         };
         /**
+         * SourceCounts
+         * @description Per-type capture counts for a space, as returned by the counts RPC.
+         */
+        SourceCounts: {
+            /**
+             * Ai Chat
+             * @default 0
+             */
+            ai_chat: number;
+            /**
+             * Article
+             * @default 0
+             */
+            article: number;
+            /**
+             * Note
+             * @default 0
+             */
+            note: number;
+            /**
+             * Pdf
+             * @default 0
+             */
+            pdf: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+            /**
+             * Youtube
+             * @default 0
+             */
+            youtube: number;
+        };
+        /** SourceListResponse */
+        SourceListResponse: {
+            /** Sources */
+            sources: components["schemas"]["SourceSummary"][];
+        };
+        /**
+         * SourceSummary
+         * @description A captured source. ``storage_prefix`` is deliberately not exposed —
+         *     artifacts are reached through ``GET /v1/sources/{id}/artifact-url``.
+         */
+        SourceSummary: {
+            /** Author */
+            author?: string | null;
+            /** Captured At */
+            captured_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            processing_status: components["schemas"]["ProcessingStatus"];
+            /**
+             * Space Id
+             * Format: uuid
+             */
+            space_id: string;
+            /** Space Name */
+            space_name?: string | null;
+            /** Title */
+            title: string;
+            type: components["schemas"]["SourceType"];
+            /** Url */
+            url?: string | null;
+        };
+        /**
          * SourceType
          * @description The kind of artifact being captured.
          * @enum {string}
@@ -322,7 +468,7 @@ export interface components {
         SourceType: "youtube" | "article" | "ai_chat" | "pdf" | "note";
         /**
          * Space
-         * @description A goal-scoped Learning Space.
+         * @description A goal-scoped Learning Space (the identity slice embedded in a session).
          */
         Space: {
             /**
@@ -332,6 +478,45 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** Slug */
+            slug?: string | null;
+        };
+        /** SpaceListResponse */
+        SpaceListResponse: {
+            /** Spaces */
+            spaces: components["schemas"]["SpaceSummary"][];
+        };
+        /**
+         * SpaceSummary
+         * @description A space plus enough aggregate detail to render a dashboard tile.
+         */
+        SpaceSummary: {
+            /** Created At */
+            created_at?: string | null;
+            /** Goal Text */
+            goal_text?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Captured At */
+            last_captured_at?: string | null;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /**
+             * @default {
+             *       "ai_chat": 0,
+             *       "article": 0,
+             *       "note": 0,
+             *       "pdf": 0,
+             *       "total": 0,
+             *       "youtube": 0
+             *     }
+             */
+            source_counts: components["schemas"]["SourceCounts"];
         };
         /**
          * UploadUrlRequest
@@ -376,7 +561,7 @@ export interface components {
         };
         /**
          * User
-         * @description The authenticated user (Phase 0: a fixed dev user).
+         * @description The authenticated user.
          */
         User: {
             /** Email */
@@ -649,7 +834,9 @@ export interface operations {
     get_session_v1_session_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -664,12 +851,23 @@ export interface operations {
                     "application/json": components["schemas"]["SessionResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     set_active_space_v1_session_active_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -697,10 +895,45 @@ export interface operations {
             };
         };
     };
+    list_sources_v1_sources_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     capture_source_v1_sources_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -733,7 +966,9 @@ export interface operations {
     create_upload_url_v1_sources_upload_url_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -750,6 +985,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UploadUrlResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_artifact_url_v1_sources__source_id__artifact_url_get: {
+        parameters: {
+            query?: {
+                key?: string;
+            };
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactUrlResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_spaces_v1_spaces_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpaceListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_space_v1_spaces_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSpaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpaceSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_space_sources_v1_spaces__space_id__sources_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceListResponse"];
                 };
             };
             /** @description Validation Error */

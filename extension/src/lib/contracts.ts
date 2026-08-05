@@ -13,6 +13,8 @@ export type UploadUrlResponse = components["schemas"]["UploadUrlResponse"]
 export type SessionResponse = components["schemas"]["SessionResponse"]
 export type SetActiveSpaceRequest = components["schemas"]["SetActiveSpaceRequest"]
 export type Space = components["schemas"]["Space"]
+export type SpaceSummary = components["schemas"]["SpaceSummary"]
+export type SpaceListResponse = components["schemas"]["SpaceListResponse"]
 export type User = components["schemas"]["User"]
 export type SourceType = components["schemas"]["SourceType"]
 

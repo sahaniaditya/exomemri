@@ -1,125 +1,118 @@
-'use client'
+import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { apiFetch } from '@/lib/api'
+import {
+  getDashboardData,
+  toCapturedSource,
+  toLearningSpace,
+} from '@/lib/dashboard-data'
+import { atlasFontVars } from '@/lib/fonts'
+import { firstName, type Profile } from '@/lib/profile'
+import { listRecentSources, listSpaces } from '@/lib/spaces'
 
-import { apiFetch } from "@/lib/api"
+import styles from '@/components/dashboard/dashboard.module.css'
+import AskBar from '@/components/dashboard/AskBar'
+import CaptureFeed from '@/components/dashboard/CaptureFeed'
+import ContourBg from '@/components/dashboard/ContourBg'
+import GapsCard from '@/components/dashboard/GapsCard'
+import Plate from '@/components/dashboard/Plate'
+import ResumeCard from '@/components/dashboard/ResumeCard'
+import ReviewCard from '@/components/dashboard/ReviewCard'
+import Sidebar from '@/components/dashboard/Sidebar'
+import SpacesGrid from '@/components/dashboard/SpacesGrid'
+import StatsRow from '@/components/dashboard/StatsRow'
+import TopBar from '@/components/dashboard/TopBar'
+import WeekTimeline from '@/components/dashboard/WeekTimeline'
 
-interface Profile {
-  full_name: string
-  username: string
-  primary_role: string
-  domain_of_focus: string
+export const metadata: Metadata = {
+  title: 'Overview · Atlas',
+  description: 'Your learning memory at a glance.',
 }
 
-export default function DashboardPage() {
-  const router = useRouter()
- 
-  
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
-
-useEffect(() => {
-  let isMounted = true;
-  const loadProfile = async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      if (res.ok) {
-        const data = await res.json();
-        if (isMounted) setProfile(data);
-      } else {
-        console.error("Failed to load profile details");
-      }
-    } catch (error) {
-      console.error("Failed to load profile details:", error);
-    } finally {
-      if (isMounted) setLoading(false);
-    }
-  };
-  loadProfile();
-  return () => { isMounted = false; };
-}, []);
-
-const handleLogout = async () => {
+async function loadProfile(token: string): Promise<Profile | null> {
   try {
-    // Our route reads the httpOnly cookie server-side, tells FastAPI to
-    // destroy the session, and clears both cookies — none of which
-    // client JS can actually do for httpOnly cookies on its own.
-    await fetch("/api/auth/logout", { method: "POST" })
+    const res = await apiFetch('/v1/auth/me', {}, token)
+    if (!res.ok) return null
+    return (await res.json()) as Profile
   } catch (error) {
-    console.error("Logout failed:", error)
-  } finally {
-    
-    router.push('/login')
+    console.error('Failed to load profile details:', error)
+    return null
   }
 }
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-        <div className="text-sm font-medium text-gray-500 animate-pulse">
-          Loading Atlas Workspace...
-        </div>
-      </div>
-    )
-  }
+
+export default async function DashboardPage() {
+  // The layout already gated auth/onboarding, so a token is expected here.
+  const token = (await cookies()).get('atlas_token')?.value ?? ''
+
+  const [profile, apiSpaces, recentSources] = await Promise.all([
+    loadProfile(token),
+    listSpaces(token),
+    listRecentSources(token),
+  ])
+
+  const spaces = apiSpaces.map(toLearningSpace)
+  const captures = recentSources.map(toCapturedSource)
+  const data = getDashboardData({
+    spaceCount: spaces.length,
+    sourceCount: apiSpaces.reduce((sum, space) => sum + space.source_counts.total, 0),
+  })
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-gray-900">
-      {/* Navbar */}
-      <nav className="bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <span className="text-xl font-black tracking-tight text-blue-600">ATLAS</span>
-          <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full font-semibold">
-            {profile?.domain_of_focus}
-          </span>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="text-sm font-medium text-gray-500 hover:text-red-600 transition-colors"
-        >
-          Sign Out
-        </button>
-      </nav>
+    <div className={`${styles.app} ${atlasFontVars}`}>
+      <Sidebar
+        profile={profile}
+        spaceCount={spaces.length}
+        reviewCount={data.review.total}
+        totalSources={data.totalSources}
+        plan={data.plan}
+        extensionTabs={data.extensionTabs}
+      />
 
-      {/* Main Layout */}
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        {/* Welcome Header */}
-        <header className="mb-10">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, {profile?.full_name}!
-          </h1>
-          <p className="text-gray-500 mt-1">
-            @{profile?.username} &bull; Personalizing workspace for a <span className="lowercase font-medium">{profile?.primary_role}</span>.
-          </p>
-        </header>
+      <main className={styles.main}>
+        <ContourBg />
 
-        {/* Dashboard Grid Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Active Learning Space Widget */}
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm md:col-span-2">
-            <h3 className="font-bold text-lg mb-2">Your Learning Space</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Templates and curated streams tailored to <span className="font-semibold text-gray-700">{profile?.domain_of_focus}</span> are active.
-            </p>
-            <div className="h-32 border border-dashed border-gray-200 rounded-lg flex items-center justify-center text-xs text-gray-400">
-              [ Space Placeholder — Documents and browser extensions syncs go here ]
+        <div className={styles.inner}>
+          <TopBar
+            name={firstName(profile)}
+            dueCount={data.review.total}
+            newConcepts={3}
+            streakDays={data.streakDays}
+          />
+
+          <AskBar />
+
+          <Plate num="01" title="Continue where you left off" />
+          <ResumeCard item={data.resume} />
+
+          <StatsRow stats={data.stats} />
+
+          <Plate
+            num="02"
+            title="Your Learning Spaces"
+            link={{ label: 'View all →', href: '/dashboard' }}
+          />
+          <SpacesGrid spaces={spaces} />
+
+          <div className={styles.cols}>
+            <div>
+              <Plate num="03" title="Recently captured" />
+              <CaptureFeed sources={captures} />
+            </div>
+
+            <div className={styles.rail}>
+              <ReviewCard review={data.review} />
+              <GapsCard gaps={data.gaps} />
             </div>
           </div>
 
-          {/* Quick Stats Sidebar */}
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-            <h3 className="font-bold text-lg mb-4">Account Overview</h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-xs text-gray-400 block uppercase font-bold tracking-wider">Focus Target</span>
-                <span className="text-sm font-medium">{profile?.domain_of_focus}</span>
-              </div>
-              <hr className="border-gray-100" />
-              <div>
-                <span className="text-xs text-gray-400 block uppercase font-bold tracking-wider">Role</span>
-                <span className="text-sm font-medium">{profile?.primary_role}</span>
-              </div>
-            </div>
+          <div className={styles.tl}>
+            <Plate
+              num="05"
+              title="This week’s learning"
+              link={{ label: 'Full timeline →', href: '/dashboard' }}
+            />
+            <WeekTimeline days={data.week.days} deltaLabel={data.week.deltaLabel} />
           </div>
         </div>
       </main>

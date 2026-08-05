@@ -4,6 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Atlas</title>
+    <!-- Same type family as the web app; each rule has a local fallback so the
+         popup still renders correctly offline. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Newsreader:wght@400;500&display=swap"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f4f1e9;
+        font-family: "Instrument Sans", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      ::selection {
+        background: rgba(44, 93, 79, 0.18);
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

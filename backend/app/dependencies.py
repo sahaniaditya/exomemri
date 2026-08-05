@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
+from uuid import UUID
 
 from fastapi import Depends, Header
 
 from app.config import Settings, get_settings
 from app.errors import AuthError
 from app.repositories.profile_repo import ProfileRepo
+from app.repositories.space_repo import SpaceRepo
 from app.repositories.storage_repo import StorageRepo, get_storage_repo
 from app.repositories.supabase_client import get_auth_client, get_service_client
 from app.schemas.auth import AuthUser
@@ -16,30 +17,35 @@ from app.schemas.common import User
 from app.services.auth_service import AuthService
 from app.services.capture_service import CaptureService
 from app.services.session_service import SessionService
+from app.services.space_service import SpaceService
 
 
-@lru_cache
-def get_session_service() -> SessionService:
-    return SessionService(get_settings())
+def get_space_repo() -> SpaceRepo:
+    return SpaceRepo(get_service_client())
+
+
+def get_space_service(
+    spaces: SpaceRepo = Depends(get_space_repo),
+) -> SpaceService:
+    return SpaceService(spaces)
+
+
+def get_session_service(
+    spaces: SpaceRepo = Depends(get_space_repo),
+    space_service: SpaceService = Depends(get_space_service),
+) -> SessionService:
+    return SessionService(spaces, space_service)
 
 
 def get_capture_service(
     settings: Settings = Depends(get_settings),
     storage: StorageRepo = Depends(get_storage_repo),
+    space_service: SpaceService = Depends(get_space_service),
 ) -> CaptureService:
-    return CaptureService(settings, storage)
+    return CaptureService(settings, storage, space_service)
 
 
-def get_current_user(settings: Settings = Depends(get_settings)) -> User:
-    """Phase 0 dev-stub: always the fixed dev user.
-
-    Structured as a dependency so Phase 2 can swap in real cookie/Supabase
-    auth without touching routers or services.
-    """
-    return User(id=settings.dev_user_id, email=settings.dev_user_email)
-
-
-# --- Auth (real Supabase JWT; used by the /auth routes) ---
+# --- Auth (real Supabase JWT) ---
 
 
 def get_profile_repo() -> ProfileRepo:
@@ -73,3 +79,15 @@ def get_authenticated_user(token: str = Depends(get_bearer_token)) -> AuthUser:
     if user is None:
         raise AuthError("Invalid or expired authentication session token.")
     return AuthUser(id=user.id, email=user.email)
+
+
+def get_authenticated_app_user(
+    auth_user: AuthUser = Depends(get_authenticated_user),
+) -> User:
+    """Adapt the verified Supabase identity to the app's ``User`` model.
+
+    The session and capture routes (and their services) are typed against
+    ``User`` (UUID id); this maps the auth-layer ``AuthUser`` (string id) onto
+    it so a real, verified user flows through unchanged.
+    """
+    return User(id=UUID(auth_user.id), email=auth_user.email)

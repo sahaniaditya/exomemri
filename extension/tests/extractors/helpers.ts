@@ -8,3 +8,8 @@ export function loadFixture(name: string): Document {
   const html = readFileSync(resolve(FIXTURE_DIR, name), "utf-8")
   return new DOMParser().parseFromString(html, "text/html")
 }
+
+/** Load a saved JSON fixture. Returns `unknown` — parsers take unknown too. */
+export function loadJsonFixture(name: string): unknown {
+  return JSON.parse(readFileSync(resolve(FIXTURE_DIR, name), "utf-8"))
+}

@@ -10,19 +10,30 @@ export default defineConfig({
   manifest: {
     name: "Atlas",
     description: "Capture what you learn online into a Learning Space.",
-    // Single source icon (public/icon.png) reused for each size; Chrome scales.
+    // The Atlas mark (public/icon.svg — identical to the web app's glyph),
+    // rasterized per size so Chrome never has to downscale a 128px source.
     icons: {
-      16: "/icon.png",
-      32: "/icon.png",
-      48: "/icon.png",
-      128: "/icon.png",
+      16: "/icon-16.png",
+      32: "/icon-32.png",
+      48: "/icon-48.png",
+      128: "/icon-128.png",
     },
     permissions: ["storage", "activeTab", "scripting"],
     host_permissions: [
-      // Backend capture endpoint (dev). Phase 2: add "https://*.atlas.ai/*".
+      // Backend capture endpoint (dev). In prod, add the deployed API origin.
       "http://localhost:8000/*",
       // Supabase Storage host for the direct client-side PDF PUT.
       "https://*.supabase.co/*",
+      // The Atlas web app: the bridge content script (atlas-bridge.content.ts)
+      // reads the logged-in session from its localStorage. Its `matches` cover
+      // these origins; listed here too for prod clarity.
+      "http://localhost:3000/*",
+      "https://atlas-ai-puce-xi.vercel.app/*",
+      "https://*.atlas.ai/*",
+      // YouTube transcript capture (youtube.content.ts + youtube-main.content.ts).
+      // No extra install warning: the <all_urls> content script already asks for
+      // the broadest possible access.
+      "*://*.youtube.com/*",
     ],
   },
 })
