@@ -150,3 +150,37 @@ class SpaceRepo:
             .execute()
         )
         return res.data if res else None
+
+    def update_source_summary(
+            self, *, source_id: str, summary_text: str, summary_model: str, summarized_at: str
+        ) -> None:
+            self._client.table("sources").update(
+                {
+                    "summary_text": summary_text,
+                    "summary_model": summary_model,
+                    "summarized_at": summarized_at,
+                }
+            ).eq("id", source_id).execute()
+
+    def list_source_messages(self, *, source_id: str) -> list[dict]:
+        res = (
+            self._client.table("source_messages")
+            .select("*")
+            .eq("source_id", source_id)
+            .order("created_at")
+            .execute()
+        )
+        return res.data or []
+
+    def insert_source_message(
+        self, *, source_id: str, space_id: str, user_id: str, role: str, content: str
+    ) -> dict:
+        row = {
+            "source_id": source_id,
+            "space_id": space_id,
+            "user_id": user_id,
+            "role": role,
+            "content": content,
+        }
+        res = self._client.table("source_messages").insert(row).execute()
+        return res.data[0]

@@ -16,6 +16,7 @@ from app.errors import ConflictError, NotFoundError
 from app.repositories.space_repo import SpaceRepo
 from app.schemas.common import User
 from app.schemas.spaces import SourceCounts, SourceSummary, SpaceSummary
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -212,4 +213,26 @@ class SpaceService:
             author=row.get("author"),
             captured_at=row.get("captured_at"),
             processing_status=row["processing_status"],
+        )
+
+    def save_summary(self, *, source_id: UUID, summary: str, model: str) -> None:
+        self._spaces.update_source_summary(
+            source_id=str(source_id),
+            summary_text=summary,
+            summary_model=model,
+            summarized_at=datetime.now(UTC).isoformat(),
+        )
+
+    def list_messages(self, source_id: UUID) -> list[dict]:
+        return self._spaces.list_source_messages(source_id=str(source_id))
+
+    def add_message(
+        self, *, user: User, source_id: UUID, space_id: UUID, role: str, content: str
+    ) -> dict:
+        return self._spaces.insert_source_message(
+            source_id=str(source_id),
+            space_id=str(space_id),
+            user_id=str(user.id),
+            role=role,
+            content=content,
         )

@@ -1,5 +1,6 @@
 import { SOURCE_GLYPH, type CapturedSource } from '@/lib/dashboard-data'
 import styles from './dashboard.module.css'
+import Link from 'next/link'
 
 export default function CaptureFeed({ sources }: { sources: CapturedSource[] }) {
   if (sources.length === 0) {
@@ -14,7 +15,8 @@ export default function CaptureFeed({ sources }: { sources: CapturedSource[] }) 
   return (
     <div className={styles.feed}>
       {sources.map(source => (
-        <div className={styles.src} key={source.id}>
+        <Link href={`/dashboard/spaces/${source.spaceId}/sources/${source.id}`}>
+            <div className={styles.src} key={source.id}>
           <div className={styles.srcico} aria-hidden="true">
             {SOURCE_GLYPH[source.kind]}
           </div>
@@ -30,9 +32,11 @@ export default function CaptureFeed({ sources }: { sources: CapturedSource[] }) 
               source.status === 'summarized' ? styles.done : styles.wip
             }`}
           >
-            {source.status === 'summarized' ? 'Summarized' : 'Summarizing'}
+            {/* {source.status === 'summarized' ? 'Summarized' : 'Summarizing'} */}
           </span>
         </div>
+        </Link>
+        
       ))}
     </div>
   )

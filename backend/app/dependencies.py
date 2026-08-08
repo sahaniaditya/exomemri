@@ -18,6 +18,9 @@ from app.services.auth_service import AuthService
 from app.services.capture_service import CaptureService
 from app.services.session_service import SessionService
 from app.services.space_service import SpaceService
+from app.services.llm_service import LLMService
+from app.services.extract_service import ExtractService
+from app.services.source_chat_service import SourceChatService
 
 
 def get_space_repo() -> SpaceRepo:
@@ -91,3 +94,16 @@ def get_authenticated_app_user(
     it so a real, verified user flows through unchanged.
     """
     return User(id=UUID(auth_user.id), email=auth_user.email)
+
+def get_extract_service(storage: StorageRepo = Depends(get_storage_repo)) -> ExtractService:
+    return ExtractService(storage)
+
+def get_llm_service(settings: Settings = Depends(get_settings)) -> LLMService:
+    return LLMService(settings)
+
+def get_source_chat_service(
+    spaces: SpaceService = Depends(get_space_service),
+    extracts: ExtractService = Depends(get_extract_service),
+    llm: LLMService = Depends(get_llm_service),
+) -> SourceChatService:
+    return SourceChatService(spaces, extracts, llm)

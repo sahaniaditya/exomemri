@@ -13,6 +13,11 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from app.schemas.common import ProcessingStatus, SourceType
 
+from datetime import datetime
+from typing import Literal
+from pydantic import BaseModel, Field
+from uuid import UUID
+
 
 class CaptureRequest(BaseModel):
     """Payload the extension background worker POSTs to ``/v1/sources``.
@@ -66,3 +71,25 @@ class UploadUrlResponse(BaseModel):
     upload_url: str
     token: str
     path: str
+
+class SummaryResponse(BaseModel):
+    summary: str
+    generated: bool          # True if generated this call, False if cached
+    model: str | None
+    summarized_at: datetime | None
+
+class ChatMessage(BaseModel):
+    id: UUID
+    role: Literal["user", "assistant"]
+    content: str
+    created_at: datetime
+
+class MessageListResponse(BaseModel):
+    messages: list[ChatMessage]
+
+class SendMessageRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=8000)
+
+class SendMessageResponse(BaseModel):
+    user_message: ChatMessage
+    assistant_message: ChatMessage
