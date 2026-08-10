@@ -51,6 +51,7 @@ export interface CapturedSource {
   id: string
   title: string
   spaceName: string
+  spaceId: string
   kind: SourceKind
   meta: string
   capturedAt: string
@@ -226,6 +227,7 @@ export function toCapturedSource(source: Source): CapturedSource {
     id: source.id,
     title: source.title,
     spaceName: source.space_name ?? '—',
+    spaceId:source.space_id,
     kind: SOURCE_KIND[source.type],
     meta: source.author
       ? `${SOURCE_LABEL[source.type]} · ${source.author}`

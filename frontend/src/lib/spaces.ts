@@ -64,3 +64,19 @@ export async function listRecentSources(token: string, limit = 8): Promise<Sourc
     return []
   }
 }
+
+/** Sources captured into a single space, newest first. Empty on any failure. */
+export async function listSpaceSources(
+  token: string,
+  spaceId: string,
+  limit = 50
+): Promise<Source[]> {
+  try {
+    const res = await apiFetch(`/v1/spaces/${spaceId}/sources?limit=${limit}`, {}, token)
+    if (!res.ok) return []
+    return ((await res.json()) as { sources: Source[] }).sources
+  } catch (error) {
+    console.error('Failed to load space sources:', error)
+    return []
+  }
+}

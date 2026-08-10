@@ -9,17 +9,23 @@ from fastapi import APIRouter, Depends, Query, status
 from app.dependencies import (
     get_authenticated_app_user,
     get_capture_service,
+    get_source_chat_service,
     get_space_service,
 )
 from app.schemas.common import User
 from app.schemas.sources import (
     CaptureRequest,
     CaptureResponse,
+    MessageListResponse,
+    SendMessageRequest,
+    SendMessageResponse,
+    SummaryResponse,
     UploadUrlRequest,
     UploadUrlResponse,
 )
 from app.schemas.spaces import ArtifactUrlResponse, SourceListResponse
 from app.services.capture_service import CaptureService
+from app.services.source_chat_service import SourceChatService
 from app.services.space_service import SpaceService
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -61,3 +67,28 @@ async def get_artifact_url(
     svc: CaptureService = Depends(get_capture_service),
 ) -> ArtifactUrlResponse:
     return await svc.artifact_url(user=user, source_id=source_id, key=key)
+
+@router.get("/{source_id}/summary", response_model=SummaryResponse)
+async def get_summary(
+    source_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: SourceChatService = Depends(get_source_chat_service),
+) -> SummaryResponse:
+    return await svc.get_or_create_summary(user=user, source_id=source_id)
+
+@router.get("/{source_id}/messages", response_model=MessageListResponse)
+async def get_messages(
+    source_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: SourceChatService = Depends(get_source_chat_service),
+) -> MessageListResponse:
+    return await svc.list_messages(user=user, source_id=source_id)
+
+@router.post("/{source_id}/messages", response_model=SendMessageResponse)
+async def post_message(
+    source_id: UUID,
+    body: SendMessageRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: SourceChatService = Depends(get_source_chat_service),
+) -> SendMessageResponse:
+    return await svc.send_message(user=user, source_id=source_id, content=body.content)

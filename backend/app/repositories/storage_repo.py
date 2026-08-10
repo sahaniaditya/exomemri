@@ -95,6 +95,25 @@ class StorageRepo:
         token = result.get("token", "")
         return {"signed_url": signed_url, "token": token, "path": result.get("path", path)}
 
+    async def download_text(self, path: str) -> str:
+        """Read a text artifact directly using the service-role client."""
+        
+        def _download() -> bytes:
+            # self._bucket already handles: client.storage.from_(self._bucket_name)
+            return self._bucket.download(path)
+
+        try:
+            raw = await anyio.to_thread.run_sync(_download)
+        except Exception as exc:  # noqa: BLE001 - normalize SDK errors
+            logger.error("storage_download_failed", extra={"path": path})
+            raise StorageError("Failed to read artifact from storage") from exc
+
+        try:
+            return raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            logger.error("storage_decode_failed", extra={"path": path})
+            raise StorageError("Downloaded artifact is not valid UTF-8 text") from exc
+
 
 @lru_cache
 def get_storage_repo() -> StorageRepo:

@@ -1,20 +1,11 @@
 'use client'
-
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-
-import { clearExtensionSession } from '@/lib/extension-session'
-import { initial, type Profile } from '@/lib/profile'
 import styles from './dashboard.module.css'
 import Glyph from './Glyph'
 
 interface SidebarProps {
-  profile: Profile | null
   spaceCount: number
-  reviewCount: number
-  totalSources: number
-  plan: string
-  extensionTabs: number
+  sourceCount: number
 }
 
 const NAV = [
@@ -42,63 +33,31 @@ const NAV = [
     ),
   },
   {
-    href: '/dashboard/ask',
-    label: 'Ask memory',
+    href: '/dashboard/sources',
+    label: 'Recent Captures',
+    key: 'sources',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
-        <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <rect x="3" y="4" width="7" height="7" rx="1" />
+        <rect x="14" y="4" width="7" height="7" rx="1" />
+        <rect x="3" y="15" width="7" height="5" rx="1" />
+        <rect x="14" y="15" width="7" height="5" rx="1" />
       </svg>
     ),
   },
-  {
-    href: '/dashboard/review',
-    label: 'Review',
-    key: 'review',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
-        <path d="M9 11l3 3 8-8" />
-        <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard/timeline',
-    label: 'Timeline',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
-        <path d="M12 8v4l3 2" />
-        <circle cx="12" cy="12" r="9" />
-      </svg>
-    ),
-  },
+  // {
+  //   href: '/dashboard/ask',
+  //   label: 'Ask memory',
+  //   icon: (
+  //     <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
+  //       <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  //     </svg>
+  //   ),
+  // },
 ] as const
 
-export default function Sidebar({
-  profile,
-  spaceCount,
-  reviewCount,
-  totalSources,
-  plan,
-  extensionTabs,
-}: SidebarProps) {
-  const router = useRouter()
-
-  const handleLogout = async () => {
-    try {
-      // The route reads the httpOnly cookie server-side, tells FastAPI to
-      // destroy the session, and clears both cookies — none of which
-      // client JS can do for httpOnly cookies on its own.
-      await fetch('/api/auth/logout', { method: 'POST' })
-    } catch (error) {
-      console.error('Logout failed:', error)
-    } finally {
-      // The extension mirror lives in localStorage, so the client clears it.
-      clearExtensionSession()
-      router.push('/login')
-    }
-  }
-
-  const counts: Record<string, number> = { spaces: spaceCount, review: reviewCount }
+export default function Sidebar({ spaceCount,sourceCount }: SidebarProps) {
+  const counts: Record<string, number> = { spaces: spaceCount, sources:sourceCount }
 
   return (
     <aside className={styles.side}>
@@ -110,7 +69,7 @@ export default function Sidebar({
         </span>
       </Link>
 
-      <button type="button" className={styles.newbtn}>
+      {/* <button type="button" className={styles.newbtn}>
         <svg
           width="16"
           height="16"
@@ -124,7 +83,7 @@ export default function Sidebar({
           <path d="M12 5v14M5 12h14" />
         </svg>
         Capture
-      </button>
+      </button> */}
 
       <div className={styles.navsec}>
         <div
@@ -177,37 +136,6 @@ export default function Sidebar({
       </div>
 
       <div className={styles.spacer} />
-
-      <div className={styles.ext}>
-        <div className={styles.st}>
-          <span className={styles.dot} /> Browser extension active
-        </div>
-        <p>
-          Capturing on {extensionTabs} tabs. Highlight anything to save it here.
-        </p>
-      </div>
-
-      <div className={styles.me}>
-        <div className={styles.avatar}>{initial(profile)}</div>
-        <div>
-          <div className={styles.nm}>{profile?.full_name ?? 'Your account'}</div>
-          <div className={styles.pl}>
-            {plan} · {totalSources} SOURCES
-          </div>
-        </div>
-        <button
-          type="button"
-          className={styles.signout}
-          onClick={handleLogout}
-          title="Sign out"
-          aria-label="Sign out"
-        >
-          <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <path d="M16 17l5-5-5-5M21 12H9" />
-          </svg>
-        </button>
-      </div>
     </aside>
   )
 }

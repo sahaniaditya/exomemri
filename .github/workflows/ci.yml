@@ -24,6 +24,9 @@ jobs:
         env:
           SUPABASE_URL: https://ci.example.supabase.co
           SUPABASE_SERVICE_KEY: ci-placeholder-key
+          GEMINI_API_KEY: ci-placeholder-key
+          GEMINI_BASE_URL: https://generativelanguage.googleapis.com/v1beta/openai/
+          GEMINI_MODEL_NAME: gemini-2.0-flash
         run: |
           python scripts/dump_openapi.py
           git diff --exit-code openapi.json

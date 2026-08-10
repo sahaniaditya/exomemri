@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     supabase_service_key: str
     storage_bucket: str = "atlas-artifacts"
 
+    gemini_api_key: str
+    gemini_base_url: str
+    gemini_model_name: str
+
+
     # --- Test/dev identity (the active space now lives in Postgres) ---
     dev_user_id: UUID = _DEV_USER_ID
     dev_user_email: str = "aditya@kimaru.ai"
