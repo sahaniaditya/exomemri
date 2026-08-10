@@ -10,6 +10,9 @@ from uuid import uuid4
 # lru_cached Settings() construction succeeds without a real .env.
 os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
+os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
+os.environ.setdefault("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+os.environ.setdefault("GEMINI_MODEL_NAME", "gemini-2.0-flash")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
