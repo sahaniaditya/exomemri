@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from openai import AsyncOpenAI
+
 from app.config import Settings
 
 SUMMARY_SYSTEM_PROMPT = (
@@ -8,7 +10,8 @@ SUMMARY_SYSTEM_PROMPT = (
     "facts, and anything worth remembering. Plain prose, no headers or bullet lists."
 )
 
-CHAT_SYSTEM_PROMPT = """You are a study assistant helping the user understand a source they captured.
+CHAT_SYSTEM_PROMPT = """You are a study assistant helping the user understand a source \
+they captured.
 Source title: {title}
 Source type: {type}
 

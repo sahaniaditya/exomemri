@@ -16,11 +16,11 @@ from app.schemas.auth import AuthUser
 from app.schemas.common import User
 from app.services.auth_service import AuthService
 from app.services.capture_service import CaptureService
-from app.services.session_service import SessionService
-from app.services.space_service import SpaceService
-from app.services.llm_service import LLMService
 from app.services.extract_service import ExtractService
+from app.services.llm_service import LLMService
+from app.services.session_service import SessionService
 from app.services.source_chat_service import SourceChatService
+from app.services.space_service import SpaceService
 
 
 def get_space_repo() -> SpaceRepo:

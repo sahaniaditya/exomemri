@@ -7,16 +7,13 @@ which is in turn the source of truth for the extension's generated TS types
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl
 
 from app.schemas.common import ProcessingStatus, SourceType
-
-from datetime import datetime
-from typing import Literal
-from pydantic import BaseModel, Field
-from uuid import UUID
 
 
 class CaptureRequest(BaseModel):
