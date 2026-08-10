@@ -9,21 +9,24 @@ from fastapi import APIRouter, Depends, Query, status
 from app.dependencies import (
     get_authenticated_app_user,
     get_capture_service,
+    get_source_chat_service,
     get_space_service,
 )
 from app.schemas.common import User
 from app.schemas.sources import (
     CaptureRequest,
     CaptureResponse,
+    MessageListResponse,
+    SendMessageRequest,
+    SendMessageResponse,
+    SummaryResponse,
     UploadUrlRequest,
     UploadUrlResponse,
 )
 from app.schemas.spaces import ArtifactUrlResponse, SourceListResponse
 from app.services.capture_service import CaptureService
-from app.services.space_service import SpaceService
-from app.schemas.sources import MessageListResponse, SendMessageRequest, SendMessageResponse, SummaryResponse
 from app.services.source_chat_service import SourceChatService
-from app.dependencies import get_source_chat_service
+from app.services.space_service import SpaceService
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 

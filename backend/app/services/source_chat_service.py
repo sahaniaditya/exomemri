@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 from datetime import UTC, datetime
 from functools import partial
 from uuid import UUID
+
 import anyio
+
 from app.schemas.common import User
 from app.schemas.sources import (
     ChatMessage,
@@ -55,7 +58,9 @@ class SourceChatService:
         rows = await anyio.to_thread.run_sync(partial(self._spaces.list_messages, source_id))
         return MessageListResponse(messages=[ChatMessage(**r) for r in rows])
 
-    async def send_message(self, *, user: User, source_id: UUID, content: str) -> SendMessageResponse:
+    async def send_message(
+        self, *, user: User, source_id: UUID, content: str
+    ) -> SendMessageResponse:
         source = await anyio.to_thread.run_sync(
             partial(self._spaces.require_owned_source, user, source_id)
         )

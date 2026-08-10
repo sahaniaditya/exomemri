@@ -21,17 +21,26 @@ Dispatch the `test-verifier` subagent, pointed at the same target and at the spe
 file(s) the `test-writer` subagent reported creating or modifying. It must independently run
 those tests and judge whether they're real coverage, not rubber-stamp them.
 
+## Stage 3 — clean up
+
+Once (and only once) the verifier's verdict is trustworthy, delete the test file(s) that
+`test-writer` created or modified for this run, along with any test-only scaffolding it added
+solely to support them (e.g. a new test config file, a new setup file) — but leave alone
+anything that predates this run or that other existing tests still depend on. If the verifier's
+verdict is not trustworthy, do not delete anything yet — leave the files in place until fixed.
+
 ## Report back
 
-After both stages complete, give the user a short combined summary:
-- What changed and which test file(s) now cover it.
+After all stages complete, give the user a short combined summary:
+- What changed and which test file(s) covered it (now deleted per stage 3, or still present if
+  the verdict wasn't trustworthy).
 - The verifier's verdict (trustworthy / partially trustworthy / not trustworthy) and any
   findings it raised, with file:line.
 - Any coverage gaps either agent flagged.
 - If the verifier found real problems, say so plainly and ask whether to send it back to
   `test-writer` for a fix — don't silently loop, and don't declare success over an untrustworthy
-  verdict.
+  verdict, and don't run stage 3 in that case.
 
 Do not write or edit any test or production code yourself in this command — all test writing
 goes through `test-writer`, all judgment of test quality goes through `test-verifier`. Your job
-here is only to orchestrate and summarize.
+here is only to orchestrate, clean up per stage 3, and summarize.

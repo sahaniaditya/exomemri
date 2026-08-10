@@ -215,6 +215,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sources/{source_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Messages */
+        get: operations["get_messages_v1_sources__source_id__messages_get"];
+        put?: never;
+        /** Post Message */
+        post: operations["post_message_v1_sources__source_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{source_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Summary */
+        get: operations["get_summary_v1_sources__source_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/spaces": {
         parameters: {
             query?: never;
@@ -315,6 +350,26 @@ export interface components {
              */
             source_id: string;
         };
+        /** ChatMessage */
+        ChatMessage: {
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+        };
         /**
          * CreateSpaceRequest
          * @description Payload for creating a Learning Space, e.g. ``{"name": "Claude Code"}``.
@@ -337,6 +392,11 @@ export interface components {
             /** Refresh Token */
             refresh_token: string;
             user: components["schemas"]["AuthUser"];
+        };
+        /** MessageListResponse */
+        MessageListResponse: {
+            /** Messages */
+            messages: components["schemas"]["ChatMessage"][];
         };
         /** MessageResponse */
         MessageResponse: {
@@ -373,6 +433,16 @@ export interface components {
             referral_source: string;
             /** Username */
             username: string;
+        };
+        /** SendMessageRequest */
+        SendMessageRequest: {
+            /** Content */
+            content: string;
+        };
+        /** SendMessageResponse */
+        SendMessageResponse: {
+            assistant_message: components["schemas"]["ChatMessage"];
+            user_message: components["schemas"]["ChatMessage"];
         };
         /**
          * SessionResponse
@@ -517,6 +587,17 @@ export interface components {
              *     }
              */
             source_counts: components["schemas"]["SourceCounts"];
+        };
+        /** SummaryResponse */
+        SummaryResponse: {
+            /** Generated */
+            generated: boolean;
+            /** Model */
+            model: string | null;
+            /** Summarized At */
+            summarized_at: string | null;
+            /** Summary */
+            summary: string;
         };
         /**
          * UploadUrlRequest
@@ -1020,6 +1101,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ArtifactUrlResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_messages_v1_sources__source_id__messages_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_message_v1_sources__source_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendMessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_summary_v1_sources__source_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryResponse"];
                 };
             };
             /** @description Validation Error */
