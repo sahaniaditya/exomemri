@@ -16,14 +16,10 @@ export default function SpacesGrid({ spaces }: { spaces: LearningSpace[] }) {
           <div className={styles.shead}>
             <div className={styles.stitle}>{space.name}</div>
             {/* <CoverageRing pct={space.coverage} /> */}
-            <button
-              type="button"
+            <PlayButton
               onClick={() => router.push(`/dashboard/spaces/${space.id}`)}
-              aria-label={`Open ${space.name}`}
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-            >
-              <PlayButton />
-            </button>
+              ariaLabel={`Open ${space.name}`}
+            />
           </div>
           <div className={styles.styp}>
             <span>{SOURCE_GLYPH.video} {space.counts.video}</span>

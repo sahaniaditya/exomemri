@@ -20,11 +20,14 @@ pytest>=8.0
 pytest-asyncio>=0.23
 httpx>=0.27
 
+# --- LLM (summary/chat) ---
+# Used as an OpenAI-compatible client against Gemini's API gateway, see app/services/llm_service.py.
+openai>=1.0
+
 # --- Phase 1+ (deferred; not installed for the starter) ---
 # langchain
 # langchain-core
 # langgraph
 # langgraph-checkpoint
 # langsmith
-# openai            # NOTE: design mandates Anthropic Claude; reconcile at Phase 1
 # anthropic
