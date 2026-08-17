@@ -61,7 +61,7 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
       <main className={styles.main}>
         <ContourBg />
         <div className={styles.inner}>
-          <TopBar profile={profile} totalSources={totalSources} />
+          <TopBar profile={profile} totalSources={totalSources} spaceCount={spaces.length} />
 
           <Plate num="01" title={activeSpace.name} />
           <CaptureFeed sources={captures} />

@@ -595,6 +595,7 @@
   padding: 22px;
   transition: transform 0.2s, box-shadow 0.2s;
   display: block;
+  cursor: pointer;
 }
 
 .space:hover {
@@ -629,6 +630,11 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.stypEmpty {
+  color: var(--sage-light);
+  font-style: italic;
 }
 
 .space .sfoot {
@@ -914,15 +920,17 @@
 }
 
 .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-ibm-plex-mono), monospace;
   font-size: 10.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 3px 8px;
+  padding: 3px 10px;
   border-radius: 100px;
   white-space: nowrap;
   flex: none;
-  cursor:pointer;
 }
 
 .status.done {
@@ -935,6 +943,19 @@
   color: var(--clay);
   background: rgba(181, 98, 60, 0.1);
   border: 1px solid rgba(181, 98, 60, 0.24);
+}
+
+.statusDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: statusPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
 /* right rail cards */

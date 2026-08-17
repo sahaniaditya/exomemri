@@ -1,6 +1,7 @@
-import { SOURCE_GLYPH, type CapturedSource } from '@/lib/dashboard-data'
+import { type CapturedSource } from '@/lib/dashboard-data'
 import styles from './dashboard.module.css'
 import Link from 'next/link'
+import SourceIcon from './SourceIcon'
 
 export default function CaptureFeed({ sources }: { sources: CapturedSource[] }) {
   if (sources.length === 0) {
@@ -21,7 +22,7 @@ export default function CaptureFeed({ sources }: { sources: CapturedSource[] }) 
         >
           <div className={styles.src}>
             <div className={styles.srcico} aria-hidden="true">
-              {SOURCE_GLYPH[source.kind]}
+              <SourceIcon kind={source.kind} size={16} />
             </div>
             <div className={styles.srcmain}>
               <div className={styles.srctitle}>{source.title}</div>
@@ -30,13 +31,12 @@ export default function CaptureFeed({ sources }: { sources: CapturedSource[] }) 
                 <span>{source.meta}</span> · <span>{source.capturedAt}</span>
               </div>
             </div>
-            <span
-              className={`${styles.status} ${
-                source.status === 'summarized' ? styles.done : styles.wip
-              }`}
-            >
-              {/* {source.status === 'summarized' ? 'Summarized' : 'Summarizing'} */}
-            </span>
+            {source.status === 'summarizing' && (
+              <span className={`${styles.status} ${styles.wip}`}>
+                <span className={styles.statusDot} aria-hidden="true" />
+                Processing
+              </span>
+            )}
           </div>
         </Link>
       ))}

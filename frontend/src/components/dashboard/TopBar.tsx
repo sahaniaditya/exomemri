@@ -8,6 +8,7 @@ import styles from './dashboard.module.css'
 interface TopBarProps {
   profile: Profile | null
   totalSources: number
+  spaceCount?: number
 }
 
 interface Clock {
@@ -39,7 +40,7 @@ function getClientClock(): Clock {
 }
 const subscribe = () => () => {}
 
-export default function TopBar({ profile, totalSources }: TopBarProps) {
+export default function TopBar({ profile, totalSources, spaceCount }: TopBarProps) {
   const router = useRouter()
   const clock = useSyncExternalStore<Clock | null>(subscribe, getClientClock, () => null)
   const name = profile?.full_name?.split(' ')[0] ?? 'there'
@@ -64,6 +65,15 @@ export default function TopBar({ profile, totalSources }: TopBarProps) {
       <div className={styles.hello}>
         <div className={styles.coord}>{clock?.date ?? ''}</div>
         <h1>{clock ? `${clock.greeting}, ${name}.` : `Welcome back, ${name}.`}</h1>
+        <p className={styles.sub}>
+          {totalSources === 0
+            ? 'Capture your first source to start a Learning Space.'
+            : spaceCount === undefined
+              ? `${totalSources} ${totalSources === 1 ? 'source' : 'sources'} captured`
+              : `${totalSources} ${totalSources === 1 ? 'source' : 'sources'} across ${spaceCount} ${
+                  spaceCount === 1 ? 'space' : 'spaces'
+                }`}
+        </p>
       </div>
 
       <div className={styles.me}>

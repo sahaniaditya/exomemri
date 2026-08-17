@@ -60,7 +60,7 @@ export default async function SourcePage({ params }: SourcePageProps) {
       <main className={styles.main}>
         <ContourBg />
         <div className={styles.inner}>
-          <TopBar profile={profile} totalSources={totalSources} />
+          <TopBar profile={profile} totalSources={totalSources} spaceCount={spaces.length} />
           <SourceChat
             sourceId={sourceId}
             sourceTitle={activeSource.title}

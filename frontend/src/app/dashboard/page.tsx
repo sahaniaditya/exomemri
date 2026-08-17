@@ -43,11 +43,11 @@ export default async function DashboardPage() {
 
   return (
     <div className={`${styles.app} ${atlasFontVars}`}>
-      <Sidebar spaceCount={spaces.length} sourceCount={captures.length} />
+      <Sidebar spaceCount={spaces.length} sourceCount={totalSources} />
       <main className={styles.main}>
         <ContourBg />
         <div className={styles.inner}>
-          <TopBar profile={profile} totalSources={totalSources} />
+          <TopBar profile={profile} totalSources={totalSources} spaceCount={spaces.length} />
 
           <Plate
             num="01"
