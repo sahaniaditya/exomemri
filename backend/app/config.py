@@ -27,14 +27,13 @@ class Settings(BaseSettings):
     supabase_service_key: str
     storage_bucket: str = "atlas-artifacts"
 
-    gemini_api_key: str
-    gemini_base_url: str
-    gemini_model_name: str
+    anthropic_api_key: str
+    anthropic_model_name: str = "claude-haiku-4-5"
 
 
     # --- Test/dev identity (the active space now lives in Postgres) ---
     dev_user_id: UUID = _DEV_USER_ID
-    dev_user_email: str = "aditya@kimaru.ai"
+    dev_user_email: str = "aditya@atlas.ai"
 
     # --- CORS ---
     # The unpacked extension origin (chrome-extension://<id>). Populate for a

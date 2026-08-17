@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from openai import AsyncOpenAI
+from anthropic import AsyncAnthropic
 
 from app.config import Settings
 
@@ -27,27 +27,21 @@ plainly rather than guessing."""
 
 class LLMService:
     def __init__(self, settings: Settings) -> None:
-        # Initialize client pointing to Google's API gateway
-        self._client = AsyncOpenAI(
-            api_key=settings.gemini_api_key,
-            base_url=settings.gemini_base_url
-        )
-        self._model = settings.gemini_model_name
-        
+        self._client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self._model = settings.anthropic_model_name
+
     @property
     def model_name(self) -> str:
         return self._model
 
     async def summarize(self, *, title: str, extract: str) -> str:
-        resp = await self._client.chat.completions.create(
+        resp = await self._client.messages.create(
             model=self._model,
             max_tokens=500,
-            messages=[
-                {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
-                {"role": "user", "content": f"Title: {title}\n\n{extract}"}
-            ],
+            system=SUMMARY_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"Title: {title}\n\n{extract}"}],
         )
-        return resp.choices[0].message.content.strip()
+        return resp.content[0].text.strip()
 
     async def chat_reply(
         self, *, title: str, source_type: str, summary: str, extract: str, history: list[dict]
@@ -55,13 +49,11 @@ class LLMService:
         system = CHAT_SYSTEM_PROMPT.format(
             title=title, type=source_type, summary=summary, extract=extract
         )
-        
-        # Format history messages to match standard OpenAI chat format if required
-        messages = [{"role": "system", "content": system}] + history
-        
-        resp = await self._client.chat.completions.create(
+
+        resp = await self._client.messages.create(
             model=self._model,
             max_tokens=800,
-            messages=messages,
+            system=system,
+            messages=history,
         )
-        return resp.choices[0].message.content.strip()
+        return resp.content[0].text.strip()

@@ -21,8 +21,8 @@ pytest-asyncio>=0.23
 httpx>=0.27
 
 # --- LLM (summary/chat) ---
-# Used as an OpenAI-compatible client against Gemini's API gateway, see app/services/llm_service.py.
-openai>=1.0
+# Claude Haiku via the official Anthropic SDK, see app/services/llm_service.py.
+anthropic>=0.40
 
 # --- Phase 1+ (deferred; not installed for the starter) ---
 # langchain
@@ -30,4 +30,3 @@ openai>=1.0
 # langgraph
 # langgraph-checkpoint
 # langsmith
-# anthropic
