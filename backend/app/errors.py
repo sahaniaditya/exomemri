@@ -7,10 +7,14 @@ Every ``AppError`` maps to the uniform envelope::
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 
 class AppError(Exception):
@@ -88,6 +92,9 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def _handle_unexpected(_: Request, exc: Exception) -> JSONResponse:
+        # Otherwise an unexpected error is invisible: the response is a bare
+        # 500 with no traceback anywhere.
+        logger.error("unhandled_exception", exc_info=exc)
         return JSONResponse(
             status_code=500,
             content=_envelope("internal_error", "An unexpected error occurred"),

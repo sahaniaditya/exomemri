@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 
 from app.dependencies import (
     get_authenticated_app_user,
     get_capture_service,
+    get_pipeline_service,
     get_source_chat_service,
     get_space_service,
 )
@@ -25,6 +26,7 @@ from app.schemas.sources import (
 )
 from app.schemas.spaces import ArtifactUrlResponse, SourceListResponse
 from app.services.capture_service import CaptureService
+from app.services.pipeline_service import PipelineService
 from app.services.source_chat_service import SourceChatService
 from app.services.space_service import SpaceService
 
@@ -34,10 +36,17 @@ router = APIRouter(prefix="/sources", tags=["sources"])
 @router.post("", status_code=status.HTTP_202_ACCEPTED, response_model=CaptureResponse)
 async def capture_source(
     body: CaptureRequest,
+    background_tasks: BackgroundTasks,
     user: User = Depends(get_authenticated_app_user),
     svc: CaptureService = Depends(get_capture_service),
+    pipeline: PipelineService = Depends(get_pipeline_service),
 ) -> CaptureResponse:
-    return await svc.capture(user=user, payload=body)
+    result = await svc.capture(user=user, payload=body)
+    # Fired after the response is sent — capture itself never calls an LLM.
+    background_tasks.add_task(
+        pipeline.run, user=user, source_id=result.source_id, space_id=body.space_id
+    )
+    return result
 
 
 @router.post("/upload-url", response_model=UploadUrlResponse)

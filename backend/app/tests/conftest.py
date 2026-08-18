@@ -12,6 +12,7 @@ os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("ANTHROPIC_MODEL_NAME", "claude-haiku-4-5")
+os.environ.setdefault("VOYAGE_API_KEY", "test-voyage-key")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -63,6 +64,14 @@ class FakeStorage:
         self.read_urls.append((path, expires_in))
         return f"https://test.supabase.co/storage/v1/object/sign/atlas-artifacts/{path}?token=fakeread"
 
+    async def download_text(self, path: str) -> str:
+        from app.errors import StorageError
+
+        if path not in self.uploads:
+            raise StorageError("Failed to read artifact from storage")
+        data, _content_type = self.uploads[path]
+        return data.decode("utf-8")
+
 
 class FakeSpaceRepo:
     """In-memory stand-in for the ``spaces``/``sources`` tables.
@@ -76,6 +85,7 @@ class FakeSpaceRepo:
         self.spaces: dict[str, dict] = {}
         self.sources: dict[str, dict] = {}
         self.active: dict[str, str | None] = {}
+        self.messages: dict[str, dict] = {}
 
         self.spaces[SEEDED_SPACE_ID] = {
             "id": SEEDED_SPACE_ID,
@@ -187,6 +197,114 @@ class FakeSpaceRepo:
         row = self.sources.get(source_id)
         return row if row and row["user_id"] == user_id else None
 
+    def update_processing_status(self, *, source_id: str, status: str) -> None:
+        if source_id in self.sources:
+            self.sources[source_id]["processing_status"] = status
+
+    def update_source_summary(
+        self, *, source_id: str, summary_text: str, summary_model: str, summarized_at: str
+    ) -> None:
+        if source_id in self.sources:
+            self.sources[source_id].update(
+                summary_text=summary_text,
+                summary_model=summary_model,
+                summarized_at=summarized_at,
+            )
+
+    def list_source_messages(self, *, source_id: str) -> list[dict]:
+        rows = [m for m in self.messages.values() if m["source_id"] == source_id]
+        rows.sort(key=lambda m: m["created_at"])
+        return rows
+
+    def insert_source_message(
+        self, *, source_id: str, space_id: str, user_id: str, role: str, content: str
+    ) -> dict:
+        row = {
+            "id": str(uuid4()),
+            "source_id": source_id,
+            "space_id": space_id,
+            "user_id": user_id,
+            "role": role,
+            "content": content,
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+        self.messages[row["id"]] = row
+        return row
+
+
+class FakeChunkRepo:
+    """In-memory stand-in for the pgvector-backed ``source_chunks`` table."""
+
+    def __init__(self) -> None:
+        self.chunks_by_source: dict[str, list[dict]] = {}
+
+    def replace_chunks(self, *, source_id: str, chunks: list[dict]) -> None:
+        self.chunks_by_source[source_id] = list(chunks)
+
+    def search(
+        self, *, source_id: str, user_id: str, query_embedding: list[float], k: int = 6
+    ) -> list[dict]:
+        def cosine(a: list[float], b: list[float]) -> float:
+            dot = sum(x * y for x, y in zip(a, b, strict=True))
+            norm_a = sum(x * x for x in a) ** 0.5
+            norm_b = sum(x * x for x in b) ** 0.5
+            return dot / (norm_a * norm_b) if norm_a and norm_b else 0.0
+
+        rows = self.chunks_by_source.get(source_id, [])
+        ranked = sorted(rows, key=lambda r: cosine(r["embedding"], query_embedding), reverse=True)
+        return [
+            {
+                "id": r.get("id", str(uuid4())),
+                "content": r["content"],
+                "chunk_index": r["chunk_index"],
+                "similarity": cosine(r["embedding"], query_embedding),
+            }
+            for r in ranked[:k]
+        ]
+
+
+class FakeEmbeddingService:
+    """Deterministic vectors (no network) — same text always embeds the same."""
+
+    model_name = "fake-embed"
+
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._vector(t) for t in texts]
+
+    async def embed_query(self, text: str) -> list[float]:
+        return self._vector(text)
+
+    @staticmethod
+    def _vector(text: str) -> list[float]:
+        seed = sum(ord(c) for c in text) or 1
+        return [((seed >> i) % 11) / 11 for i in range(8)]
+
+
+class FakeLLMService:
+    """Canned summarize/chat replies — no Anthropic call."""
+
+    model_name = "fake-llm"
+
+    async def summarize(self, *, title: str, extract: str) -> str:  # noqa: ARG002
+        return f"Summary of {title}"
+
+    async def chat_reply(
+        self, *, title: str, source_type: str, summary: str, extract: str, history: list[dict]
+    ) -> str:  # noqa: ARG002
+        return f"Reply grounded in: {extract[:200]}"
+
+
+class FakePipelineService:
+    """Records invocations instead of running the real chunk/embed/summarize graph."""
+
+    def __init__(self) -> None:
+        self.runs: list[dict] = []
+
+    async def run(self, *, user: User, source_id, space_id) -> None:
+        self.runs.append(
+            {"user_id": str(user.id), "source_id": str(source_id), "space_id": str(space_id)}
+        )
+
 
 @pytest.fixture
 def storage() -> FakeStorage:
@@ -201,8 +319,44 @@ def space_repo() -> FakeSpaceRepo:
 
 
 @pytest.fixture
-def client(storage: FakeStorage, space_repo: FakeSpaceRepo) -> TestClient:
+def chunk_repo() -> FakeChunkRepo:
+    return FakeChunkRepo()
+
+
+@pytest.fixture
+def embedding_service() -> FakeEmbeddingService:
+    return FakeEmbeddingService()
+
+
+@pytest.fixture
+def llm_service() -> FakeLLMService:
+    return FakeLLMService()
+
+
+@pytest.fixture
+def pipeline_service() -> FakePipelineService:
+    return FakePipelineService()
+
+
+@pytest.fixture
+def client(
+    storage: FakeStorage,
+    space_repo: FakeSpaceRepo,
+    chunk_repo: FakeChunkRepo,
+    embedding_service: FakeEmbeddingService,
+    llm_service: FakeLLMService,
+    pipeline_service: FakePipelineService,
+) -> TestClient:
     from app.config import get_settings
+    from app.dependencies import (
+        get_chunk_repo,
+        get_embedding_service,
+        get_llm_service,
+        get_pipeline_service,
+        get_source_chat_service,
+    )
+    from app.services.extract_service import ExtractService
+    from app.services.source_chat_service import SourceChatService
 
     app = create_app()
 
@@ -210,6 +364,10 @@ def client(storage: FakeStorage, space_repo: FakeSpaceRepo) -> TestClient:
     space_svc = SpaceService(space_repo)  # type: ignore[arg-type]
     session_svc = SessionService(space_repo, space_svc)  # type: ignore[arg-type]
     capture_svc = CaptureService(settings, storage, space_svc)  # type: ignore[arg-type]
+    extract_svc = ExtractService(storage)  # type: ignore[arg-type]
+    chat_svc = SourceChatService(
+        space_svc, extract_svc, llm_service, embedding_service, chunk_repo  # type: ignore[arg-type]
+    )
 
     # Real routes now require a verified Supabase JWT; inject the fixed dev
     # user so tests stay hermetic (no live token verification).
@@ -220,5 +378,13 @@ def client(storage: FakeStorage, space_repo: FakeSpaceRepo) -> TestClient:
     app.dependency_overrides[get_session_service] = lambda: session_svc
     app.dependency_overrides[get_space_service] = lambda: space_svc
     app.dependency_overrides[get_authenticated_app_user] = lambda: dev_user
+    app.dependency_overrides[get_chunk_repo] = lambda: chunk_repo
+    app.dependency_overrides[get_embedding_service] = lambda: embedding_service
+    app.dependency_overrides[get_llm_service] = lambda: llm_service
+    app.dependency_overrides[get_source_chat_service] = lambda: chat_svc
+    # The real pipeline calls Anthropic/Voyage over the network — never run it
+    # from the capture path in tests; dedicated pipeline tests exercise the
+    # real graph directly against fakes instead.
+    app.dependency_overrides[get_pipeline_service] = lambda: pipeline_service
 
     return TestClient(app)

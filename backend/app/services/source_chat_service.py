@@ -6,6 +6,7 @@ from uuid import UUID
 
 import anyio
 
+from app.repositories.chunk_repo import ChunkRepo
 from app.schemas.common import User
 from app.schemas.sources import (
     ChatMessage,
@@ -13,16 +14,30 @@ from app.schemas.sources import (
     SendMessageResponse,
     SummaryResponse,
 )
+from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
 from app.services.space_service import SpaceService
 
+# Top-k chunks retrieved per question — enough context without overrunning
+# the prompt budget the way the old full-extract approach could.
+RETRIEVAL_K = 6
+
 
 class SourceChatService:
-    def __init__(self, spaces: SpaceService, extracts: ExtractService, llm: LLMService) -> None:
+    def __init__(
+        self,
+        spaces: SpaceService,
+        extracts: ExtractService,
+        llm: LLMService,
+        embeddings: EmbeddingService,
+        chunks: ChunkRepo,
+    ) -> None:
         self._spaces = spaces
         self._extracts = extracts
         self._llm = llm
+        self._embeddings = embeddings
+        self._chunks = chunks
 
     async def get_or_create_summary(self, *, user: User, source_id: UUID) -> SummaryResponse:
         source = await anyio.to_thread.run_sync(
@@ -68,7 +83,7 @@ class SourceChatService:
         # interaction with the source (no prior "open" call happened).
         summary_resp = await self.get_or_create_summary(user=user, source_id=source_id)
         prior_rows = await anyio.to_thread.run_sync(partial(self._spaces.list_messages, source_id))
-        extract = await self._extracts.read_extract(source)
+        extract = await self._retrieve_context(user=user, source=source, question=content)
 
         user_row = await anyio.to_thread.run_sync(
             partial(
@@ -107,3 +122,23 @@ class SourceChatService:
             user_message=ChatMessage(**user_row),
             assistant_message=ChatMessage(**assistant_row),
         )
+
+    async def _retrieve_context(self, *, user: User, source: dict, question: str) -> str:
+        """Top-k relevant chunks for ``question``, or the full extract as a fallback.
+
+        The fallback covers sources captured before this pipeline existed, or
+        whose pipeline run failed — chat still works, just without retrieval.
+        """
+        query_embedding = await self._embeddings.embed_query(question)
+        retrieved = await anyio.to_thread.run_sync(
+            partial(
+                self._chunks.search,
+                source_id=str(source["id"]),
+                user_id=str(user.id),
+                query_embedding=query_embedding,
+                k=RETRIEVAL_K,
+            )
+        )
+        if not retrieved:
+            return await self._extracts.read_extract(source)
+        return "\n\n".join(f"[chunk {r['chunk_index']}] {r['content']}" for r in retrieved)

@@ -215,6 +215,9 @@ class SpaceService:
             processing_status=row["processing_status"],
         )
 
+    def update_processing_status(self, *, source_id: UUID, status: str) -> None:
+        self._spaces.update_processing_status(source_id=str(source_id), status=status)
+
     def save_summary(self, *, source_id: UUID, summary: str, model: str) -> None:
         self._spaces.update_source_summary(
             source_id=str(source_id),

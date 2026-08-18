@@ -162,6 +162,11 @@ class SpaceRepo:
                 }
             ).eq("id", source_id).execute()
 
+    def update_processing_status(self, *, source_id: str, status: str) -> None:
+        self._client.table("sources").update(
+            {"processing_status": status}
+        ).eq("id", source_id).execute()
+
     def list_source_messages(self, *, source_id: str) -> list[dict]:
         res = (
             self._client.table("source_messages")

@@ -24,11 +24,19 @@ class ExtractService:
         self._storage = storage
 
     async def read_extract(self, source: dict) -> str:
+        return (await self.read_full_extract(source))[:MAX_EXTRACT_CHARS]
+
+    async def read_full_extract(self, source: dict) -> str:
+        """Untruncated text for the chunking pipeline.
+
+        ``read_extract``'s cap exists only to bound a single inline LLM call;
+        the pipeline chunks the whole document instead.
+        """
         source_type = SourceType(source["type"])
         key = EXTRACT_KEY_BY_TYPE[source_type]
         path = f"{source['storage_prefix']}/{key}"
         raw = await self._storage.download_text(path)
-        return self._parse(source_type, raw)[:MAX_EXTRACT_CHARS]
+        return self._parse(source_type, raw)
 
     def _parse(self, source_type: SourceType, raw: str) -> str:
         # transcript.json / chat.json are structured JSON, not plain text —
