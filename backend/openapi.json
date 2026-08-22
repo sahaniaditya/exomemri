@@ -188,6 +188,64 @@
         "title": "ChatMessage",
         "type": "object"
       },
+      "CollaboratorListResponse": {
+        "properties": {
+          "collaborators": {
+            "items": {
+              "$ref": "#/components/schemas/CollaboratorResponse"
+            },
+            "title": "Collaborators",
+            "type": "array"
+          }
+        },
+        "required": [
+          "collaborators"
+        ],
+        "title": "CollaboratorListResponse",
+        "type": "object"
+      },
+      "CollaboratorResponse": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username"
+        ],
+        "title": "CollaboratorResponse",
+        "type": "object"
+      },
       "ConceptNode": {
         "description": "A concept in the map. ``degree`` is how many sources reference it.",
         "properties": {
@@ -332,6 +390,21 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "InviteCollaboratorRequest": {
+        "properties": {
+          "username": {
+            "maxLength": 32,
+            "minLength": 3,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "title": "InviteCollaboratorRequest",
+        "type": "object"
+      },
       "LoginResponse": {
         "properties": {
           "access_token": {
@@ -381,6 +454,89 @@
           "message"
         ],
         "title": "MessageResponse",
+        "type": "object"
+      },
+      "NoteImageUploadRequest": {
+        "description": "Ask for a signed PUT URL for a note image under the source prefix.",
+        "properties": {
+          "content_type": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Content Type",
+            "type": "string"
+          },
+          "filename": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Filename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_type",
+          "filename"
+        ],
+        "title": "NoteImageUploadRequest",
+        "type": "object"
+      },
+      "NoteImageUploadResponse": {
+        "description": "Client PUTs bytes to ``upload_url`` with header ``x-upsert: true``.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "upload_url",
+          "token",
+          "path"
+        ],
+        "title": "NoteImageUploadResponse",
+        "type": "object"
+      },
+      "NoteResponse": {
+        "description": "The notebook for one source. Empty content when the user has never saved.",
+        "properties": {
+          "content": {
+            "additionalProperties": true,
+            "title": "Content",
+            "type": "object"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "source_id"
+        ],
+        "title": "NoteResponse",
         "type": "object"
       },
       "OnboardingStatusResponse": {
@@ -436,7 +592,7 @@
         "type": "object"
       },
       "ProcessingStatus": {
-        "description": "Lifecycle of a source.\n\nPhase 0 only ever emits ``queued`` (nothing processes it yet); the full\nset is declared here so the generated client contract is stable across\nphases.",
+        "description": "Lifecycle of a captured source through the RAG pipeline.\n\nCapture inserts ``queued``. The background pipeline advances through\nfetching \u2192 chunking \u2192 embedding \u2192 summarizing \u2192 extracting, then\n``ready``. Any stage error lands on ``failed``.",
         "enum": [
           "queued",
           "fetching",
@@ -485,6 +641,101 @@
           "referral_source"
         ],
         "title": "ProfileUpsertRequest",
+        "type": "object"
+      },
+      "ProfileVisibilityRequest": {
+        "properties": {
+          "profile_public": {
+            "title": "Profile Public",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile_public"
+        ],
+        "title": "ProfileVisibilityRequest",
+        "type": "object"
+      },
+      "ProfileVisibilityResponse": {
+        "properties": {
+          "profile_public": {
+            "title": "Profile Public",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile_public"
+        ],
+        "title": "ProfileVisibilityResponse",
+        "type": "object"
+      },
+      "PublicProfileResponse": {
+        "description": "The public-facing subset of a profile.\n\nDeliberately excludes anything onboarding-survey-shaped (``goal_text``,\n``primary_role``, etc.) or content-level (concept labels, syllabus\ntopics, source titles) \u2014 those stay at the sensitivity tier the\nread-only sharing feature already established for invited collaborators,\nnot strangers.",
+        "properties": {
+          "current_streak": {
+            "title": "Current Streak",
+            "type": "integer"
+          },
+          "full_name": {
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "longest_streak": {
+            "title": "Longest Streak",
+            "type": "integer"
+          },
+          "spaces": {
+            "items": {
+              "$ref": "#/components/schemas/PublicSpaceSummary"
+            },
+            "title": "Spaces",
+            "type": "array"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "full_name",
+          "current_streak",
+          "longest_streak",
+          "spaces"
+        ],
+        "title": "PublicProfileResponse",
+        "type": "object"
+      },
+      "PublicSpaceSummary": {
+        "description": "A portfolio tile \u2014 counts only, never source titles, URLs, or content.",
+        "properties": {
+          "coverage_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Pct"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "coverage_pct",
+          "source_count"
+        ],
+        "title": "PublicSpaceSummary",
         "type": "object"
       },
       "RebuildResponse": {
@@ -672,6 +923,70 @@
           "space_id"
         ],
         "title": "SetActiveSpaceRequest",
+        "type": "object"
+      },
+      "SharedSpaceListResponse": {
+        "properties": {
+          "spaces": {
+            "items": {
+              "$ref": "#/components/schemas/SharedSpaceSummary"
+            },
+            "title": "Spaces",
+            "type": "array"
+          }
+        },
+        "required": [
+          "spaces"
+        ],
+        "title": "SharedSpaceListResponse",
+        "type": "object"
+      },
+      "SharedSpaceSummary": {
+        "description": "One space shared with the current user \u2014 read-only, curated content only.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "owner_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Username"
+          },
+          "shared_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared At"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "title": "SharedSpaceSummary",
         "type": "object"
       },
       "SourceCounts": {
@@ -1262,6 +1577,18 @@
         "title": "UploadUrlResponse",
         "type": "object"
       },
+      "UpsertNoteRequest": {
+        "description": "Replace the notebook document for a source.",
+        "properties": {
+          "content": {
+            "additionalProperties": true,
+            "title": "Content",
+            "type": "object"
+          }
+        },
+        "title": "UpsertNoteRequest",
+        "type": "object"
+      },
       "User": {
         "description": "The authenticated user.",
         "properties": {
@@ -1666,6 +1993,141 @@
         ]
       }
     },
+    "/v1/profile/visibility": {
+      "get": {
+        "operationId": "get_profile_visibility_v1_profile_visibility_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileVisibilityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Profile Visibility",
+        "tags": [
+          "profile"
+        ]
+      },
+      "put": {
+        "operationId": "set_profile_visibility_v1_profile_visibility_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileVisibilityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Profile Visibility",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/v1/profiles/{username}": {
+      "get": {
+        "description": "A user's opted-in public profile. No authentication required.",
+        "operationId": "get_public_profile_v1_profiles__username__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Public Profile",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
     "/v1/session": {
       "get": {
         "operationId": "get_session_v1_session_get",
@@ -1750,6 +2212,49 @@
         "summary": "Set Active Space",
         "tags": [
           "session"
+        ]
+      }
+    },
+    "/v1/shared-with-me": {
+      "get": {
+        "description": "Spaces another Atlas user has shared read-only access to with me.",
+        "operationId": "list_shared_with_me_v1_shared_with_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedSpaceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Shared With Me",
+        "tags": [
+          "sharing"
         ]
       }
     },
@@ -2084,6 +2589,180 @@
         ]
       }
     },
+    "/v1/sources/{source_id}/note-images": {
+      "post": {
+        "operationId": "create_note_image_upload_v1_sources__source_id__note_images_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteImageUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteImageUploadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Note Image Upload",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/notes": {
+      "get": {
+        "operationId": "get_note_v1_sources__source_id__notes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Note",
+        "tags": [
+          "sources"
+        ]
+      },
+      "put": {
+        "operationId": "put_note_v1_sources__source_id__notes_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Note",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
     "/v1/sources/{source_id}/summary": {
       "get": {
         "operationId": "get_summary_v1_sources__source_id__summary_get",
@@ -2225,6 +2904,173 @@
         "summary": "Create Space",
         "tags": [
           "spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/collaborators": {
+      "get": {
+        "operationId": "list_collaborators_v1_spaces__space_id__collaborators_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollaboratorListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Collaborators",
+        "tags": [
+          "sharing"
+        ]
+      },
+      "post": {
+        "operationId": "invite_collaborator_v1_spaces__space_id__collaborators_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteCollaboratorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollaboratorResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Invite Collaborator",
+        "tags": [
+          "sharing"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/collaborators/{collaborator_user_id}": {
+      "delete": {
+        "operationId": "revoke_collaborator_v1_spaces__space_id__collaborators__collaborator_user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "collaborator_user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collaborator User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Collaborator",
+        "tags": [
+          "sharing"
         ]
       }
     },

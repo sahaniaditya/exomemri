@@ -3,13 +3,15 @@ import { cookies } from 'next/headers'
 import { apiFetch } from '@/lib/api'
 import { toCapturedSource, toLearningSpace } from '@/lib/dashboard-data'
 import { atlasFontVars } from '@/lib/fonts'
-import type { Profile } from '@/lib/profile'
+import { streakDays as getStreakDays, type Profile } from '@/lib/profile'
+import { listSharedWithMe } from '@/lib/sharing'
 import { listRecentSources, listSpaces } from '@/lib/spaces'
 import styles from '@/components/dashboard/dashboard.module.css'
 import CaptureFeed from '@/components/dashboard/CaptureFeed'
 import ContourBg from '@/components/dashboard/ContourBg'
 import Plate from '@/components/dashboard/Plate'
 import Sidebar from '@/components/dashboard/Sidebar'
+import SharedWithMeList from '@/components/dashboard/SharedWithMeList'
 import SpacesGrid from '@/components/dashboard/SpacesGrid'
 import TopBar from '@/components/dashboard/TopBar'
 
@@ -31,10 +33,11 @@ async function loadProfile(token: string): Promise<Profile | null> {
 
 export default async function DashboardPage() {
   const token = (await cookies()).get('atlas_token')?.value ?? ''
-  const [profile, apiSpaces, recentSources] = await Promise.all([
+  const [profile, apiSpaces, recentSources, sharedSpaces] = await Promise.all([
     loadProfile(token),
     listSpaces(token),
     listRecentSources(token),
+    listSharedWithMe(token),
   ])
   const spaces = apiSpaces.map(toLearningSpace)
   const captures = recentSources.map(toCapturedSource)
@@ -50,6 +53,7 @@ export default async function DashboardPage() {
             profile={profile}
             totalSources={totalSources}
             spaceCount={spaces.length}
+            streakDays={getStreakDays(profile)}
           />
 
           <section id="spaces" className={styles.section}>
@@ -69,6 +73,13 @@ export default async function DashboardPage() {
             />
             <CaptureFeed sources={captures} />
           </section>
+
+          {sharedSpaces.length > 0 && (
+            <section id="shared" className={styles.section}>
+              <Plate num="03" title="Shared with you" />
+              <SharedWithMeList spaces={sharedSpaces} />
+            </section>
+          )}
         </div>
       </main>
     </div>

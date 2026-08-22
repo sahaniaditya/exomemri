@@ -52,8 +52,10 @@ class ConceptService:
     # --- reads ---
 
     def get_graph(self, user: User, space_id: UUID) -> SpaceGraphResponse:
-        self._spaces.require_owned_space(user, space_id)
-        row = self._concepts.get_space_graph(user_id=str(user.id), space_id=str(space_id))
+        # A superset of ownership — lets a read-only collaborator see the
+        # knowledge map without granting them any write access.
+        space = self._spaces.require_viewable_space(user, space_id)
+        row = self._concepts.get_space_graph(user_id=space["user_id"], space_id=str(space_id))
         return SpaceGraphResponse(
             concepts=[ConceptNode(**c) for c in row["concepts"]],
             sources=[SourceNode(**s) for s in row["sources"]],

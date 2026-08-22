@@ -77,6 +77,38 @@ class FakeStorage:
         return data.decode("utf-8")
 
 
+class FakeNoteRepo:
+    """In-memory ``source_notes`` table."""
+
+    def __init__(self) -> None:
+        self.notes: dict[str, dict] = {}
+
+    def get_by_source(self, *, source_id: str, user_id: str) -> dict | None:
+        row = self.notes.get(source_id)
+        if not row or row["user_id"] != user_id:
+            return None
+        return row
+
+    def upsert(
+        self,
+        *,
+        source_id: str,
+        user_id: str,
+        space_id: str,
+        content: dict,
+    ) -> dict:
+        from datetime import UTC, datetime
+
+        row = {
+            "source_id": source_id,
+            "user_id": user_id,
+            "space_id": space_id,
+            "content": content,
+            "updated_at": datetime.now(UTC).isoformat(),
+        }
+        self.notes[source_id] = row
+        return row
+
 class FakeSpaceRepo:
     """In-memory stand-in for the ``spaces``/``sources`` tables.
 
@@ -161,6 +193,9 @@ class FakeSpaceRepo:
         row = self.spaces.get(space_id)
         return row if row and row["user_id"] == user_id else None
 
+    def get_space_any(self, *, space_id: str) -> dict | None:
+        return self.spaces.get(space_id)
+
     def slug_exists(self, *, user_id: str, slug: str) -> bool:
         return any(
             r["user_id"] == user_id and r["slug"] == slug for r in self.spaces.values()
@@ -205,9 +240,21 @@ class FakeSpaceRepo:
         rows.sort(key=lambda r: r["captured_at"], reverse=True)
         return rows[:limit]
 
+    def list_sources_for_space(self, *, space_id: str, limit: int = 20) -> list[dict]:
+        rows = [
+            {**r, "spaces": {"name": self.spaces[r["space_id"]]["name"]}}
+            for r in self.sources.values()
+            if r["space_id"] == space_id
+        ]
+        rows.sort(key=lambda r: r["captured_at"], reverse=True)
+        return rows[:limit]
+
     def get_source(self, *, user_id: str, source_id: str) -> dict | None:
         row = self.sources.get(source_id)
         return row if row and row["user_id"] == user_id else None
+
+    def get_source_any(self, *, source_id: str) -> dict | None:
+        return self.sources.get(source_id)
 
     def update_processing_status(self, *, source_id: str, status: str) -> None:
         if source_id in self.sources:
@@ -505,6 +552,102 @@ class FakeCoverageRepo:
         }
 
 
+class FakeProfileRepo:
+    """In-memory stand-in for ``profiles``."""
+
+    def __init__(self) -> None:
+        self.profiles: dict[str, dict] = {}
+
+    def get_profile(self, user_id: str) -> dict | None:
+        return self.profiles.get(user_id)
+
+    def get_by_username(self, username: str) -> dict | None:
+        return next((p for p in self.profiles.values() if p.get("username") == username), None)
+
+    def username_taken(self, username: str) -> bool:
+        return any(p.get("username") == username for p in self.profiles.values())
+
+    def upsert_profile(self, row: dict) -> None:
+        self.profiles[row["id"]] = {**self.profiles.get(row["id"], {}), **row}
+
+    def update_streak(
+        self, *, user_id: str, current_streak: int, longest_streak: int, last_active_date: str
+    ) -> None:
+        if user_id in self.profiles:
+            self.profiles[user_id].update(
+                current_streak=current_streak,
+                longest_streak=longest_streak,
+                last_active_date=last_active_date,
+            )
+
+
+class FakeProfileSettingsRepo:
+    """In-memory stand-in for ``profile_settings``."""
+
+    def __init__(self) -> None:
+        self.settings: dict[str, dict] = {}
+
+    def get(self, *, user_id: str) -> dict | None:
+        return self.settings.get(user_id)
+
+    def upsert(self, *, user_id: str, profile_public: bool) -> None:
+        self.settings[user_id] = {"user_id": user_id, "profile_public": profile_public}
+
+
+class FakeCollaboratorRepo:
+    """In-memory stand-in for ``space_collaborators``."""
+
+    def __init__(self) -> None:
+        self.grants: dict[tuple[str, str], dict] = {}
+        # Wired by the `collaborator_repo` fixture for the joined-profile reads.
+        self._space_repo: FakeSpaceRepo | None = None
+        self._profile_repo: FakeProfileRepo | None = None
+
+    def add(self, *, space_id: str, user_id: str, invited_by: str) -> dict:
+        key = (space_id, user_id)
+        if key not in self.grants:
+            self.grants[key] = {
+                "id": str(uuid4()),
+                "space_id": space_id,
+                "user_id": user_id,
+                "invited_by": invited_by,
+                "created_at": datetime.now(UTC).isoformat(),
+            }
+        return self.grants[key]
+
+    def remove(self, *, space_id: str, user_id: str) -> None:
+        self.grants.pop((space_id, user_id), None)
+
+    def is_collaborator(self, *, space_id: str, user_id: str) -> bool:
+        return (space_id, user_id) in self.grants
+
+    def list_for_space(self, *, space_id: str) -> list[dict]:
+        out = []
+        for (sid, uid), row in self.grants.items():
+            if sid != space_id:
+                continue
+            profile = self._profile_repo.profiles.get(uid) if self._profile_repo else None
+            out.append(
+                {
+                    **row,
+                    "profiles": {
+                        "username": profile.get("username") if profile else None,
+                        "full_name": profile.get("full_name") if profile else None,
+                    },
+                }
+            )
+        return out
+
+    def list_for_user(self, *, user_id: str) -> list[dict]:
+        out = []
+        for (sid, uid), row in self.grants.items():
+            if uid != user_id:
+                continue
+            space = self._space_repo.spaces.get(sid) if self._space_repo else None
+            out.append({**row, "spaces": space})
+        return out
+
+
 class FakeEmbeddingService:
     """Deterministic vectors (no network) — same text always embeds the same."""
 
@@ -603,6 +746,38 @@ def chunk_repo() -> FakeChunkRepo:
 
 
 @pytest.fixture
+def profile_repo() -> FakeProfileRepo:
+    from app.config import get_settings
+
+    repo = FakeProfileRepo()
+    dev_user_id = str(get_settings().dev_user_id)
+    repo.profiles[dev_user_id] = {
+        "id": dev_user_id,
+        "username": "dev",
+        "full_name": "Dev User",
+        "current_streak": 0,
+        "longest_streak": 0,
+        "last_active_date": None,
+    }
+    return repo
+
+
+@pytest.fixture
+def profile_settings_repo() -> FakeProfileSettingsRepo:
+    return FakeProfileSettingsRepo()
+
+
+@pytest.fixture
+def collaborator_repo(
+    space_repo: FakeSpaceRepo, profile_repo: FakeProfileRepo
+) -> FakeCollaboratorRepo:
+    repo = FakeCollaboratorRepo()
+    repo._space_repo = space_repo
+    repo._profile_repo = profile_repo
+    return repo
+
+
+@pytest.fixture
 def concept_repo(space_repo: FakeSpaceRepo) -> FakeConceptRepo:
     repo = FakeConceptRepo()
     repo._space_repo = space_repo
@@ -621,6 +796,11 @@ def coverage_repo(space_repo: FakeSpaceRepo) -> FakeCoverageRepo:
     repo = FakeCoverageRepo()
     space_repo._coverage_repo = repo
     return repo
+
+
+@pytest.fixture
+def note_repo() -> FakeNoteRepo:
+    return FakeNoteRepo()
 
 
 @pytest.fixture
@@ -646,6 +826,10 @@ def client(
     concept_repo: FakeConceptRepo,
     review_repo: FakeReviewRepo,
     coverage_repo: FakeCoverageRepo,
+    profile_repo: FakeProfileRepo,
+    profile_settings_repo: FakeProfileSettingsRepo,
+    collaborator_repo: FakeCollaboratorRepo,
+    note_repo: FakeNoteRepo,
     embedding_service: FakeEmbeddingService,
     llm_service: FakeLLMService,
     pipeline_service: FakePipelineService,
@@ -657,34 +841,50 @@ def client(
         get_coverage_service,
         get_embedding_service,
         get_llm_service,
+        get_note_service,
         get_pipeline_service,
         get_plan_service,
+        get_profile_repo,
+        get_profile_service,
         get_review_service,
+        get_sharing_service,
         get_source_chat_service,
     )
     from app.services.coverage_service import CoverageService
     from app.services.extract_service import ExtractService
+    from app.services.note_service import NoteService
     from app.services.plan_service import PlanService
+    from app.services.profile_service import ProfileService
     from app.services.review_service import ReviewService
+    from app.services.sharing_service import SharingService
     from app.services.source_chat_service import SourceChatService
+    from app.services.streak_service import StreakService
 
     app = create_app()
 
     settings = get_settings()
-    space_svc = SpaceService(space_repo)  # type: ignore[arg-type]
+    space_svc = SpaceService(space_repo, collaborator_repo)  # type: ignore[arg-type]
     session_svc = SessionService(space_repo, space_svc)  # type: ignore[arg-type]
-    capture_svc = CaptureService(settings, storage, space_svc)  # type: ignore[arg-type]
+    streak_svc = StreakService(profile_repo)  # type: ignore[arg-type]
+    capture_svc = CaptureService(settings, storage, space_svc, streak_svc)  # type: ignore[arg-type]
     extract_svc = ExtractService(storage)  # type: ignore[arg-type]
     concept_svc = ConceptService(
         concept_repo, space_svc, extract_svc, llm_service  # type: ignore[arg-type]
     )
-    review_svc = ReviewService(review_repo, space_svc)  # type: ignore[arg-type]
+    review_svc = ReviewService(review_repo, space_svc, streak_svc)  # type: ignore[arg-type]
     coverage_svc = CoverageService(
         coverage_repo, concept_repo, space_svc, llm_service  # type: ignore[arg-type]
     )
     plan_svc = PlanService(coverage_svc, review_svc, space_svc)  # type: ignore[arg-type]
+    sharing_svc = SharingService(
+        collaborator_repo, space_svc, profile_repo  # type: ignore[arg-type]
+    )
     chat_svc = SourceChatService(
         space_svc, extract_svc, llm_service, embedding_service, chunk_repo  # type: ignore[arg-type]
+    )
+    note_svc = NoteService(note_repo, space_svc, storage, settings)  # type: ignore[arg-type]
+    profile_svc = ProfileService(
+        profile_repo, profile_settings_repo, space_repo  # type: ignore[arg-type]
     )
 
     # Real routes now require a verified Supabase JWT; inject the fixed dev
@@ -701,9 +901,13 @@ def client(
     app.dependency_overrides[get_review_service] = lambda: review_svc
     app.dependency_overrides[get_coverage_service] = lambda: coverage_svc
     app.dependency_overrides[get_plan_service] = lambda: plan_svc
+    app.dependency_overrides[get_profile_repo] = lambda: profile_repo
+    app.dependency_overrides[get_sharing_service] = lambda: sharing_svc
+    app.dependency_overrides[get_profile_service] = lambda: profile_svc
     app.dependency_overrides[get_embedding_service] = lambda: embedding_service
     app.dependency_overrides[get_llm_service] = lambda: llm_service
     app.dependency_overrides[get_source_chat_service] = lambda: chat_svc
+    app.dependency_overrides[get_note_service] = lambda: note_svc
     # The real pipeline calls Anthropic/Voyage over the network — never run it
     # from the capture path in tests; dedicated pipeline tests exercise the
     # real graph directly against fakes instead.

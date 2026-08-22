@@ -1,6 +1,18 @@
-import { type CapturedSource } from '@/lib/dashboard-data'
-import styles from './dashboard.module.css'
+'use client'
+
+/**
+ * Capture list with live status badges.
+ * While any row is still processing, refresh the server tree so
+ * Processing → Ready / Failed without a manual reload.
+ */
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import {
+  isCaptureProcessing,
+  type CapturedSource,
+} from '@/lib/dashboard-data'
+import styles from './dashboard.module.css'
 import SourceIcon from './SourceIcon'
 import OriginalLink from './OriginalLink'
 
@@ -11,11 +23,45 @@ interface CaptureFeedProps {
   emptyBody?: string
 }
 
+const POLL_MS = 2500
+
+function StatusBadge({ status }: { status: CapturedSource['status'] }) {
+  if (status === 'processing') {
+    return (
+      <span className={`${styles.status} ${styles.wip}`}>
+        <span className={styles.statusDot} aria-hidden="true" />
+        Processing
+      </span>
+    )
+  }
+  if (status === 'failed') {
+    return (
+      <span className={`${styles.status} ${styles.fail}`}>
+        Failed
+      </span>
+    )
+  }
+  return (
+    <span className={`${styles.status} ${styles.done}`}>Ready</span>
+  )
+}
+
 export default function CaptureFeed({
   sources,
   emptyTitle = 'No captures yet',
   emptyBody = 'Install the browser extension, open a video or article, and save it into a Learning Space — it will show up here.',
 }: CaptureFeedProps) {
+  const router = useRouter()
+  const pending = sources.some(source => isCaptureProcessing(source.status))
+
+  useEffect(() => {
+    if (!pending) return
+    const id = window.setInterval(() => {
+      router.refresh()
+    }, POLL_MS)
+    return () => window.clearInterval(id)
+  }, [pending, router])
+
   if (sources.length === 0) {
     return (
       <div className={styles.empty}>
@@ -52,12 +98,7 @@ export default function CaptureFeed({
                     <span>{source.capturedAt}</span>
                   </div>
                 </div>
-                {source.status === 'summarizing' ? (
-                  <span className={`${styles.status} ${styles.wip}`}>
-                    <span className={styles.statusDot} aria-hidden="true" />
-                    Processing
-                  </span>
-                ) : null}
+                <StatusBadge status={source.status} />
               </div>
             </Link>
             <div className={styles.srcActions}>

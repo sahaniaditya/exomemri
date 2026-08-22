@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from app.errors import ConflictError, NotFoundError
+from app.repositories.collaborator_repo import CollaboratorRepo
 from app.repositories.space_repo import SpaceRepo
 from app.schemas.common import User
 from app.schemas.spaces import SourceCounts, SourceSummary, SpaceSummary
@@ -44,8 +45,9 @@ def _is_unique_violation(exc: Exception) -> bool:
 
 
 class SpaceService:
-    def __init__(self, spaces: SpaceRepo) -> None:
+    def __init__(self, spaces: SpaceRepo, collaborators: CollaboratorRepo) -> None:
         self._spaces = spaces
+        self._collaborators = collaborators
 
     # --- spaces ---
 
@@ -130,18 +132,50 @@ class SpaceService:
             )
         return space
 
+    def require_viewable_space(self, user: User, space_id: UUID) -> dict:
+        """The space row if the caller owns it OR is a read-only collaborator.
+
+        Still 404, not 403, on failure — same unenumerable-ids rule as
+        ``require_owned_space``. This is strictly a superset of that check:
+        every owner-only call site keeps using ``require_owned_space``
+        unchanged, and only the curated-content reads (sources, summaries,
+        the knowledge-map graph) route through this one instead.
+        """
+        space = self._spaces.get_space(user_id=str(user.id), space_id=str(space_id))
+        if space:
+            return space
+        if self._collaborators.is_collaborator(space_id=str(space_id), user_id=str(user.id)):
+            space = self._spaces.get_space_any(space_id=str(space_id))
+            if space:
+                return space
+        raise NotFoundError(
+            "Learning Space not found.", detail={"space_id": str(space_id)}
+        )
+
+    def require_viewable_source(self, user: User, source_id: UUID) -> dict:
+        """Like ``require_viewable_space``, for a single source."""
+        source = self._spaces.get_source(user_id=str(user.id), source_id=str(source_id))
+        if source:
+            return source
+        source = self._spaces.get_source_any(source_id=str(source_id))
+        if source and self._collaborators.is_collaborator(
+            space_id=source["space_id"], user_id=str(user.id)
+        ):
+            return source
+        raise NotFoundError("Source not found.", detail={"source_id": str(source_id)})
+
     # --- sources ---
 
     def list_sources(
         self, user: User, *, space_id: UUID | None = None, limit: int = 20
     ) -> list[SourceSummary]:
         if space_id is not None:
-            self.require_owned_space(user, space_id)
-        rows = self._spaces.list_sources(
-            user_id=str(user.id),
-            space_id=str(space_id) if space_id else None,
-            limit=limit,
-        )
+            # A superset of ownership — lets a read-only collaborator see the
+            # space's captures without granting them any write access.
+            self.require_viewable_space(user, space_id)
+            rows = self._spaces.list_sources_for_space(space_id=str(space_id), limit=limit)
+        else:
+            rows = self._spaces.list_sources(user_id=str(user.id), limit=limit)
         return [self._to_source_summary(row) for row in rows]
 
     def existing_source_id(self, *, space_id: UUID, content_hash: str) -> UUID | None:

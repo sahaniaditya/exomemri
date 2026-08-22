@@ -56,9 +56,24 @@ export interface CapturedSource {
   kind: SourceKind
   meta: string
   capturedAt: string
-  status: 'summarized' | 'summarizing'
+  /** Derived from backend `processing_status`. */
+  status: CaptureStatus
   /** Original article / video URL when the capture had one. */
   url: string | null
+}
+
+/** Terminal + in-flight labels the capture feed / detail chrome show. */
+export type CaptureStatus = 'ready' | 'processing' | 'failed'
+
+/** Collapse the pipeline enum into the three user-facing states. */
+export function captureStatus(processingStatus: string): CaptureStatus {
+  if (processingStatus === 'ready') return 'ready'
+  if (processingStatus === 'failed') return 'failed'
+  return 'processing'
+}
+
+export function isCaptureProcessing(status: CaptureStatus): boolean {
+  return status === 'processing'
 }
 
 export interface ReviewQueue {
@@ -237,8 +252,7 @@ export function toCapturedSource(source: Source): CapturedSource {
       ? `${SOURCE_LABEL[source.type]} · ${source.author}`
       : SOURCE_LABEL[source.type],
     capturedAt: relativeTime(source.captured_at),
-    // Nothing processes captures yet, so anything not `ready` is still in flight.
-    status: source.processing_status === 'ready' ? 'summarized' : 'summarizing',
+    status: captureStatus(source.processing_status),
     url: source.url,
   }
 }

@@ -57,6 +57,21 @@ class SpaceRepo:
         )
         return res.data if res else None
 
+    def get_space_any(self, *, space_id: str) -> dict | None:
+        """Return the space with no owner filter.
+
+        Only for the viewer-read path, after collaborator access has already
+        been checked — see ``SpaceService.require_viewable_space``.
+        """
+        res = (
+            self._client.table("spaces")
+            .select("*")
+            .eq("id", space_id)
+            .maybe_single()
+            .execute()
+        )
+        return res.data if res else None
+
     def slug_exists(self, *, user_id: str, slug: str) -> bool:
         res = (
             self._client.table("spaces")
@@ -138,6 +153,34 @@ class SpaceRepo:
             query = query.eq("space_id", space_id)
         res = query.order("captured_at", desc=True).limit(limit).execute()
         return res.data or []
+
+    def list_sources_for_space(self, *, space_id: str, limit: int = 20) -> list[dict]:
+        """Sources in one space, with no owner filter.
+
+        Only for the viewer-read path, called after the caller's access to
+        ``space_id`` has already been authorized (owner or collaborator) —
+        this method itself enforces nothing.
+        """
+        res = (
+            self._client.table("sources")
+            .select("*, spaces(name, slug)")
+            .eq("space_id", space_id)
+            .order("captured_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+
+    def get_source_any(self, *, source_id: str) -> dict | None:
+        """Return the source with no owner filter — see ``list_sources_for_space``."""
+        res = (
+            self._client.table("sources")
+            .select("*")
+            .eq("id", source_id)
+            .maybe_single()
+            .execute()
+        )
+        return res.data if res else None
 
     def get_source(self, *, user_id: str, source_id: str) -> dict | None:
         """Return the source only if it belongs to ``user_id`` (authorization)."""

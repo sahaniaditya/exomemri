@@ -8,6 +8,7 @@ import type { Profile } from '@/lib/profile'
 import { getReviewQueue } from '@/lib/review'
 import { getSpaceCoverage } from '@/lib/coverage'
 import { getStudyPlan } from '@/lib/plan'
+import { listCollaborators } from '@/lib/sharing'
 import { listSpaceSources, listSpaces } from '@/lib/spaces'
 import styles from '@/components/dashboard/dashboard.module.css'
 import CaptureFeed from '@/components/dashboard/CaptureFeed'
@@ -15,6 +16,7 @@ import ContourBg from '@/components/dashboard/ContourBg'
 import CoverageCard from '@/components/dashboard/CoverageCard'
 import Plate from '@/components/dashboard/Plate'
 import PlanCard from '@/components/dashboard/PlanCard'
+import ShareManager from '@/components/dashboard/ShareManager'
 import SpaceHero from '@/components/dashboard/SpaceHero'
 import SpacesSidebar from '@/components/dashboard/SpacesSideBar'
 
@@ -42,14 +44,16 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
   const { spaceId } = await params
   const token = (await cookies()).get('atlas_token')?.value ?? ''
 
-  const [profile, spaces, spaceSources, reviewQueue, coverage, planItems] = await Promise.all([
-    loadProfile(token),
-    listSpaces(token),
-    listSpaceSources(token, spaceId),
-    getReviewQueue(token, spaceId),
-    getSpaceCoverage(token, spaceId),
-    getStudyPlan(token, spaceId),
-  ])
+  const [profile, spaces, spaceSources, reviewQueue, coverage, planItems, collaborators] =
+    await Promise.all([
+      loadProfile(token),
+      listSpaces(token),
+      listSpaceSources(token, spaceId),
+      getReviewQueue(token, spaceId),
+      getSpaceCoverage(token, spaceId),
+      getStudyPlan(token, spaceId),
+      listCollaborators(token, spaceId),
+    ])
 
   const activeSpace = spaces.find(space => space.id === spaceId)
   if (!activeSpace) notFound()
@@ -116,6 +120,11 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
               <CoverageCard coverage={coverage} />
             </section>
           )}
+
+          <section id="sharing" className={styles.section}>
+            <Plate num="05" title="Share (read-only)" />
+            <ShareManager spaceId={spaceId} initialCollaborators={collaborators} />
+          </section>
         </div>
       </main>
     </div>

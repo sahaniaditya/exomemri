@@ -52,11 +52,23 @@ export default function SourceChatPanel({
   const [resizing, setResizing] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
+  const resizingRef = useRef(false)
+  const widthRef = useRef(width)
 
   useEffect(() => {
-    const onResize = () => setWidth(prev => clampWidth(prev))
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    widthRef.current = width
+  }, [width])
+
+  useEffect(() => {
+    const onWindowResize = () => {
+      const next = clampWidth(widthRef.current)
+      widthRef.current = next
+      setWidth(next)
+      if (panelRef.current) panelRef.current.style.width = `${next}px`
+    }
+    window.addEventListener('resize', onWindowResize)
+    return () => window.removeEventListener('resize', onWindowResize)
   }, [])
 
   useEffect(() => {
@@ -97,20 +109,25 @@ export default function SourceChatPanel({
   const onResizeStart = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return
     event.preventDefault()
+    event.stopPropagation()
+    resizingRef.current = true
     setResizing(true)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   const onResizeMove = (event: PointerEvent<HTMLButtonElement>) => {
-    if (!resizing) return
-    // Panel is right-docked: left edge at (windowWidth - width).
-    // Dragging left increases width.
-    setWidth(clampWidth(window.innerWidth - event.clientX))
+    if (!resizingRef.current) return
+    // Right-docked panel: drag left edge leftward to widen.
+    const next = clampWidth(window.innerWidth - event.clientX)
+    widthRef.current = next
+    if (panelRef.current) panelRef.current.style.width = `${next}px`
   }
 
   const onResizeEnd = (event: PointerEvent<HTMLButtonElement>) => {
-    if (!resizing) return
+    if (!resizingRef.current) return
+    resizingRef.current = false
     setResizing(false)
+    setWidth(widthRef.current)
     try {
       event.currentTarget.releasePointerCapture(event.pointerId)
     } catch {
@@ -164,6 +181,7 @@ export default function SourceChatPanel({
         onClick={onClose}
       />
       <aside
+        ref={panelRef}
         className={`${styles.memoryPanel} ${resizing ? styles.memoryPanelResizing : ''}`}
         aria-label="Ask this capture"
         style={{ width }}

@@ -568,6 +568,12 @@
   }
 }
 
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .streak {
   display: flex;
   align-items: center;
@@ -1471,6 +1477,12 @@
   border: 1px solid rgba(181, 98, 60, 0.24);
 }
 
+.status.fail {
+  color: #8f3d2c;
+  background: rgba(143, 61, 44, 0.08);
+  border: 1px solid rgba(143, 61, 44, 0.22);
+}
+
 .statusDot {
   width: 5px;
   height: 5px;
@@ -2024,6 +2036,19 @@
   transform: translateY(0);
 }
 
+.captureAskBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.captureAskBtn:disabled:hover {
+  background: var(--forest);
+  transform: none;
+  box-shadow: none;
+}
+
 .captureEmptySummary {
   margin: 0 auto;
   max-width: 520px;
@@ -2301,6 +2326,174 @@
   color: var(--ink);
 }
 
+/* ---- Capture notes (user notebook) ---- */
+
+.notesSection {
+  margin: 40px auto 0;
+  max-width: 1100px;
+  animation: riseIn 0.5s ease both;
+  animation-delay: 280ms;
+}
+
+.notesCard {
+  border: 1px solid rgba(27, 26, 22, 0.1);
+  border-radius: 14px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.notesToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(27, 26, 22, 0.08);
+  background: rgba(244, 241, 233, 0.55);
+}
+
+.notesTool {
+  border: 1px solid rgba(27, 26, 22, 0.12);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.notesTool:hover:not(:disabled) {
+  border-color: rgba(44, 93, 79, 0.35);
+  background: rgba(44, 93, 79, 0.06);
+}
+
+.notesTool:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.notesTool[data-active='true'] {
+  background: rgba(44, 93, 79, 0.12);
+  border-color: rgba(44, 93, 79, 0.35);
+  color: var(--forest);
+}
+
+.notesEmojiWrap {
+  position: relative;
+}
+
+.notesEmojiPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  padding: 8px;
+  width: 240px;
+  background: var(--paper);
+  border: 1px solid rgba(27, 26, 22, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 16px 32px -20px rgba(27, 26, 22, 0.45);
+}
+
+.notesEmojiBtn {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1.4;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.notesEmojiBtn:hover {
+  background: rgba(44, 93, 79, 0.1);
+}
+
+.notesFileInput {
+  display: none;
+}
+
+.notesToolbarSpacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.notesSaveMeta {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--sage);
+}
+
+.notesError {
+  color: #8f3d2c;
+}
+
+.notesSave {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  background: var(--forest);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.notesSave:hover:not(:disabled) {
+  background: var(--forest-deep);
+}
+
+.notesSave:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.notesEditor {
+  min-height: 160px;
+  padding: 16px 18px 20px;
+  outline: none;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.notesEditor p {
+  margin: 0 0 0.65em;
+}
+
+.notesEditor p:last-child {
+  margin-bottom: 0;
+}
+
+.notesEditor a {
+  color: var(--forest);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.notesEditor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin: 10px 0;
+  border: 1px solid rgba(27, 26, 22, 0.1);
+}
+
+.notesEditor :global(p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--sage-light);
+  pointer-events: none;
+  height: 0;
+}
+
 /* ---- Memory overlay (ask this capture) ---- */
 
 .memoryOverlay {
@@ -2366,10 +2559,10 @@
 .memoryResize {
   position: absolute;
   top: 0;
-  left: 0;
+  left: -8px;
   bottom: 0;
-  width: 10px;
-  z-index: 2;
+  width: 18px;
+  z-index: 3;
   border: none;
   padding: 0;
   margin: 0;
@@ -2378,25 +2571,39 @@
   touch-action: none;
 }
 
+.memoryResize::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+
 .memoryResize::after {
   content: '';
   position: absolute;
   top: 50%;
-  left: 3px;
-  width: 3px;
-  height: 48px;
-  margin-top: -24px;
+  left: 7px;
+  width: 4px;
+  height: 56px;
+  margin-top: -28px;
   border-radius: 999px;
-  background: rgba(44, 93, 79, 0.28);
+  background: rgba(44, 93, 79, 0.35);
+  box-shadow: 0 0 0 1px rgba(251, 250, 246, 0.65);
   transition: background 0.15s ease, height 0.15s ease, opacity 0.15s ease;
-  opacity: 0.7;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.memoryResize:hover,
+.memoryPanelResizing .memoryResize {
+  cursor: col-resize;
 }
 
 .memoryResize:hover::after,
 .memoryPanelResizing .memoryResize::after {
   background: var(--forest);
-  height: 72px;
-  margin-top: -36px;
+  height: 80px;
+  margin-top: -40px;
   opacity: 1;
 }
 
@@ -2648,15 +2855,13 @@
   align-items: flex-end;
   gap: 8px;
   padding: 10px 10px 10px 14px;
-  border: 1px solid rgba(44, 93, 79, 0.28);
+  border: none;
   border-radius: 14px;
-  background: var(--paper);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  background: rgba(27, 26, 22, 0.04);
 }
 
 .memoryComposerRow:focus-within {
-  border-color: rgba(44, 93, 79, 0.55);
-  box-shadow: 0 0 0 3px rgba(44, 93, 79, 0.12);
+  background: rgba(27, 26, 22, 0.06);
 }
 
 .memoryInput {
@@ -2671,6 +2876,16 @@
   color: var(--ink);
   max-height: 140px;
   padding: 4px 0;
+}
+
+.memoryInput:focus,
+.memoryInput:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.memoryComposerRow :focus-visible {
+  outline: none;
 }
 
 .memoryInput::placeholder {
@@ -3286,6 +3501,17 @@
 .covchipgap {
   background: rgba(181, 98, 60, 0.1);
   border-color: rgba(181, 98, 60, 0.2);
+}
+
+.covchipremove {
+  margin-left: 6px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
 }
 
 /* ---------- study plan card ---------- */

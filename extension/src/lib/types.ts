@@ -126,6 +126,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/profile/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile Visibility */
+        get: operations["get_profile_visibility_v1_profile_visibility_get"];
+        /** Set Profile Visibility */
+        put: operations["set_profile_visibility_v1_profile_visibility_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profiles/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Public Profile
+         * @description A user's opted-in public profile. No authentication required.
+         */
+        get: operations["get_public_profile_v1_profiles__username__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/session": {
         parameters: {
             query?: never;
@@ -154,6 +192,26 @@ export interface paths {
         put?: never;
         /** Set Active Space */
         post: operations["set_active_space_v1_session_active_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shared-with-me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Shared With Me
+         * @description Spaces another Atlas user has shared read-only access to with me.
+         */
+        get: operations["list_shared_with_me_v1_shared_with_me_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -233,6 +291,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sources/{source_id}/note-images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Note Image Upload */
+        post: operations["create_note_image_upload_v1_sources__source_id__note_images_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{source_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Note */
+        get: operations["get_note_v1_sources__source_id__notes_get"];
+        /** Put Note */
+        put: operations["put_note_v1_sources__source_id__notes_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sources/{source_id}/summary": {
         parameters: {
             query?: never;
@@ -263,6 +356,41 @@ export interface paths {
         /** Create Space */
         post: operations["create_space_v1_spaces_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/collaborators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Collaborators */
+        get: operations["list_collaborators_v1_spaces__space_id__collaborators_get"];
+        put?: never;
+        /** Invite Collaborator */
+        post: operations["invite_collaborator_v1_spaces__space_id__collaborators_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/collaborators/{collaborator_user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Collaborator */
+        delete: operations["revoke_collaborator_v1_spaces__space_id__collaborators__collaborator_user_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -523,6 +651,25 @@ export interface components {
              */
             role: "user" | "assistant";
         };
+        /** CollaboratorListResponse */
+        CollaboratorListResponse: {
+            /** Collaborators */
+            collaborators: components["schemas"]["CollaboratorResponse"][];
+        };
+        /** CollaboratorResponse */
+        CollaboratorResponse: {
+            /** Created At */
+            created_at?: string | null;
+            /** Full Name */
+            full_name?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Username */
+            username: string;
+        };
         /**
          * ConceptNode
          * @description A concept in the map. ``degree`` is how many sources reference it.
@@ -587,6 +734,11 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** InviteCollaboratorRequest */
+        InviteCollaboratorRequest: {
+            /** Username */
+            username: string;
+        };
         /** LoginResponse */
         LoginResponse: {
             /** Access Token */
@@ -604,6 +756,47 @@ export interface components {
         MessageResponse: {
             /** Message */
             message: string;
+        };
+        /**
+         * NoteImageUploadRequest
+         * @description Ask for a signed PUT URL for a note image under the source prefix.
+         */
+        NoteImageUploadRequest: {
+            /** Content Type */
+            content_type: string;
+            /** Filename */
+            filename: string;
+        };
+        /**
+         * NoteImageUploadResponse
+         * @description Client PUTs bytes to ``upload_url`` with header ``x-upsert: true``.
+         */
+        NoteImageUploadResponse: {
+            /** Key */
+            key: string;
+            /** Path */
+            path: string;
+            /** Token */
+            token: string;
+            /** Upload Url */
+            upload_url: string;
+        };
+        /**
+         * NoteResponse
+         * @description The notebook for one source. Empty content when the user has never saved.
+         */
+        NoteResponse: {
+            /** Content */
+            content?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /** Updated At */
+            updated_at?: string | null;
         };
         /** OnboardingStatusResponse */
         OnboardingStatusResponse: {
@@ -626,11 +819,11 @@ export interface components {
         };
         /**
          * ProcessingStatus
-         * @description Lifecycle of a source.
+         * @description Lifecycle of a captured source through the RAG pipeline.
          *
-         *     Phase 0 only ever emits ``queued`` (nothing processes it yet); the full
-         *     set is declared here so the generated client contract is stable across
-         *     phases.
+         *     Capture inserts ``queued``. The background pipeline advances through
+         *     fetching → chunking → embedding → summarizing → extracting, then
+         *     ``ready``. Any stage error lands on ``failed``.
          * @enum {string}
          */
         ProcessingStatus: "queued" | "fetching" | "chunking" | "embedding" | "summarizing" | "extracting" | "ready" | "failed";
@@ -649,6 +842,50 @@ export interface components {
             referral_source: string;
             /** Username */
             username: string;
+        };
+        /** ProfileVisibilityRequest */
+        ProfileVisibilityRequest: {
+            /** Profile Public */
+            profile_public: boolean;
+        };
+        /** ProfileVisibilityResponse */
+        ProfileVisibilityResponse: {
+            /** Profile Public */
+            profile_public: boolean;
+        };
+        /**
+         * PublicProfileResponse
+         * @description The public-facing subset of a profile.
+         *
+         *     Deliberately excludes anything onboarding-survey-shaped (``goal_text``,
+         *     ``primary_role``, etc.) or content-level (concept labels, syllabus
+         *     topics, source titles) — those stay at the sensitivity tier the
+         *     read-only sharing feature already established for invited collaborators,
+         *     not strangers.
+         */
+        PublicProfileResponse: {
+            /** Current Streak */
+            current_streak: number;
+            /** Full Name */
+            full_name: string;
+            /** Longest Streak */
+            longest_streak: number;
+            /** Spaces */
+            spaces: components["schemas"]["PublicSpaceSummary"][];
+            /** Username */
+            username: string;
+        };
+        /**
+         * PublicSpaceSummary
+         * @description A portfolio tile — counts only, never source titles, URLs, or content.
+         */
+        PublicSpaceSummary: {
+            /** Coverage Pct */
+            coverage_pct: number | null;
+            /** Name */
+            name: string;
+            /** Source Count */
+            source_count: number;
         };
         /**
          * RebuildResponse
@@ -733,6 +970,30 @@ export interface components {
              * Format: uuid
              */
             space_id: string;
+        };
+        /** SharedSpaceListResponse */
+        SharedSpaceListResponse: {
+            /** Spaces */
+            spaces: components["schemas"]["SharedSpaceSummary"][];
+        };
+        /**
+         * SharedSpaceSummary
+         * @description One space shared with the current user — read-only, curated content only.
+         */
+        SharedSpaceSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Owner Username */
+            owner_username?: string | null;
+            /** Shared At */
+            shared_at?: string | null;
+            /** Slug */
+            slug: string;
         };
         /**
          * SourceCounts
@@ -985,6 +1246,16 @@ export interface components {
             token: string;
             /** Upload Url */
             upload_url: string;
+        };
+        /**
+         * UpsertNoteRequest
+         * @description Replace the notebook document for a source.
+         */
+        UpsertNoteRequest: {
+            /** Content */
+            content?: {
+                [key: string]: unknown;
+            };
         };
         /**
          * User
@@ -1258,6 +1529,103 @@ export interface operations {
             };
         };
     };
+    get_profile_visibility_v1_profile_visibility_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileVisibilityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_profile_visibility_v1_profile_visibility_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileVisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileVisibilityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_public_profile_v1_profiles__username__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_session_v1_session_get: {
         parameters: {
             query?: never;
@@ -1310,6 +1678,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_shared_with_me_v1_shared_with_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedSpaceListResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -1530,6 +1929,113 @@ export interface operations {
             };
         };
     };
+    create_note_image_upload_v1_sources__source_id__note_images_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteImageUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteImageUploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_note_v1_sources__source_id__notes_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_note_v1_sources__source_id__notes_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_summary_v1_sources__source_id__summary_get: {
         parameters: {
             query?: never;
@@ -1617,6 +2123,108 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SpaceSummary"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_collaborators_v1_spaces__space_id__collaborators_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollaboratorListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invite_collaborator_v1_spaces__space_id__collaborators_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteCollaboratorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollaboratorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_collaborator_v1_spaces__space_id__collaborators__collaborator_user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                collaborator_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

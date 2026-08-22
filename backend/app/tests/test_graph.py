@@ -15,6 +15,7 @@ from app.services.space_service import SpaceService
 from app.tests.conftest import (
     OTHER_USER_SPACE_ID,
     SEEDED_SPACE_ID,
+    FakeCollaboratorRepo,
     FakeConceptRepo,
     FakeLLMService,
     FakeSpaceRepo,
@@ -64,7 +65,7 @@ def _build_service(
     storage: FakeStorage,
     llm: FakeLLMService,
 ) -> ConceptService:
-    space_svc = SpaceService(space_repo)  # type: ignore[arg-type]
+    space_svc = SpaceService(space_repo, FakeCollaboratorRepo())  # type: ignore[arg-type]
     return ConceptService(
         concept_repo, space_svc, ExtractService(storage), llm  # type: ignore[arg-type]
     )

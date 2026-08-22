@@ -9,11 +9,18 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 from app.dependencies import (
     get_authenticated_app_user,
     get_capture_service,
+    get_note_service,
     get_pipeline_service,
     get_source_chat_service,
     get_space_service,
 )
 from app.schemas.common import User
+from app.schemas.notes import (
+    NoteImageUploadRequest,
+    NoteImageUploadResponse,
+    NoteResponse,
+    UpsertNoteRequest,
+)
 from app.schemas.sources import (
     CaptureRequest,
     CaptureResponse,
@@ -26,6 +33,7 @@ from app.schemas.sources import (
 )
 from app.schemas.spaces import ArtifactUrlResponse, SourceListResponse
 from app.services.capture_service import CaptureService
+from app.services.note_service import NoteService
 from app.services.pipeline_service import PipelineService
 from app.services.source_chat_service import SourceChatService
 from app.services.space_service import SpaceService
@@ -101,3 +109,32 @@ async def post_message(
     svc: SourceChatService = Depends(get_source_chat_service),
 ) -> SendMessageResponse:
     return await svc.send_message(user=user, source_id=source_id, content=body.content)
+
+
+@router.get("/{source_id}/notes", response_model=NoteResponse)
+async def get_note(
+    source_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> NoteResponse:
+    return await svc.get_note(user=user, source_id=source_id)
+
+
+@router.put("/{source_id}/notes", response_model=NoteResponse)
+async def put_note(
+    source_id: UUID,
+    body: UpsertNoteRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> NoteResponse:
+    return await svc.upsert_note(user=user, source_id=source_id, payload=body)
+
+
+@router.post("/{source_id}/note-images", response_model=NoteImageUploadResponse)
+async def create_note_image_upload(
+    source_id: UUID,
+    body: NoteImageUploadRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> NoteImageUploadResponse:
+    return await svc.create_image_upload(user=user, source_id=source_id, payload=body)

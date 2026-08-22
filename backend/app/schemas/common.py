@@ -19,11 +19,11 @@ class SourceType(StrEnum):
 
 
 class ProcessingStatus(StrEnum):
-    """Lifecycle of a source.
+    """Lifecycle of a captured source through the RAG pipeline.
 
-    Phase 0 only ever emits ``queued`` (nothing processes it yet); the full
-    set is declared here so the generated client contract is stable across
-    phases.
+    Capture inserts ``queued``. The background pipeline advances through
+    fetching → chunking → embedding → summarizing → extracting, then
+    ``ready``. Any stage error lands on ``failed``.
     """
 
     queued = "queued"

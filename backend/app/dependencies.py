@@ -9,9 +9,12 @@ from fastapi import Depends, Header
 from app.config import Settings, get_settings
 from app.errors import AuthError
 from app.repositories.chunk_repo import ChunkRepo
+from app.repositories.collaborator_repo import CollaboratorRepo
 from app.repositories.concept_repo import ConceptRepo
 from app.repositories.coverage_repo import CoverageRepo
+from app.repositories.note_repo import NoteRepo
 from app.repositories.profile_repo import ProfileRepo
+from app.repositories.profile_settings_repo import ProfileSettingsRepo
 from app.repositories.review_repo import ReviewRepo
 from app.repositories.space_repo import SpaceRepo
 from app.repositories.storage_repo import StorageRepo, get_storage_repo
@@ -25,22 +28,31 @@ from app.services.coverage_service import CoverageService
 from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
+from app.services.note_service import NoteService
 from app.services.pipeline_service import PipelineService
 from app.services.plan_service import PlanService
+from app.services.profile_service import ProfileService
 from app.services.review_service import ReviewService
 from app.services.session_service import SessionService
+from app.services.sharing_service import SharingService
 from app.services.source_chat_service import SourceChatService
 from app.services.space_service import SpaceService
+from app.services.streak_service import StreakService
 
 
 def get_space_repo() -> SpaceRepo:
     return SpaceRepo(get_service_client())
 
 
+def get_collaborator_repo() -> CollaboratorRepo:
+    return CollaboratorRepo(get_service_client())
+
+
 def get_space_service(
     spaces: SpaceRepo = Depends(get_space_repo),
+    collaborators: CollaboratorRepo = Depends(get_collaborator_repo),
 ) -> SpaceService:
-    return SpaceService(spaces)
+    return SpaceService(spaces, collaborators)
 
 
 def get_session_service(
@@ -50,19 +62,59 @@ def get_session_service(
     return SessionService(spaces, space_service)
 
 
+def get_profile_repo() -> ProfileRepo:
+    return ProfileRepo(get_service_client())
+
+
+def get_profile_settings_repo() -> ProfileSettingsRepo:
+    return ProfileSettingsRepo(get_service_client())
+
+
+def get_profile_service(
+    profiles: ProfileRepo = Depends(get_profile_repo),
+    settings: ProfileSettingsRepo = Depends(get_profile_settings_repo),
+    spaces: SpaceRepo = Depends(get_space_repo),
+) -> ProfileService:
+    return ProfileService(profiles, settings, spaces)
+
+
+def get_streak_service(
+    profiles: ProfileRepo = Depends(get_profile_repo),
+) -> StreakService:
+    return StreakService(profiles)
+
+
+def get_sharing_service(
+    collaborators: CollaboratorRepo = Depends(get_collaborator_repo),
+    space_service: SpaceService = Depends(get_space_service),
+    profiles: ProfileRepo = Depends(get_profile_repo),
+) -> SharingService:
+    return SharingService(collaborators, space_service, profiles)
+
+
 def get_capture_service(
     settings: Settings = Depends(get_settings),
     storage: StorageRepo = Depends(get_storage_repo),
     space_service: SpaceService = Depends(get_space_service),
+    streaks: StreakService = Depends(get_streak_service),
 ) -> CaptureService:
-    return CaptureService(settings, storage, space_service)
+    return CaptureService(settings, storage, space_service, streaks)
+
+
+def get_note_repo() -> NoteRepo:
+    return NoteRepo(get_service_client())
+
+
+def get_note_service(
+    notes: NoteRepo = Depends(get_note_repo),
+    space_service: SpaceService = Depends(get_space_service),
+    storage: StorageRepo = Depends(get_storage_repo),
+    settings: Settings = Depends(get_settings),
+) -> NoteService:
+    return NoteService(notes, space_service, storage, settings)
 
 
 # --- Auth (real Supabase JWT) ---
-
-
-def get_profile_repo() -> ProfileRepo:
-    return ProfileRepo(get_service_client())
 
 
 def get_auth_service(
@@ -154,8 +206,9 @@ def get_review_repo() -> ReviewRepo:
 def get_review_service(
     reviews: ReviewRepo = Depends(get_review_repo),
     spaces: SpaceService = Depends(get_space_service),
+    streaks: StreakService = Depends(get_streak_service),
 ) -> ReviewService:
-    return ReviewService(reviews, spaces)
+    return ReviewService(reviews, spaces, streaks)
 
 def get_plan_service(
     coverage: CoverageService = Depends(get_coverage_service),

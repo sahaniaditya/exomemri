@@ -12,8 +12,10 @@ from app.routers import auth as auth_router
 from app.routers import coverage as coverage_router
 from app.routers import graph as graph_router
 from app.routers import plan as plan_router
+from app.routers import profile as profile_router
 from app.routers import review as review_router
 from app.routers import session as session_router
+from app.routers import sharing as sharing_router
 from app.routers import sources as sources_router
 from app.routers import spaces as spaces_router
 
@@ -59,6 +61,10 @@ def create_app() -> FastAPI:
     app.include_router(review_router.router, prefix=API_PREFIX)
     app.include_router(coverage_router.router, prefix=API_PREFIX)
     app.include_router(plan_router.router, prefix=API_PREFIX)
+    app.include_router(sharing_router.router, prefix=API_PREFIX)
+    app.include_router(sharing_router.shared_with_me_router, prefix=API_PREFIX)
+    app.include_router(profile_router.router, prefix=API_PREFIX)
+    app.include_router(profile_router.public_router, prefix=API_PREFIX)
 
     @app.get("/health", tags=["meta"])
     def health() -> dict:

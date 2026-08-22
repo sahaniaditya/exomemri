@@ -14,6 +14,8 @@ interface TopBarProps {
   profile: Profile | null
   totalSources: number
   spaceCount: number
+  /** Days of consecutive study activity (a capture or a review, UTC days). */
+  streakDays?: number
   /** Full hero + pulse on overview; compact greeting elsewhere. */
   variant?: 'hero' | 'compact'
 }
@@ -48,6 +50,7 @@ export default function TopBar({
   profile,
   totalSources,
   spaceCount,
+  streakDays = 0,
   variant = 'hero',
 }: TopBarProps) {
   const router = useRouter()
@@ -88,6 +91,15 @@ export default function TopBar({
     </div>
   )
 
+  const streak = streakDays > 0 && (
+    <div className={styles.streak}>
+      <span className={styles.flame} aria-hidden="true">
+        🔥
+      </span>
+      {streakDays} day{streakDays === 1 ? '' : 's'}
+    </div>
+  )
+
   if (variant === 'compact') {
     return (
       <div className={styles.top}>
@@ -104,7 +116,10 @@ export default function TopBar({
                 }`}
           </p>
         </div>
-        {account}
+        <div className={styles.topRight}>
+          {streak}
+          {account}
+        </div>
       </div>
     )
   }
@@ -123,7 +138,10 @@ export default function TopBar({
               : 'Pick up a Learning Space, or scan what you captured most recently.'}
           </p>
         </div>
-        {account}
+        <div className={styles.topRight}>
+          {streak}
+          {account}
+        </div>
       </div>
 
       <div className={styles.pulse} aria-label="Library at a glance">

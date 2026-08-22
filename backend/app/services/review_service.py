@@ -26,6 +26,7 @@ from app.schemas.review import (
 )
 from app.schemas.sources import StructuredSummary
 from app.services.space_service import SpaceService
+from app.services.streak_service import StreakService
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +37,12 @@ BACKFILL_BATCH_SIZE = 8
 
 
 class ReviewService:
-    def __init__(self, reviews: ReviewRepo, spaces: SpaceService) -> None:
+    def __init__(
+        self, reviews: ReviewRepo, spaces: SpaceService, streaks: StreakService
+    ) -> None:
         self._reviews = reviews
         self._spaces = spaces
+        self._streaks = streaks
 
     # --- reads ---
 
@@ -65,6 +69,7 @@ class ReviewService:
         )
         if not row:
             raise NotFoundError("Review item not found.", detail={"item_id": str(item_id)})
+        self._streaks.record_activity(str(user.id))
         return self._to_review_item(row)
 
     # --- generation ---

@@ -11,12 +11,15 @@ from app.services.concept_service import ConceptService
 from app.services.pipeline_service import PipelineService
 from app.services.review_service import ReviewService
 from app.services.space_service import SpaceService
+from app.services.streak_service import StreakService
 from app.tests.conftest import (
     SEEDED_SPACE_ID,
     FakeChunkRepo,
+    FakeCollaboratorRepo,
     FakeConceptRepo,
     FakeEmbeddingService,
     FakeLLMService,
+    FakeProfileRepo,
     FakeReviewRepo,
     FakeSpaceRepo,
     FakeStorage,
@@ -71,9 +74,10 @@ def _build_pipeline_service(
     concepts: FakeConceptRepo,
     reviews: FakeReviewRepo,
 ) -> PipelineService:
-    space_svc = SpaceService(space_repo)  # type: ignore[arg-type]
+    space_svc = SpaceService(space_repo, FakeCollaboratorRepo())  # type: ignore[arg-type]
     concept_svc = ConceptService(concepts, space_svc, extracts, llm)  # type: ignore[arg-type]
-    review_svc = ReviewService(reviews, space_svc)  # type: ignore[arg-type]
+    streak_svc = StreakService(FakeProfileRepo())  # type: ignore[arg-type]
+    review_svc = ReviewService(reviews, space_svc, streak_svc)  # type: ignore[arg-type]
     return PipelineService(concept_svc, review_svc, extracts, embeddings, llm, chunks, space_svc)
 
 

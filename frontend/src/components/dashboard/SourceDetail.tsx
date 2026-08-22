@@ -2,17 +2,25 @@
 
 /**
  * Capture workspace: full-width details; "Ask this capture" opens a
- * right overlay drawer (does not reserve a permanent column).
+ * right overlay drawer (does not reserve a permanent layout column).
  */
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import styles from './dashboard.module.css'
 import SourceSummary from './SourceSummary'
+import SourceNotes from './SourceNotes'
 import SourceChatPanel from './SourceChatPanel'
 import OriginalLink from './OriginalLink'
 import SourceIcon from './SourceIcon'
-import { SOURCE_KIND, relativeTime, type SourceKind } from '@/lib/dashboard-data'
+import {
+  SOURCE_KIND,
+  captureStatus,
+  relativeTime,
+  type SourceKind,
+} from '@/lib/dashboard-data'
 import type { Source } from '@/lib/spaces'
 import type { ChatMessage, SummaryResponse } from '@/lib/sources'
+import type { SourceNote } from '@/lib/notes'
 
 const KIND_LABEL: Record<SourceKind, string> = {
   video: 'YouTube',
@@ -22,11 +30,14 @@ const KIND_LABEL: Record<SourceKind, string> = {
   note: 'Note',
 }
 
+const POLL_MS = 2500
+
 interface SourceDetailProps {
   source: Source
   spaceName: string
   initialSummary: SummaryResponse | null
   initialMessages: ChatMessage[]
+  initialNote: SourceNote
 }
 
 export default function SourceDetail({
@@ -34,10 +45,20 @@ export default function SourceDetail({
   spaceName,
   initialSummary,
   initialMessages,
+  initialNote,
 }: SourceDetailProps) {
+  const router = useRouter()
   const [chatOpen, setChatOpen] = useState(false)
   const kind = SOURCE_KIND[source.type]
-  const processing = source.processing_status !== 'ready'
+  const status = captureStatus(source.processing_status)
+
+  useEffect(() => {
+    if (status !== 'processing') return
+    const id = window.setInterval(() => {
+      router.refresh()
+    }, POLL_MS)
+    return () => window.clearInterval(id)
+  }, [status, router])
 
   useEffect(() => {
     if (!chatOpen) return
@@ -61,11 +82,13 @@ export default function SourceDetail({
               <div className={styles.captureKind}>
                 <span>{KIND_LABEL[kind]}</span>
               </div>
-              {processing ? (
+              {status === 'processing' ? (
                 <span className={`${styles.status} ${styles.wip}`}>
                   <span className={styles.statusDot} aria-hidden="true" />
                   Processing
                 </span>
+              ) : status === 'failed' ? (
+                <span className={`${styles.status} ${styles.fail}`}>Failed</span>
               ) : (
                 <span className={`${styles.status} ${styles.done}`}>Ready</span>
               )}
@@ -109,6 +132,7 @@ export default function SourceDetail({
               className={styles.captureAskBtn}
               onClick={() => setChatOpen(true)}
               aria-expanded={chatOpen}
+              disabled={status === 'processing'}
             >
               <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">
                 <path d="M5 8.5C5 6.6 6.8 5 9 5h6c2.2 0 4 1.6 4 3.5V14c0 1.9-1.8 3.5-4 3.5h-3.2L8 21v-3.5C6.2 17.3 5 15.8 5 14V8.5Z" />
@@ -129,14 +153,24 @@ export default function SourceDetail({
                 <path d="M9 9h6M9 12h6M9 15h4" />
               </svg>
             </div>
-            <div className={styles.et}>Summary not ready yet</div>
+            <div className={styles.et}>
+              {status === 'failed'
+                ? 'Processing failed'
+                : status === 'processing'
+                  ? 'Summary not ready yet'
+                  : 'Summary unavailable'}
+            </div>
             <p>
-              {processing
-                ? 'This capture is still being understood. Key points will appear here when processing finishes.'
-                : 'Open this page again in a moment — the summary is generated on first view.'}
+              {status === 'failed'
+                ? 'Something went wrong while understanding this capture. Try capturing it again.'
+                : status === 'processing'
+                  ? 'This capture is still being understood. Key points will appear here when processing finishes.'
+                  : 'Open this page again in a moment — the summary should be available shortly.'}
             </p>
           </div>
         )}
+
+        <SourceNotes sourceId={source.id} initialNote={initialNote} />
       </div>
 
       {chatOpen ? (

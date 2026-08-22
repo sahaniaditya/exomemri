@@ -5,6 +5,7 @@ export interface Profile {
   primary_role: string
   domain_of_focus: string
   referral_source?: string
+  current_streak?: number
 }
 
 export function firstName(profile: Profile | null): string {
@@ -13,4 +14,8 @@ export function firstName(profile: Profile | null): string {
 
 export function initial(profile: Profile | null): string {
   return (profile?.full_name?.trim()[0] || profile?.username?.[0] || 'A').toUpperCase()
+}
+
+export function streakDays(profile: Profile | null): number {
+  return profile?.current_streak ?? 0
 }

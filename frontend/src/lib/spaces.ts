@@ -10,6 +10,17 @@ import { apiFetch } from '@/lib/api'
 /** Matches `SourceType` in backend/app/schemas/common.py. */
 export type SourceType = 'youtube' | 'article' | 'ai_chat' | 'pdf' | 'note'
 
+/** Matches `ProcessingStatus` in backend/app/schemas/common.py. */
+export type ProcessingStatus =
+  | 'queued'
+  | 'fetching'
+  | 'chunking'
+  | 'embedding'
+  | 'summarizing'
+  | 'extracting'
+  | 'ready'
+  | 'failed'
+
 export interface SourceCounts {
   youtube: number
   article: number
@@ -40,7 +51,7 @@ export interface Source {
   url: string | null
   author: string | null
   captured_at: string | null
-  processing_status: string
+  processing_status: ProcessingStatus
 }
 
 /** The caller's spaces, newest activity first. Empty on any failure. */

@@ -41,8 +41,11 @@ class SourceChatService:
         self._chunks = chunks
 
     async def get_or_create_summary(self, *, user: User, source_id: UUID) -> SummaryResponse:
+        # A superset of ownership — lets a read-only collaborator see a
+        # source's summary without granting them any write access. Chat
+        # (list/send messages) stays strictly owner-only, unaffected.
         source = await anyio.to_thread.run_sync(
-            partial(self._spaces.require_owned_source, user, source_id)
+            partial(self._spaces.require_viewable_source, user, source_id)
         )
         # A source captured before this feature shipped has summary_text but no
         # summary_sections yet; fall through to regenerate both like a cache miss.
