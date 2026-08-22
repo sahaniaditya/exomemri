@@ -12,6 +12,7 @@ from app.schemas.sources import (
     ChatMessage,
     MessageListResponse,
     SendMessageResponse,
+    StructuredSummary,
     SummaryResponse,
 )
 from app.services.embedding_service import EmbeddingService
@@ -43,9 +44,12 @@ class SourceChatService:
         source = await anyio.to_thread.run_sync(
             partial(self._spaces.require_owned_source, user, source_id)
         )
-        if source.get("summary_text"):
+        # A source captured before this feature shipped has summary_text but no
+        # summary_sections yet; fall through to regenerate both like a cache miss.
+        if source.get("summary_text") and source.get("summary_sections"):
             return SummaryResponse(
                 summary=source["summary_text"],
+                sections=StructuredSummary(**source["summary_sections"]),
                 generated=False,
                 model=source.get("summary_model"),
                 summarized_at=source.get("summarized_at"),
@@ -53,16 +57,19 @@ class SourceChatService:
 
         extract = await self._extracts.read_extract(source)
         summary = await self._llm.summarize(title=source["title"], extract=extract)
+        sections = await self._llm.summarize_structured(title=source["title"], extract=extract)
         await anyio.to_thread.run_sync(
             partial(
                 self._spaces.save_summary,
                 source_id=source_id,
                 summary=summary,
+                sections=sections.model_dump(),
                 model=self._llm.model_name,
             )
         )
         return SummaryResponse(
             summary=summary,
+            sections=sections,
             generated=True,
             model=self._llm.model_name,
             summarized_at=datetime.now(UTC),

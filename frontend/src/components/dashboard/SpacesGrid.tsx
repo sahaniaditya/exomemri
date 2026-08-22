@@ -1,6 +1,7 @@
 import { type LearningSpace } from '@/lib/dashboard-data'
 import styles from './dashboard.module.css'
 import Link from 'next/link'
+import CoverageRing from './CoverageRing'
 import NewSpaceTile from './NewSpaceTile'
 import SourceIcon from './SourceIcon'
 
@@ -35,9 +36,13 @@ export default function SpacesGrid({ spaces }: { spaces: LearningSpace[] }) {
                 </div>
                 <div className={styles.stitle}>{space.name}</div>
               </div>
-              <span className={styles.spaceGo} aria-hidden="true">
-                →
-              </span>
+              {space.coverage !== null ? (
+                <CoverageRing pct={space.coverage} />
+              ) : (
+                <span className={styles.spaceGo} aria-hidden="true">
+                  →
+                </span>
+              )}
             </div>
 
             <div className={styles.styp}>

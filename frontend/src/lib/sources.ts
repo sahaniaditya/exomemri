@@ -1,7 +1,15 @@
 import { apiFetch } from '@/lib/api'
 
+export interface StructuredSummary {
+  tldr: string[]
+  key_concepts: string[]
+  examples: string[]
+  interview_points: string[]
+}
+
 export interface SummaryResponse {
   summary: string
+  sections: StructuredSummary
   generated: boolean
   model: string | null
   summarized_at: string | null

@@ -8,12 +8,35 @@ from app.schemas.concepts import (
     ExtractedConcept,
     ExtractedConcepts,
 )
+from app.schemas.coverage import (
+    MAX_SYLLABUS_TOPICS,
+    MIN_SYLLABUS_TOPICS,
+    SyllabusTopic,
+    SyllabusTopics,
+)
+from app.schemas.sources import StructuredSummary
 
 SUMMARY_SYSTEM_PROMPT = (
     "You summarize captured learning material for a student's personal knowledge "
     "base. Write a concise summary (150-250 words) covering the main ideas, key "
     "facts, and anything worth remembering. Plain prose, no headers or bullet lists."
 )
+
+STRUCTURED_SUMMARY_SYSTEM_PROMPT = """You summarize captured learning material for a \
+student's personal knowledge base, broken into four sections:
+
+- `tldr`: exactly 5 bullets, each one sentence, covering the main ideas in order of
+  importance.
+- `key_concepts`: 3-8 short noun phrases naming the subjects this material teaches
+  (e.g. "consistent hashing", not "technology" or "this video"). This is a summary
+  aid for the reader, not a request to canonicalize against any existing taxonomy.
+- `examples`: 2-6 concrete examples, cases, or illustrations actually used in the
+  material — not invented ones.
+- `interview_points`: 3-6 questions or angles a reader could be quizzed on to check
+  they understood this material.
+
+Every bullet is a complete standalone sentence or phrase, no trailing punctuation
+inconsistency, no markdown formatting inside the bullets themselves."""
 
 CHAT_SYSTEM_PROMPT = """You are a study assistant helping the user understand a source \
 they captured.
@@ -61,6 +84,28 @@ Existing concepts:
 
 NO_VOCABULARY_BLOCK = "This is the first material mapped in this learning space."
 
+SYLLABUS_SYSTEM_PROMPT = """You infer the implied syllabus for a personal learning \
+space, and judge how much of it is already covered.
+
+Given the space's stated goal (if any) and the concepts already captured in it,
+infer between {min_topics} and {max_topics} topics a person would need to learn to
+be considered proficient in this space's subject. Then, for each topic, set
+`covered` to true only if the captured concepts already demonstrate it, false
+otherwise.
+
+Rules:
+- Topics should be at the same level of specificity as the captured concepts
+  (e.g. "Load balancing", not "Computer science" and not "Round-robin DNS
+  weighting details").
+- If a captured concept clearly satisfies an inferred topic, mark it covered —
+  don't require an exact label match, just genuine topical overlap.
+- With no goal stated, infer the syllabus from the subject the captured concepts
+  already imply.
+- Use the noun form, sentence case, matching the concept-labeling convention."""
+
+SYLLABUS_GOAL_BLOCK = "The user's stated goal for this space: {goal_text}"
+NO_SYLLABUS_GOAL_BLOCK = "No goal was stated for this space."
+
 
 class LLMService:
     def __init__(self, settings: Settings) -> None:
@@ -79,6 +124,53 @@ class LLMService:
             messages=[{"role": "user", "content": f"Title: {title}\n\n{extract}"}],
         )
         return resp.content[0].text.strip()
+
+    async def summarize_structured(self, *, title: str, extract: str) -> StructuredSummary:
+        """The 4-part TL;DR/key-concepts/examples/interview-points summary.
+
+        Uses structured outputs, like ``extract_concepts``, so the bullet counts
+        and shape are validated rather than parsed out of free-form prose.
+        """
+        resp = await self._client.messages.parse(
+            model=self._model,
+            max_tokens=1200,
+            system=STRUCTURED_SUMMARY_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"Title: {title}\n\n{extract}"}],
+            output_format=StructuredSummary,
+        )
+        return resp.parsed_output
+
+    async def infer_syllabus_coverage(
+        self, *, space_name: str, goal_text: str | None, concept_labels: list[str]
+    ) -> list[SyllabusTopic]:
+        """The implied syllabus for a space, with each topic's covered state.
+
+        Uses structured outputs, like ``extract_concepts``, so the topic count
+        and shape are validated rather than parsed out of free-form prose.
+        """
+        system = SYLLABUS_SYSTEM_PROMPT.format(
+            min_topics=MIN_SYLLABUS_TOPICS, max_topics=MAX_SYLLABUS_TOPICS
+        )
+        goal_block = (
+            SYLLABUS_GOAL_BLOCK.format(goal_text=goal_text) if goal_text else NO_SYLLABUS_GOAL_BLOCK
+        )
+        concepts_block = (
+            "\n".join(f"- {label}" for label in sorted(concept_labels))
+            if concept_labels
+            else "No concepts have been captured in this space yet."
+        )
+        user_content = (
+            f"Space: {space_name}\n{goal_block}\n\nCaptured concepts:\n{concepts_block}"
+        )
+
+        resp = await self._client.messages.parse(
+            model=self._model,
+            max_tokens=1200,
+            system=system,
+            messages=[{"role": "user", "content": user_content}],
+            output_format=SyllabusTopics,
+        )
+        return resp.parsed_output.topics
 
     async def chat_reply(
         self, *, title: str, source_type: str, summary: str, extract: str, history: list[dict]

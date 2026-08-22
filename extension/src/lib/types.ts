@@ -268,6 +268,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/spaces/{space_id}/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Space Coverage
+         * @description The space's inferred syllabus and how much of it is covered.
+         *
+         *     Generated on first read and cached; regenerated automatically once the
+         *     space's mapped concepts change since the last generation.
+         */
+        get: operations["get_space_coverage_v1_spaces__space_id__coverage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/spaces/{space_id}/graph": {
         parameters: {
             query?: never;
@@ -307,6 +330,91 @@ export interface paths {
          *     ``pending`` is 0.
          */
         post: operations["rebuild_space_graph_v1_spaces__space_id__graph_rebuild_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Study Plan
+         * @description Overdue reviews and uncovered coverage topics, resequenced into one list.
+         *
+         *     No new gap detection and nothing cached — composed fresh from the review
+         *     queue and coverage on every call.
+         */
+        get: operations["get_study_plan_v1_spaces__space_id__plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/review/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rebuild Review Items
+         * @description Generate review items for one bounded batch of unprocessed sources.
+         *
+         *     New captures get items automatically once the pipeline's summary stage
+         *     runs; this exists for sources captured before the queue shipped, and for
+         *     retrying ones whose pipeline run failed. Bounded per call, so the client
+         *     loops until ``pending`` is 0.
+         */
+        post: operations["rebuild_review_items_v1_spaces__space_id__review_rebuild_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/review/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Today Queue
+         * @description Items due for review today in one space — the "study today" queue.
+         */
+        get: operations["get_today_queue_v1_spaces__space_id__review_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/review/{item_id}/reviewed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Item Reviewed */
+        post: operations["mark_item_reviewed_v1_spaces__space_id__review__item_id__reviewed_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -432,6 +540,20 @@ export interface components {
             /** Slug */
             slug: string;
         };
+        /** CoverageResponse */
+        CoverageResponse: {
+            /** Coverage Pct */
+            coverage_pct: number | null;
+            /** Generated At */
+            generated_at: string | null;
+            /**
+             * Space Id
+             * Format: uuid
+             */
+            space_id: string;
+            /** Topics */
+            topics: components["schemas"]["SyllabusTopic"][];
+        };
         /**
          * CreateSpaceRequest
          * @description Payload for creating a Learning Space, e.g. ``{"name": "Claude Code"}``.
@@ -488,6 +610,20 @@ export interface components {
             /** Has Completed Onboarding */
             has_completed_onboarding: boolean;
         };
+        /** PlanItem */
+        PlanItem: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "overdue_review" | "uncovered_topic";
+            /** Rationale */
+            rationale: string;
+            /** Review Item Id */
+            review_item_id?: string | null;
+            /** Title */
+            title: string;
+        };
         /**
          * ProcessingStatus
          * @description Lifecycle of a source.
@@ -519,6 +655,52 @@ export interface components {
          * @description Outcome of one bounded backfill batch.
          */
         RebuildResponse: {
+            /** Failed */
+            failed: number;
+            /** Pending */
+            pending: number;
+            /** Processed */
+            processed: number;
+        };
+        /**
+         * ReviewItem
+         * @description One reviewable interview point, materialized from a source's summary.
+         */
+        ReviewItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Reviewed At */
+            last_reviewed_at: string | null;
+            /** Prompt Text */
+            prompt_text: string;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /** Source Title */
+            source_title: string;
+            /**
+             * Space Id
+             * Format: uuid
+             */
+            space_id: string;
+        };
+        /** ReviewQueueResponse */
+        ReviewQueueResponse: {
+            /** Items */
+            items: components["schemas"]["ReviewItem"][];
+            /** Total Pending */
+            total_pending: number;
+        };
+        /**
+         * ReviewRebuildResponse
+         * @description Outcome of one bounded backfill batch.
+         */
+        ReviewRebuildResponse: {
             /** Failed */
             failed: number;
             /** Pending */
@@ -683,6 +865,8 @@ export interface components {
          * @description A space plus enough aggregate detail to render a dashboard tile.
          */
         SpaceSummary: {
+            /** Coverage Pct */
+            coverage_pct?: number | null;
             /** Created At */
             created_at?: string | null;
             /** Goal Text */
@@ -710,16 +894,56 @@ export interface components {
              */
             source_counts: components["schemas"]["SourceCounts"];
         };
+        /**
+         * StructuredSummary
+         * @description The 4-part per-source summary, as a structured-output envelope.
+         */
+        StructuredSummary: {
+            /** Examples */
+            examples: string[];
+            /** Interview Points */
+            interview_points: string[];
+            /** Key Concepts */
+            key_concepts: string[];
+            /** Tldr */
+            tldr: string[];
+        };
+        /** StudyPlanResponse */
+        StudyPlanResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Items */
+            items: components["schemas"]["PlanItem"][];
+            /**
+             * Space Id
+             * Format: uuid
+             */
+            space_id: string;
+        };
         /** SummaryResponse */
         SummaryResponse: {
             /** Generated */
             generated: boolean;
             /** Model */
             model: string | null;
+            sections: components["schemas"]["StructuredSummary"];
             /** Summarized At */
             summarized_at: string | null;
             /** Summary */
             summary: string;
+        };
+        /**
+         * SyllabusTopic
+         * @description One inferred syllabus topic and whether captured concepts cover it.
+         */
+        SyllabusTopic: {
+            /** Covered */
+            covered: boolean;
+            /** Label */
+            label: string;
         };
         /**
          * UploadUrlRequest
@@ -1405,6 +1629,39 @@ export interface operations {
             };
         };
     };
+    get_space_coverage_v1_spaces__space_id__coverage_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_space_graph_v1_spaces__space_id__graph_get: {
         parameters: {
             query?: never;
@@ -1458,6 +1715,139 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RebuildResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_study_plan_v1_spaces__space_id__plan_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyPlanResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rebuild_review_items_v1_spaces__space_id__review_rebuild_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewRebuildResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_today_queue_v1_spaces__space_id__review_today_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewQueueResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_item_reviewed_v1_spaces__space_id__review__item_id__reviewed_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewItem"];
                 };
             };
             /** @description Validation Error */

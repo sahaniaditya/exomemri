@@ -27,6 +27,8 @@ export interface Space {
   created_at: string | null
   last_captured_at: string | null
   source_counts: SourceCounts
+  /** Cached from the last coverage computation; null until one has run. */
+  coverage_pct: number | null
 }
 
 export interface Source {

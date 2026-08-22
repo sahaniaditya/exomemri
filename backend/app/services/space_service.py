@@ -112,6 +112,7 @@ class SpaceService:
                 created_at=row.get("created_at"),
                 last_captured_at=row.get("last_captured_at"),
                 source_counts=SourceCounts(**(row.get("source_counts") or {})),
+                coverage_pct=row.get("coverage_pct"),
             )
             for row in rows
         ]
@@ -218,10 +219,13 @@ class SpaceService:
     def update_processing_status(self, *, source_id: UUID, status: str) -> None:
         self._spaces.update_processing_status(source_id=str(source_id), status=status)
 
-    def save_summary(self, *, source_id: UUID, summary: str, model: str) -> None:
+    def save_summary(
+        self, *, source_id: UUID, summary: str, sections: dict, model: str
+    ) -> None:
         self._spaces.update_source_summary(
             source_id=str(source_id),
             summary_text=summary,
+            summary_sections=sections,
             summary_model=model,
             summarized_at=datetime.now(UTC).isoformat(),
         )
@@ -234,6 +238,16 @@ class SpaceService:
         self._spaces.mark_concepts_extracted(
             source_id=str(source_id),
             model=model,
+            extracted_at=datetime.now(UTC).isoformat(),
+        )
+
+    def list_unreviewed_sources(self, *, space_id: UUID, limit: int) -> list[dict]:
+        """Sources in a space with no review items generated yet."""
+        return self._spaces.list_unreviewed_sources(space_id=str(space_id), limit=limit)
+
+    def mark_review_items_extracted(self, *, source_id: UUID) -> None:
+        self._spaces.mark_review_items_extracted(
+            source_id=str(source_id),
             extracted_at=datetime.now(UTC).isoformat(),
         )
 

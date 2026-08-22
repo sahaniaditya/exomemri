@@ -69,8 +69,18 @@ class UploadUrlResponse(BaseModel):
     token: str
     path: str
 
+class StructuredSummary(BaseModel):
+    """The 4-part per-source summary, as a structured-output envelope."""
+
+    tldr: list[str] = Field(min_length=5, max_length=5)
+    key_concepts: list[str] = Field(min_length=1, max_length=8)
+    examples: list[str] = Field(min_length=1, max_length=6)
+    interview_points: list[str] = Field(min_length=1, max_length=6)
+
+
 class SummaryResponse(BaseModel):
     summary: str
+    sections: StructuredSummary
     generated: bool          # True if generated this call, False if cached
     model: str | None
     summarized_at: datetime | None

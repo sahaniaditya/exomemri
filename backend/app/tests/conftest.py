@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 # Provide required settings BEFORE the app/settings are imported so the
@@ -27,6 +27,8 @@ from app.main import create_app  # noqa: E402
 from app.repositories.storage_repo import get_storage_repo  # noqa: E402
 from app.schemas.common import User  # noqa: E402
 from app.schemas.concepts import ExtractedConcept  # noqa: E402
+from app.schemas.coverage import SyllabusTopic  # noqa: E402
+from app.schemas.sources import StructuredSummary  # noqa: E402
 from app.services.capture_service import CaptureService  # noqa: E402
 from app.services.concept_service import ConceptService  # noqa: E402
 from app.services.session_service import SessionService  # noqa: E402
@@ -88,6 +90,9 @@ class FakeSpaceRepo:
         self.sources: dict[str, dict] = {}
         self.active: dict[str, str | None] = {}
         self.messages: dict[str, dict] = {}
+        # Wired by the `coverage_repo` fixture so list_spaces can surface the
+        # cached percentage, mirroring the real RPC's LEFT JOIN.
+        self._coverage_repo: FakeCoverageRepo | None = None
 
         self.spaces[SEEDED_SPACE_ID] = {
             "id": SEEDED_SPACE_ID,
@@ -143,6 +148,11 @@ class FakeSpaceRepo:
                         for kind in ("youtube", "article", "ai_chat", "pdf", "note")
                     }
                     | {"total": len(mine)},
+                    "coverage_pct": (
+                        self._coverage_repo.coverage.get(row["id"], {}).get("coverage_pct")
+                        if self._coverage_repo
+                        else None
+                    ),
                 }
             )
         return out
@@ -204,11 +214,18 @@ class FakeSpaceRepo:
             self.sources[source_id]["processing_status"] = status
 
     def update_source_summary(
-        self, *, source_id: str, summary_text: str, summary_model: str, summarized_at: str
+        self,
+        *,
+        source_id: str,
+        summary_text: str,
+        summary_sections: dict,
+        summary_model: str,
+        summarized_at: str,
     ) -> None:
         if source_id in self.sources:
             self.sources[source_id].update(
                 summary_text=summary_text,
+                summary_sections=summary_sections,
                 summary_model=summary_model,
                 summarized_at=summarized_at,
             )
@@ -229,6 +246,19 @@ class FakeSpaceRepo:
             self.sources[source_id].update(
                 concepts_model=model, concepts_extracted_at=extracted_at
             )
+
+    def list_unreviewed_sources(self, *, space_id: str, limit: int) -> list[dict]:
+        rows = [
+            r
+            for r in self.sources.values()
+            if r["space_id"] == space_id and not r.get("review_items_extracted_at")
+        ]
+        rows.sort(key=lambda r: r["captured_at"])
+        return rows[:limit]
+
+    def mark_review_items_extracted(self, *, source_id: str, extracted_at: str) -> None:
+        if source_id in self.sources:
+            self.sources[source_id].update(review_items_extracted_at=extracted_at)
 
     def list_source_messages(self, *, source_id: str) -> list[dict]:
         rows = [m for m in self.messages.values() if m["source_id"] == source_id]
@@ -378,6 +408,103 @@ class FakeConceptRepo:
         return [s for s in self._space_repo.sources.values() if s["space_id"] == space_id]
 
 
+class FakeReviewRepo:
+    """In-memory stand-in for ``review_items``.
+
+    Enforces the ``(source_id, prompt_text)`` unique index the same way the
+    real table does, via ``replace_source_items``'s delete-then-insert.
+    """
+
+    def __init__(self) -> None:
+        self.items: dict[str, dict] = {}
+        # Wired by the `review_repo` fixture so queue reads can look up titles.
+        self._space_repo: FakeSpaceRepo | None = None
+
+    def replace_source_items(
+        self, *, source_id: str, space_id: str, user_id: str, prompts: list[str]
+    ) -> None:
+        self.items = {k: v for k, v in self.items.items() if v["source_id"] != source_id}
+        for prompt in prompts:
+            item_id = str(uuid4())
+            self.items[item_id] = {
+                "id": item_id,
+                "source_id": source_id,
+                "space_id": space_id,
+                "user_id": user_id,
+                "prompt_text": prompt,
+                "last_reviewed_at": None,
+            }
+
+    def _due(self, *, space_id: str, user_id: str, staleness_days: int) -> list[dict]:
+        cutoff = datetime.now(UTC) - timedelta(days=staleness_days)
+        rows = [
+            r
+            for r in self.items.values()
+            if r["space_id"] == space_id
+            and r["user_id"] == user_id
+            and (
+                r["last_reviewed_at"] is None
+                or datetime.fromisoformat(r["last_reviewed_at"]) < cutoff
+            )
+        ]
+        rows.sort(key=lambda r: (r["last_reviewed_at"] is not None, r["last_reviewed_at"] or ""))
+        return rows
+
+    def list_due(
+        self, *, space_id: str, user_id: str, staleness_days: int, limit: int
+    ) -> list[dict]:
+        rows = self._due(space_id=space_id, user_id=user_id, staleness_days=staleness_days)
+        out = []
+        for r in rows[:limit]:
+            row = dict(r)
+            source = (self._space_repo.sources.get(r["source_id"]) if self._space_repo else None)
+            row["sources"] = {"title": source["title"]} if source else {}
+            out.append(row)
+        return out
+
+    def count_due(self, *, space_id: str, user_id: str, staleness_days: int) -> int:
+        return len(self._due(space_id=space_id, user_id=user_id, staleness_days=staleness_days))
+
+    def mark_reviewed(self, *, item_id: str, space_id: str, user_id: str) -> dict | None:
+        row = self.items.get(item_id)
+        if not row or row["space_id"] != space_id or row["user_id"] != user_id:
+            return None
+        row["last_reviewed_at"] = datetime.now(UTC).isoformat()
+        result = dict(row)
+        source = self._space_repo.sources.get(row["source_id"]) if self._space_repo else None
+        result["sources"] = {"title": source["title"]} if source else {}
+        return result
+
+
+class FakeCoverageRepo:
+    """In-memory stand-in for ``space_coverage``."""
+
+    def __init__(self) -> None:
+        self.coverage: dict[str, dict] = {}
+
+    def get(self, *, space_id: str) -> dict | None:
+        return self.coverage.get(space_id)
+
+    def upsert(
+        self,
+        *,
+        space_id: str,
+        user_id: str,
+        coverage_pct: int | None,
+        topics: list[dict],
+        concept_count: int,
+        generated_at: str | None,
+    ) -> None:
+        self.coverage[space_id] = {
+            "space_id": space_id,
+            "user_id": user_id,
+            "coverage_pct": coverage_pct,
+            "syllabus_topics": topics,
+            "syllabus_concept_count": concept_count,
+            "generated_at": generated_at,
+        }
+
+
 class FakeEmbeddingService:
     """Deterministic vectors (no network) — same text always embeds the same."""
 
@@ -403,10 +530,33 @@ class FakeLLMService:
     async def summarize(self, *, title: str, extract: str) -> str:  # noqa: ARG002
         return f"Summary of {title}"
 
+    async def summarize_structured(
+        self, *, title: str, extract: str  # noqa: ARG002
+    ) -> StructuredSummary:
+        return StructuredSummary(
+            tldr=[f"{title} point {i}" for i in range(1, 6)],
+            key_concepts=[f"{title} concept"],
+            examples=[f"{title} example"],
+            interview_points=[f"Explain {title}"],
+        )
+
     async def chat_reply(
         self, *, title: str, source_type: str, summary: str, extract: str, history: list[dict]
     ) -> str:  # noqa: ARG002
         return f"Reply grounded in: {extract[:200]}"
+
+    async def infer_syllabus_coverage(
+        self, *, space_name: str, goal_text: str | None, concept_labels: list[str]  # noqa: ARG002
+    ) -> list[SyllabusTopic]:
+        """Half the captured concepts are "covered", plus two uncovered gaps —
+        enough variation for tests to assert both branches without hand-tuning
+        each fixture's concept count."""
+        covered = [SyllabusTopic(label=label, covered=True) for label in concept_labels]
+        gaps = [
+            SyllabusTopic(label=f"{space_name} gap A", covered=False),
+            SyllabusTopic(label=f"{space_name} gap B", covered=False),
+        ]
+        return covered + gaps
 
     async def extract_concepts(
         self, *, title: str, extract: str, vocabulary: list[str]  # noqa: ARG002
@@ -460,6 +610,20 @@ def concept_repo(space_repo: FakeSpaceRepo) -> FakeConceptRepo:
 
 
 @pytest.fixture
+def review_repo(space_repo: FakeSpaceRepo) -> FakeReviewRepo:
+    repo = FakeReviewRepo()
+    repo._space_repo = space_repo
+    return repo
+
+
+@pytest.fixture
+def coverage_repo(space_repo: FakeSpaceRepo) -> FakeCoverageRepo:
+    repo = FakeCoverageRepo()
+    space_repo._coverage_repo = repo
+    return repo
+
+
+@pytest.fixture
 def embedding_service() -> FakeEmbeddingService:
     return FakeEmbeddingService()
 
@@ -480,6 +644,8 @@ def client(
     space_repo: FakeSpaceRepo,
     chunk_repo: FakeChunkRepo,
     concept_repo: FakeConceptRepo,
+    review_repo: FakeReviewRepo,
+    coverage_repo: FakeCoverageRepo,
     embedding_service: FakeEmbeddingService,
     llm_service: FakeLLMService,
     pipeline_service: FakePipelineService,
@@ -488,12 +654,18 @@ def client(
     from app.dependencies import (
         get_chunk_repo,
         get_concept_service,
+        get_coverage_service,
         get_embedding_service,
         get_llm_service,
         get_pipeline_service,
+        get_plan_service,
+        get_review_service,
         get_source_chat_service,
     )
+    from app.services.coverage_service import CoverageService
     from app.services.extract_service import ExtractService
+    from app.services.plan_service import PlanService
+    from app.services.review_service import ReviewService
     from app.services.source_chat_service import SourceChatService
 
     app = create_app()
@@ -506,6 +678,11 @@ def client(
     concept_svc = ConceptService(
         concept_repo, space_svc, extract_svc, llm_service  # type: ignore[arg-type]
     )
+    review_svc = ReviewService(review_repo, space_svc)  # type: ignore[arg-type]
+    coverage_svc = CoverageService(
+        coverage_repo, concept_repo, space_svc, llm_service  # type: ignore[arg-type]
+    )
+    plan_svc = PlanService(coverage_svc, review_svc, space_svc)  # type: ignore[arg-type]
     chat_svc = SourceChatService(
         space_svc, extract_svc, llm_service, embedding_service, chunk_repo  # type: ignore[arg-type]
     )
@@ -521,6 +698,9 @@ def client(
     app.dependency_overrides[get_authenticated_app_user] = lambda: dev_user
     app.dependency_overrides[get_chunk_repo] = lambda: chunk_repo
     app.dependency_overrides[get_concept_service] = lambda: concept_svc
+    app.dependency_overrides[get_review_service] = lambda: review_svc
+    app.dependency_overrides[get_coverage_service] = lambda: coverage_svc
+    app.dependency_overrides[get_plan_service] = lambda: plan_svc
     app.dependency_overrides[get_embedding_service] = lambda: embedding_service
     app.dependency_overrides[get_llm_service] = lambda: llm_service
     app.dependency_overrides[get_source_chat_service] = lambda: chat_svc

@@ -7,11 +7,10 @@ import { getSpaceGraph, rankConcepts } from '@/lib/graph'
 import type { Profile } from '@/lib/profile'
 import { listSpaces } from '@/lib/spaces'
 import styles from '@/components/dashboard/dashboard.module.css'
-import ConceptList from '@/components/dashboard/ConceptList'
 import ContourBg from '@/components/dashboard/ContourBg'
-import KnowledgeMap from '@/components/dashboard/KnowledgeMap'
 import MapBackfill from '@/components/dashboard/MapBackfill'
 import Plate from '@/components/dashboard/Plate'
+import SpaceMapView from '@/components/dashboard/SpaceMapView'
 import SpacesSidebar from '@/components/dashboard/SpacesSideBar'
 import TopBar from '@/components/dashboard/TopBar'
 
@@ -37,7 +36,6 @@ interface SpaceMapPageProps {
 
 export default async function SpaceMapPage({ params }: SpaceMapPageProps) {
   const { spaceId } = await params
-  // The layout already gated auth/onboarding, so a token is expected here.
   const token = (await cookies()).get('atlas_token')?.value ?? ''
 
   const [profile, spaces, graph] = await Promise.all([
@@ -59,7 +57,12 @@ export default async function SpaceMapPage({ params }: SpaceMapPageProps) {
       <main className={styles.main}>
         <ContourBg />
         <div className={styles.inner}>
-          <TopBar profile={profile} totalSources={totalSources} spaceCount={spaces.length} variant="compact" />
+          <TopBar
+            profile={profile}
+            totalSources={totalSources}
+            spaceCount={spaces.length}
+            variant="compact"
+          />
 
           <Plate
             num="01"
@@ -67,10 +70,12 @@ export default async function SpaceMapPage({ params }: SpaceMapPageProps) {
             link={{ label: 'Back to captures', href: `/dashboard/spaces/${spaceId}` }}
           />
           <MapBackfill spaceId={spaceId} pending={graph.pending} />
-          <KnowledgeMap graph={graph} spaceId={spaceId} />
-
-          <Plate num="02" title="What this space covers" />
-          <ConceptList concepts={ranked} maxDegree={maxDegree} />
+          <SpaceMapView
+            graph={graph}
+            spaceId={spaceId}
+            concepts={ranked}
+            maxDegree={maxDegree}
+          />
         </div>
       </main>
     </div>

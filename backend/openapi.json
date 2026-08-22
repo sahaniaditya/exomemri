@@ -218,6 +218,53 @@
         "title": "ConceptNode",
         "type": "object"
       },
+      "CoverageResponse": {
+        "properties": {
+          "coverage_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Pct"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/SyllabusTopic"
+            },
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "space_id",
+          "coverage_pct",
+          "topics",
+          "generated_at"
+        ],
+        "title": "CoverageResponse",
+        "type": "object"
+      },
       "CreateSpaceRequest": {
         "description": "Payload for creating a Learning Space, e.g. ``{\"name\": \"Claude Code\"}``.",
         "properties": {
@@ -349,6 +396,45 @@
         "title": "OnboardingStatusResponse",
         "type": "object"
       },
+      "PlanItem": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "overdue_review",
+              "uncovered_topic"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "review_item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Item Id"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "rationale"
+        ],
+        "title": "PlanItem",
+        "type": "object"
+      },
       "ProcessingStatus": {
         "description": "Lifecycle of a source.\n\nPhase 0 only ever emits ``queued`` (nothing processes it yet); the full\nset is declared here so the generated client contract is stable across\nphases.",
         "enum": [
@@ -423,6 +509,101 @@
           "pending"
         ],
         "title": "RebuildResponse",
+        "type": "object"
+      },
+      "ReviewItem": {
+        "description": "One reviewable interview point, materialized from a source's summary.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Reviewed At"
+          },
+          "prompt_text": {
+            "title": "Prompt Text",
+            "type": "string"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_title": {
+            "title": "Source Title",
+            "type": "string"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_id",
+          "source_title",
+          "space_id",
+          "prompt_text",
+          "last_reviewed_at"
+        ],
+        "title": "ReviewItem",
+        "type": "object"
+      },
+      "ReviewQueueResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total_pending": {
+            "title": "Total Pending",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_pending"
+        ],
+        "title": "ReviewQueueResponse",
+        "type": "object"
+      },
+      "ReviewRebuildResponse": {
+        "description": "Outcome of one bounded backfill batch.",
+        "properties": {
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "processed": {
+            "title": "Processed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "processed",
+          "failed",
+          "pending"
+        ],
+        "title": "ReviewRebuildResponse",
         "type": "object"
       },
       "SendMessageRequest": {
@@ -763,6 +944,17 @@
       "SpaceSummary": {
         "description": "A space plus enough aggregate detail to render a dashboard tile.",
         "properties": {
+          "coverage_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Pct"
+          },
           "created_at": {
             "anyOf": [
               {
@@ -831,6 +1023,83 @@
         "title": "SpaceSummary",
         "type": "object"
       },
+      "StructuredSummary": {
+        "description": "The 4-part per-source summary, as a structured-output envelope.",
+        "properties": {
+          "examples": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Examples",
+            "type": "array"
+          },
+          "interview_points": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Interview Points",
+            "type": "array"
+          },
+          "key_concepts": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Key Concepts",
+            "type": "array"
+          },
+          "tldr": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 5,
+            "title": "Tldr",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tldr",
+          "key_concepts",
+          "examples",
+          "interview_points"
+        ],
+        "title": "StructuredSummary",
+        "type": "object"
+      },
+      "StudyPlanResponse": {
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlanItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "space_id",
+          "items",
+          "generated_at"
+        ],
+        "title": "StudyPlanResponse",
+        "type": "object"
+      },
       "SummaryResponse": {
         "properties": {
           "generated": {
@@ -847,6 +1116,9 @@
               }
             ],
             "title": "Model"
+          },
+          "sections": {
+            "$ref": "#/components/schemas/StructuredSummary"
           },
           "summarized_at": {
             "anyOf": [
@@ -867,11 +1139,33 @@
         },
         "required": [
           "summary",
+          "sections",
           "generated",
           "model",
           "summarized_at"
         ],
         "title": "SummaryResponse",
+        "type": "object"
+      },
+      "SyllabusTopic": {
+        "description": "One inferred syllabus topic and whether captured concepts cover it.",
+        "properties": {
+          "covered": {
+            "title": "Covered",
+            "type": "boolean"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "covered"
+        ],
+        "title": "SyllabusTopic",
         "type": "object"
       },
       "UploadUrlRequest": {
@@ -1934,6 +2228,59 @@
         ]
       }
     },
+    "/v1/spaces/{space_id}/coverage": {
+      "get": {
+        "description": "The space's inferred syllabus and how much of it is covered.\n\nGenerated on first read and cached; regenerated automatically once the\nspace's mapped concepts change since the last generation.",
+        "operationId": "get_space_coverage_v1_spaces__space_id__coverage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Space Coverage",
+        "tags": [
+          "coverage"
+        ]
+      }
+    },
     "/v1/spaces/{space_id}/graph": {
       "get": {
         "description": "Every concept, source and edge in one space \u2014 the map's whole payload.",
@@ -2037,6 +2384,227 @@
         "summary": "Rebuild Space Graph",
         "tags": [
           "graph"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/plan": {
+      "get": {
+        "description": "Overdue reviews and uncovered coverage topics, resequenced into one list.\n\nNo new gap detection and nothing cached \u2014 composed fresh from the review\nqueue and coverage on every call.",
+        "operationId": "get_study_plan_v1_spaces__space_id__plan_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyPlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Study Plan",
+        "tags": [
+          "plan"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/review/rebuild": {
+      "post": {
+        "description": "Generate review items for one bounded batch of unprocessed sources.\n\nNew captures get items automatically once the pipeline's summary stage\nruns; this exists for sources captured before the queue shipped, and for\nretrying ones whose pipeline run failed. Bounded per call, so the client\nloops until ``pending`` is 0.",
+        "operationId": "rebuild_review_items_v1_spaces__space_id__review_rebuild_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewRebuildResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rebuild Review Items",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/review/today": {
+      "get": {
+        "description": "Items due for review today in one space \u2014 the \"study today\" queue.",
+        "operationId": "get_today_queue_v1_spaces__space_id__review_today_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Today Queue",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/review/{item_id}/reviewed": {
+      "post": {
+        "operationId": "mark_item_reviewed_v1_spaces__space_id__review__item_id__reviewed_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Item Reviewed",
+        "tags": [
+          "review"
         ]
       }
     },

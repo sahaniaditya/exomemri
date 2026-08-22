@@ -1,0 +1,152 @@
+'use client'
+
+/**
+ * Capture workspace: full-width details; "Ask this capture" opens a
+ * right overlay drawer (does not reserve a permanent column).
+ */
+import { useEffect, useState } from 'react'
+import styles from './dashboard.module.css'
+import SourceSummary from './SourceSummary'
+import SourceChatPanel from './SourceChatPanel'
+import OriginalLink from './OriginalLink'
+import SourceIcon from './SourceIcon'
+import { SOURCE_KIND, relativeTime, type SourceKind } from '@/lib/dashboard-data'
+import type { Source } from '@/lib/spaces'
+import type { ChatMessage, SummaryResponse } from '@/lib/sources'
+
+const KIND_LABEL: Record<SourceKind, string> = {
+  video: 'YouTube',
+  article: 'Article',
+  chat: 'AI chat',
+  pdf: 'PDF',
+  note: 'Note',
+}
+
+interface SourceDetailProps {
+  source: Source
+  spaceName: string
+  initialSummary: SummaryResponse | null
+  initialMessages: ChatMessage[]
+}
+
+export default function SourceDetail({
+  source,
+  spaceName,
+  initialSummary,
+  initialMessages,
+}: SourceDetailProps) {
+  const [chatOpen, setChatOpen] = useState(false)
+  const kind = SOURCE_KIND[source.type]
+  const processing = source.processing_status !== 'ready'
+
+  useEffect(() => {
+    if (!chatOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [chatOpen])
+
+  return (
+    <div className={styles.captureShell}>
+      <div className={styles.captureMain}>
+        <header className={styles.captureHero}>
+          <div className={styles.captureHeroMark} aria-hidden="true">
+            <SourceIcon kind={kind} size={28} />
+          </div>
+
+          <div className={styles.captureHeroCopy}>
+            <div className={styles.captureHeroTop}>
+              <div className={styles.captureKind}>
+                <span>{KIND_LABEL[kind]}</span>
+              </div>
+              {processing ? (
+                <span className={`${styles.status} ${styles.wip}`}>
+                  <span className={styles.statusDot} aria-hidden="true" />
+                  Processing
+                </span>
+              ) : (
+                <span className={`${styles.status} ${styles.done}`}>Ready</span>
+              )}
+            </div>
+
+            <h1 className={styles.captureTitle}>{source.title}</h1>
+
+            <ul className={styles.captureMetaChips}>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" aria-hidden="true">
+                  <path d="M4 7h16v12H4z" />
+                  <path d="M8 7V5h8v2" />
+                </svg>
+                {spaceName}
+              </li>
+              {source.author ? (
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3.2" />
+                    <path d="M5.5 19c1.6-3.2 4-4.8 6.5-4.8S17.4 15.8 19 19" />
+                  </svg>
+                  {source.author}
+                </li>
+              ) : null}
+              {source.captured_at ? (
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 8v4.5l3 1.5" />
+                  </svg>
+                  Captured {relativeTime(source.captured_at)}
+                </li>
+              ) : null}
+            </ul>
+          </div>
+
+          <div className={styles.captureActions}>
+            {source.url ? <OriginalLink url={source.url} /> : null}
+            <button
+              type="button"
+              className={styles.captureAskBtn}
+              onClick={() => setChatOpen(true)}
+              aria-expanded={chatOpen}
+            >
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">
+                <path d="M5 8.5C5 6.6 6.8 5 9 5h6c2.2 0 4 1.6 4 3.5V14c0 1.9-1.8 3.5-4 3.5h-3.2L8 21v-3.5C6.2 17.3 5 15.8 5 14V8.5Z" />
+                <path d="M9 10h6M9 13h4" />
+              </svg>
+              Ask this capture
+            </button>
+          </div>
+        </header>
+
+        {initialSummary ? (
+          <SourceSummary sections={initialSummary.sections} />
+        ) : (
+          <div className={styles.captureEmptySummary}>
+            <div className={styles.captureEmptyIcon} aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.6">
+                <path d="M6 5h12v14H6z" />
+                <path d="M9 9h6M9 12h6M9 15h4" />
+              </svg>
+            </div>
+            <div className={styles.et}>Summary not ready yet</div>
+            <p>
+              {processing
+                ? 'This capture is still being understood. Key points will appear here when processing finishes.'
+                : 'Open this page again in a moment — the summary is generated on first view.'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {chatOpen ? (
+        <SourceChatPanel
+          sourceId={source.id}
+          sourceTitle={source.title}
+          initialMessages={initialMessages}
+          onClose={() => setChatOpen(false)}
+        />
+      ) : null}
+    </div>
+  )
+}

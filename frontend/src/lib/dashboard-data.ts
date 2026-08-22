@@ -41,8 +41,9 @@ export interface LearningSpace {
   id: string
   name: string
   slug: string
-  /** No coverage signal exists yet — real spaces report 0 until one does. */
-  coverage: number
+  /** Null until a coverage computation has run for this space (e.g. no
+   * concepts mapped yet) — not 0, which would read as "assessed and empty". */
+  coverage: number | null
   counts: { video: number; article: number; pdf: number; chat: number; note: number }
   lastActive: string
 }
@@ -56,6 +57,8 @@ export interface CapturedSource {
   meta: string
   capturedAt: string
   status: 'summarized' | 'summarizing'
+  /** Original article / video URL when the capture had one. */
+  url: string | null
 }
 
 export interface ReviewQueue {
@@ -209,7 +212,7 @@ export function toLearningSpace(space: Space): LearningSpace {
     id: space.id,
     name: space.name,
     slug: space.slug,
-    coverage: 0,
+    coverage: space.coverage_pct,
     counts: {
       video: counts.youtube,
       article: counts.article,
@@ -228,7 +231,7 @@ export function toCapturedSource(source: Source): CapturedSource {
     id: source.id,
     title: source.title,
     spaceName: source.space_name ?? '—',
-    spaceId:source.space_id,
+    spaceId: source.space_id,
     kind: SOURCE_KIND[source.type],
     meta: source.author
       ? `${SOURCE_LABEL[source.type]} · ${source.author}`
@@ -236,5 +239,6 @@ export function toCapturedSource(source: Source): CapturedSource {
     capturedAt: relativeTime(source.captured_at),
     // Nothing processes captures yet, so anything not `ready` is still in flight.
     status: source.processing_status === 'ready' ? 'summarized' : 'summarizing',
+    url: source.url,
   }
 }

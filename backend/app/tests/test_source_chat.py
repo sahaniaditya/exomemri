@@ -4,12 +4,26 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
+from app.schemas.sources import StructuredSummary
 from app.tests.conftest import SEEDED_SPACE_ID, FakeChunkRepo, FakeSpaceRepo, FakeStorage
 
 DEV_USER = "00000000-0000-0000-0000-0000000000a1"
 SPACE = SEEDED_SPACE_ID
+
+
+@pytest.mark.parametrize("bullet_count", [4, 6])
+def test_structured_summary_rejects_wrong_tldr_bullet_count(bullet_count: int) -> None:
+    with pytest.raises(ValidationError):
+        StructuredSummary(
+            tldr=[f"point {i}" for i in range(bullet_count)],
+            key_concepts=["a concept"],
+            examples=["an example"],
+            interview_points=["a question"],
+        )
 
 
 def _seed_note_source(space_repo: FakeSpaceRepo, storage: FakeStorage, *, note_text: str) -> str:
@@ -28,6 +42,7 @@ def _seed_note_source(space_repo: FakeSpaceRepo, storage: FakeStorage, *, note_t
         "processing_status": "queued",
         "captured_at": "2026-08-18T00:00:00+00:00",
         "summary_text": None,
+        "summary_sections": None,
         "summary_model": None,
         "summarized_at": None,
     }
@@ -83,8 +98,27 @@ def test_get_summary_generates_and_caches(
     first = client.get(f"/v1/sources/{source_id}/summary")
     assert first.status_code == 200
     assert first.json()["generated"] is True
+    assert len(first.json()["sections"]["tldr"]) == 5
 
     second = client.get(f"/v1/sources/{source_id}/summary")
     assert second.status_code == 200
     assert second.json()["generated"] is False
     assert second.json()["summary"] == first.json()["summary"]
+    assert second.json()["sections"] == first.json()["sections"]
+
+
+def test_get_summary_regenerates_sections_for_pre_migration_row(
+    client: TestClient, space_repo: FakeSpaceRepo, storage: FakeStorage
+) -> None:
+    """A row with summary_text set but no summary_sections (captured before this
+    feature shipped) must regenerate structured sections, not crash on the missing
+    field."""
+    source_id = _seed_note_source(space_repo, storage, note_text="note body")
+    space_repo.sources[source_id]["summary_text"] = "Old prose summary"
+    space_repo.sources[source_id]["summary_model"] = "old-model"
+
+    resp = client.get(f"/v1/sources/{source_id}/summary")
+
+    assert resp.status_code == 200
+    assert resp.json()["generated"] is True
+    assert len(resp.json()["sections"]["tldr"]) == 5

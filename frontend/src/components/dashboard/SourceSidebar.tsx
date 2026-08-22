@@ -3,6 +3,7 @@ import Link from 'next/link'
 import styles from './dashboard.module.css'
 import { Lockup } from '@/components/brand/Lockup'
 import { SOURCE_GLYPH } from '@/lib/dashboard-data'
+import OriginalLink from './OriginalLink'
 import type { Source, Space } from '@/lib/spaces'
 
 interface SourceSidebarProps {
@@ -34,39 +35,31 @@ export default function SourceSidebar({ space, sources, activeSourceId }: Source
       </Link>
 
       <div className={styles.navsec}>
-        <div
-          className={styles.navlabel}
-          style={{
-            fontFamily: 'var(--font-ibm-plex-mono), monospace',
-            fontSize: 11,
-            letterSpacing: '.16em',
-            textTransform: 'uppercase',
-            color: '#7C8A7E',
-          }}
-        >
-          Sources
-        </div>
-        <nav className={styles.nav}>
+        <div className={styles.navlabel}>Sources</div>
+        <nav className={styles.nav} aria-label="Sources">
           {sources.length === 0 ? (
-            <span className={styles.navitem} style={{ color: '#7C8A7E' }}>
+            <span className={styles.navitem} style={{ color: 'var(--sage)' }}>
               No sources yet
             </span>
           ) : (
             sources.map(source => {
               const isActive = source.id === activeSourceId
               return (
-                <Link
+                <div
                   key={source.id}
-                  className={`${styles.navitem} ${isActive ? styles.on : ''}`}
-                  href={`/dashboard/spaces/${space.id}/sources/${source.id}`}
-                  aria-current={isActive ? 'page' : undefined}
-                  title={source.title}
+                  className={`${styles.sourceNavRow} ${isActive ? styles.sourceNavRowOn : ''}`}
                 >
-                  <span aria-hidden="true">{GLYPH_BY_TYPE[source.type]}</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {source.title}
-                  </span>
-                </Link>
+                  <Link
+                    className={styles.sourceNavLink}
+                    href={`/dashboard/spaces/${space.id}/sources/${source.id}`}
+                    aria-current={isActive ? 'page' : undefined}
+                    title={source.title}
+                  >
+                    <span aria-hidden="true">{GLYPH_BY_TYPE[source.type]}</span>
+                    <span className={styles.sourceNavTitle}>{source.title}</span>
+                  </Link>
+                  {source.url ? <OriginalLink url={source.url} compact /> : null}
+                </div>
               )
             })
           )}

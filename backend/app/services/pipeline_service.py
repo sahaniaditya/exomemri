@@ -21,6 +21,7 @@ from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
 from app.services.pipeline.graph import build_pipeline
+from app.services.review_service import ReviewService
 from app.services.space_service import SpaceService
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class PipelineService:
     def __init__(
         self,
         concepts: ConceptService,
+        reviews: ReviewService,
         extracts: ExtractService,
         embeddings: EmbeddingService,
         llm: LLMService,
@@ -39,6 +41,7 @@ class PipelineService:
         self._space_service = space_service
         self._graph = build_pipeline(
             concepts=concepts,
+            reviews=reviews,
             extracts=extracts,
             embeddings=embeddings,
             llm=llm,

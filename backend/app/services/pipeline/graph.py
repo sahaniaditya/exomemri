@@ -17,6 +17,7 @@ import anyio
 from langgraph.graph import END, StateGraph
 
 from app.schemas.common import ProcessingStatus
+from app.schemas.sources import StructuredSummary
 from app.services.pipeline.chunking import chunk_text
 from app.services.pipeline.state import PipelineState
 
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from app.services.embedding_service import EmbeddingService
     from app.services.extract_service import ExtractService
     from app.services.llm_service import LLMService
+    from app.services.review_service import ReviewService
     from app.services.space_service import SpaceService
 
 logger = logging.getLogger(__name__)
@@ -45,6 +47,7 @@ def _route_after(node: str) -> str:
 def build_pipeline(
     *,
     concepts: ConceptService,
+    reviews: ReviewService,
     extracts: ExtractService,
     embeddings: EmbeddingService,
     llm: LLMService,
@@ -127,15 +130,19 @@ def build_pipeline(
             summary = await llm.summarize(
                 title=state["source"]["title"], extract=state["extract"]
             )
+            sections = await llm.summarize_structured(
+                title=state["source"]["title"], extract=state["extract"]
+            )
             await anyio.to_thread.run_sync(
                 partial(
                     space_service.save_summary,
                     source_id=state["source_id"],
                     summary=summary,
+                    sections=sections.model_dump(),
                     model=llm.model_name,
                 )
             )
-            return {**state, "summary": summary}
+            return {**state, "summary": summary, "summary_sections": sections.model_dump()}
         except Exception as exc:  # noqa: BLE001 - graph must never raise
             logger.error("pipeline_summarize_failed", extra={"source_id": state["source_id"]})
             return {**state, "error": str(exc)}
@@ -161,6 +168,23 @@ def build_pipeline(
         except Exception as exc:  # noqa: BLE001 - graph must never raise
             logger.error(
                 "pipeline_extract_concepts_failed", extra={"source_id": state["source_id"]}
+            )
+            return {**state, "error": str(exc)}
+
+    async def generate_review_items(state: PipelineState) -> PipelineState:
+        """Materialize this source's interview points into the review queue.
+
+        A separate node from ``summarize`` so a failure here (e.g. a bad
+        insert) can't cost the user their summary, same rationale as
+        ``extract_concepts`` being isolated from ``summarize``.
+        """
+        try:
+            sections = StructuredSummary(**state["summary_sections"])
+            count = await reviews.generate_for_source(source=state["source"], sections=sections)
+            return {**state, "review_item_count": count}
+        except Exception as exc:  # noqa: BLE001 - graph must never raise
+            logger.error(
+                "pipeline_generate_review_items_failed", extra={"source_id": state["source_id"]}
             )
             return {**state, "error": str(exc)}
 
@@ -194,6 +218,7 @@ def build_pipeline(
     graph.add_node("embed", embed)
     graph.add_node("summarize", summarize)
     graph.add_node("extract_concepts", extract_concepts)
+    graph.add_node("generate_review_items", generate_review_items)
     graph.add_node("finalize", finalize)
     graph.add_node("mark_failed", mark_failed)
 
@@ -202,7 +227,8 @@ def build_pipeline(
     graph.add_conditional_edges("chunk", _route_after("embed"))
     graph.add_conditional_edges("embed", _route_after("summarize"))
     graph.add_conditional_edges("summarize", _route_after("extract_concepts"))
-    graph.add_conditional_edges("extract_concepts", _route_after("finalize"))
+    graph.add_conditional_edges("extract_concepts", _route_after("generate_review_items"))
+    graph.add_conditional_edges("generate_review_items", _route_after("finalize"))
     graph.add_edge("finalize", END)
     graph.add_edge("mark_failed", END)
 

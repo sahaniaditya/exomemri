@@ -43,6 +43,9 @@ class SpaceSummary(BaseModel):
     created_at: datetime | None = None
     last_captured_at: datetime | None = None
     source_counts: SourceCounts = SourceCounts()
+    # Cached from the last coverage computation; None until one has run for
+    # this space. Never computed inline here — see CoverageService.
+    coverage_pct: int | None = None
 
 
 class SpaceListResponse(BaseModel):

@@ -10,7 +10,9 @@ from app.config import Settings, get_settings
 from app.errors import AuthError
 from app.repositories.chunk_repo import ChunkRepo
 from app.repositories.concept_repo import ConceptRepo
+from app.repositories.coverage_repo import CoverageRepo
 from app.repositories.profile_repo import ProfileRepo
+from app.repositories.review_repo import ReviewRepo
 from app.repositories.space_repo import SpaceRepo
 from app.repositories.storage_repo import StorageRepo, get_storage_repo
 from app.repositories.supabase_client import get_auth_client, get_service_client
@@ -19,10 +21,13 @@ from app.schemas.common import User
 from app.services.auth_service import AuthService
 from app.services.capture_service import CaptureService
 from app.services.concept_service import ConceptService
+from app.services.coverage_service import CoverageService
 from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
 from app.services.pipeline_service import PipelineService
+from app.services.plan_service import PlanService
+from app.services.review_service import ReviewService
 from app.services.session_service import SessionService
 from app.services.source_chat_service import SourceChatService
 from app.services.space_service import SpaceService
@@ -132,12 +137,40 @@ def get_concept_service(
 ) -> ConceptService:
     return ConceptService(concepts, spaces, extracts, llm)
 
+def get_coverage_repo() -> CoverageRepo:
+    return CoverageRepo(get_service_client())
+
+def get_coverage_service(
+    coverage: CoverageRepo = Depends(get_coverage_repo),
+    concepts: ConceptRepo = Depends(get_concept_repo),
+    spaces: SpaceService = Depends(get_space_service),
+    llm: LLMService = Depends(get_llm_service),
+) -> CoverageService:
+    return CoverageService(coverage, concepts, spaces, llm)
+
+def get_review_repo() -> ReviewRepo:
+    return ReviewRepo(get_service_client())
+
+def get_review_service(
+    reviews: ReviewRepo = Depends(get_review_repo),
+    spaces: SpaceService = Depends(get_space_service),
+) -> ReviewService:
+    return ReviewService(reviews, spaces)
+
+def get_plan_service(
+    coverage: CoverageService = Depends(get_coverage_service),
+    reviews: ReviewService = Depends(get_review_service),
+    spaces: SpaceService = Depends(get_space_service),
+) -> PlanService:
+    return PlanService(coverage, reviews, spaces)
+
 def get_pipeline_service(
     concepts: ConceptService = Depends(get_concept_service),
+    reviews: ReviewService = Depends(get_review_service),
     extracts: ExtractService = Depends(get_extract_service),
     embeddings: EmbeddingService = Depends(get_embedding_service),
     llm: LLMService = Depends(get_llm_service),
     chunks: ChunkRepo = Depends(get_chunk_repo),
     space_service: SpaceService = Depends(get_space_service),
 ) -> PipelineService:
-    return PipelineService(concepts, extracts, embeddings, llm, chunks, space_service)
+    return PipelineService(concepts, reviews, extracts, embeddings, llm, chunks, space_service)

@@ -9,7 +9,10 @@ from app.config import Settings, get_settings
 from app.errors import register_exception_handlers
 from app.logging import RequestIdMiddleware, configure_logging
 from app.routers import auth as auth_router
+from app.routers import coverage as coverage_router
 from app.routers import graph as graph_router
+from app.routers import plan as plan_router
+from app.routers import review as review_router
 from app.routers import session as session_router
 from app.routers import sources as sources_router
 from app.routers import spaces as spaces_router
@@ -53,6 +56,9 @@ def create_app() -> FastAPI:
     app.include_router(spaces_router.router, prefix=API_PREFIX)
     app.include_router(sources_router.router, prefix=API_PREFIX)
     app.include_router(graph_router.router, prefix=API_PREFIX)
+    app.include_router(review_router.router, prefix=API_PREFIX)
+    app.include_router(coverage_router.router, prefix=API_PREFIX)
+    app.include_router(plan_router.router, prefix=API_PREFIX)
 
     @app.get("/health", tags=["meta"])
     def health() -> dict:

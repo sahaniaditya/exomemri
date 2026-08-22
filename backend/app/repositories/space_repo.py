@@ -152,15 +152,22 @@ class SpaceRepo:
         return res.data if res else None
 
     def update_source_summary(
-            self, *, source_id: str, summary_text: str, summary_model: str, summarized_at: str
-        ) -> None:
-            self._client.table("sources").update(
-                {
-                    "summary_text": summary_text,
-                    "summary_model": summary_model,
-                    "summarized_at": summarized_at,
-                }
-            ).eq("id", source_id).execute()
+        self,
+        *,
+        source_id: str,
+        summary_text: str,
+        summary_sections: dict,
+        summary_model: str,
+        summarized_at: str,
+    ) -> None:
+        self._client.table("sources").update(
+            {
+                "summary_text": summary_text,
+                "summary_sections": summary_sections,
+                "summary_model": summary_model,
+                "summarized_at": summarized_at,
+            }
+        ).eq("id", source_id).execute()
 
     def update_processing_status(self, *, source_id: str, status: str) -> None:
         self._client.table("sources").update(
@@ -189,6 +196,24 @@ class SpaceRepo:
     ) -> None:
         self._client.table("sources").update(
             {"concepts_model": model, "concepts_extracted_at": extracted_at}
+        ).eq("id", source_id).execute()
+
+    def list_unreviewed_sources(self, *, space_id: str, limit: int) -> list[dict]:
+        """Sources in a space with no review items generated yet, oldest first."""
+        res = (
+            self._client.table("sources")
+            .select("*")
+            .eq("space_id", space_id)
+            .is_("review_items_extracted_at", "null")
+            .order("captured_at")
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+
+    def mark_review_items_extracted(self, *, source_id: str, extracted_at: str) -> None:
+        self._client.table("sources").update(
+            {"review_items_extracted_at": extracted_at}
         ).eq("id", source_id).execute()
 
     def list_source_messages(self, *, source_id: str) -> list[dict]:

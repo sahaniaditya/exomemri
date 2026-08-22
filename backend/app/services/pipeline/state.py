@@ -14,5 +14,7 @@ class PipelineState(TypedDict, total=False):
     chunks: list[Chunk]
     embeddings: list[list[float]]
     summary: str
+    summary_sections: dict
     concept_count: int
+    review_item_count: int
     error: str | None
