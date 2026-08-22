@@ -163,7 +163,8 @@ export function getDashboardData(totals: DashboardTotals): DashboardData {
 
 // --- API → view model ---
 
-const SOURCE_KIND: Record<SourceType, SourceKind> = {
+/** Shared with `lib/graph.ts`, which needs the same mapping for map nodes. */
+export const SOURCE_KIND: Record<SourceType, SourceKind> = {
   youtube: 'video',
   article: 'article',
   ai_chat: 'chat',

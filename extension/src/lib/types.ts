@@ -268,6 +268,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/spaces/{space_id}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Space Graph
+         * @description Every concept, source and edge in one space — the map's whole payload.
+         */
+        get: operations["get_space_graph_v1_spaces__space_id__graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/graph/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rebuild Space Graph
+         * @description Extract concepts for one bounded batch of not-yet-mapped sources.
+         *
+         *     New captures are mapped automatically by the capture pipeline; this exists
+         *     for sources captured before the map shipped, and for retrying ones whose
+         *     pipeline run failed. Bounded per call, so the client loops until
+         *     ``pending`` is 0.
+         */
+        post: operations["rebuild_space_graph_v1_spaces__space_id__graph_rebuild_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/spaces/{space_id}/sources": {
         parameters: {
             query?: never;
@@ -371,6 +416,23 @@ export interface components {
             role: "user" | "assistant";
         };
         /**
+         * ConceptNode
+         * @description A concept in the map. ``degree`` is how many sources reference it.
+         */
+        ConceptNode: {
+            /** Degree */
+            degree: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Slug */
+            slug: string;
+        };
+        /**
          * CreateSpaceRequest
          * @description Payload for creating a Learning Space, e.g. ``{"name": "Claude Code"}``.
          */
@@ -379,6 +441,24 @@ export interface components {
             goal_text?: string | null;
             /** Name */
             name: string;
+        };
+        /**
+         * GraphEdge
+         * @description A source mentioning a concept, weighted by the LLM's salience score.
+         */
+        GraphEdge: {
+            /**
+             * Concept Id
+             * Format: uuid
+             */
+            concept_id: string;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /** Weight */
+            weight: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -433,6 +513,18 @@ export interface components {
             referral_source: string;
             /** Username */
             username: string;
+        };
+        /**
+         * RebuildResponse
+         * @description Outcome of one bounded backfill batch.
+         */
+        RebuildResponse: {
+            /** Failed */
+            failed: number;
+            /** Pending */
+            pending: number;
+            /** Processed */
+            processed: number;
         };
         /** SendMessageRequest */
         SendMessageRequest: {
@@ -502,6 +594,22 @@ export interface components {
             sources: components["schemas"]["SourceSummary"][];
         };
         /**
+         * SourceNode
+         * @description A captured source in the map, trimmed to what the canvas renders.
+         */
+        SourceNode: {
+            /** Captured At */
+            captured_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            type: components["schemas"]["SourceType"];
+        };
+        /**
          * SourceSummary
          * @description A captured source. ``storage_prefix`` is deliberately not exposed —
          *     artifacts are reached through ``GET /v1/sources/{id}/artifact-url``.
@@ -550,6 +658,20 @@ export interface components {
             name: string;
             /** Slug */
             slug?: string | null;
+        };
+        /**
+         * SpaceGraphResponse
+         * @description The whole map for one space, plus how much of it is still unmapped.
+         */
+        SpaceGraphResponse: {
+            /** Concepts */
+            concepts: components["schemas"]["ConceptNode"][];
+            /** Edges */
+            edges: components["schemas"]["GraphEdge"][];
+            /** Pending */
+            pending: number;
+            /** Sources */
+            sources: components["schemas"]["SourceNode"][];
         };
         /** SpaceListResponse */
         SpaceListResponse: {
@@ -1270,6 +1392,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SpaceSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_space_graph_v1_spaces__space_id__graph_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpaceGraphResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rebuild_space_graph_v1_spaces__space_id__graph_rebuild_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RebuildResponse"];
                 };
             };
             /** @description Validation Error */

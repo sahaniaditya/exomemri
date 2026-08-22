@@ -4,21 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { apiFetch } from "@/lib/api"
-
-function Glyph({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="14.5" stroke="#2C5D4F" />
-      <path
-        d="M16 1.5v29M1.5 16h29M6 6c6 5 14 5 20 0M6 26c6-5 14-5 20 0M4.2 10.5c7 3.5 16.6 3.5 23.6 0M4.2 21.5c7-3.5 16.6-3.5 23.6 0"
-        stroke="#2C5D4F"
-        strokeWidth="1"
-        opacity=".55"
-      />
-      <circle cx="16" cy="16" r="2.4" fill="#B5623C" />
-    </svg>
-  )
-}
+import { Lockup } from '@/components/brand/Lockup'
 
 function ContourBg() {
   return (
@@ -328,10 +314,9 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div style={{
           position: 'absolute', top: 28, left: 40,
           display: 'flex', alignItems: 'center', gap: 10,
-          fontFamily: 'Newsreader', fontSize: 20, letterSpacing: '-0.03em', color: '#1B1A16',
+          fontSize: 19, color: '#1B1A16',
         }}>
-          <Glyph size={24} />
-          <span style={{ fontWeight: 500 }}>atlas<span style={{ color: '#2C5D4F' }}>.ai</span></span>
+          <Lockup size={24} />
         </div>
 
         {/* Step counter */}
@@ -393,7 +378,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   Set up your identity.
                 </h1>
                 <p style={{ fontSize: 15, color: '#5B5A52', margin: '0 0 30px' }}>
-                  This is how Atlas knows you.
+                  This is how exomemri knows you.
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -536,7 +521,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   How do you learn?
                 </h1>
                 <p style={{ fontSize: 15, color: '#5B5A52', margin: '0 0 26px' }}>
-                  Atlas adapts to your context.
+                  exomemri adapts to your context.
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -567,7 +552,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   What do you study?
                 </h1>
                 <p style={{ fontSize: 15, color: '#5B5A52', margin: '0 0 26px' }}>
-                  Your primary domain shapes how Atlas organises your memory.
+                  Your primary domain shapes how exomemri organises your memory.
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -689,7 +674,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
 
           <p style={{ marginTop: 20, textAlign: 'center', fontFamily: 'IBM Plex Mono', fontSize: 11, color: '#9AA69C', letterSpacing: '0.06em' }}>
-            © {new Date().getFullYear()} Atlas.ai · Your AI learning memory
+            © {new Date().getFullYear()} exomemri · Your AI learning memory
           </p>
         </div>
       </div>

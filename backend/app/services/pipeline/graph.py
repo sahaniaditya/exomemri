@@ -1,4 +1,4 @@
-"""The chunk/embed/summarize pipeline, as a linear LangGraph state machine.
+"""The chunk/embed/summarize/extract pipeline, as a linear LangGraph state machine.
 
 Each stage node advances ``sources.processing_status`` to the matching
 ``ProcessingStatus`` value before doing its work. Any node exception is
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
 
     from app.repositories.chunk_repo import ChunkRepo
+    from app.services.concept_service import ConceptService
     from app.services.embedding_service import EmbeddingService
     from app.services.extract_service import ExtractService
     from app.services.llm_service import LLMService
@@ -43,6 +44,7 @@ def _route_after(node: str) -> str:
 
 def build_pipeline(
     *,
+    concepts: ConceptService,
     extracts: ExtractService,
     embeddings: EmbeddingService,
     llm: LLMService,
@@ -138,6 +140,30 @@ def build_pipeline(
             logger.error("pipeline_summarize_failed", extra={"source_id": state["source_id"]})
             return {**state, "error": str(exc)}
 
+    async def extract_concepts(state: PipelineState) -> PipelineState:
+        """Map the source onto its space's concepts — the knowledge-map stage.
+
+        Deliberately the last real stage: it depends on nothing downstream, so a
+        failure here should not cost the user their chunks, embeddings or summary.
+        """
+        try:
+            await anyio.to_thread.run_sync(
+                partial(
+                    space_service.update_processing_status,
+                    source_id=state["source_id"],
+                    status=ProcessingStatus.extracting.value,
+                )
+            )
+            count = await concepts.extract_for_source(
+                source=state["source"], extract=state["extract"]
+            )
+            return {**state, "concept_count": count}
+        except Exception as exc:  # noqa: BLE001 - graph must never raise
+            logger.error(
+                "pipeline_extract_concepts_failed", extra={"source_id": state["source_id"]}
+            )
+            return {**state, "error": str(exc)}
+
     async def finalize(state: PipelineState) -> PipelineState:
         await anyio.to_thread.run_sync(
             partial(
@@ -167,6 +193,7 @@ def build_pipeline(
     graph.add_node("chunk", chunk)
     graph.add_node("embed", embed)
     graph.add_node("summarize", summarize)
+    graph.add_node("extract_concepts", extract_concepts)
     graph.add_node("finalize", finalize)
     graph.add_node("mark_failed", mark_failed)
 
@@ -174,7 +201,8 @@ def build_pipeline(
     graph.add_conditional_edges("fetch_extract", _route_after("chunk"))
     graph.add_conditional_edges("chunk", _route_after("embed"))
     graph.add_conditional_edges("embed", _route_after("summarize"))
-    graph.add_conditional_edges("summarize", _route_after("finalize"))
+    graph.add_conditional_edges("summarize", _route_after("extract_concepts"))
+    graph.add_conditional_edges("extract_concepts", _route_after("finalize"))
     graph.add_edge("finalize", END)
     graph.add_edge("mark_failed", END)
 

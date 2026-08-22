@@ -14,7 +14,7 @@ import SpacesGrid from '@/components/dashboard/SpacesGrid'
 import TopBar from '@/components/dashboard/TopBar'
 
 export const metadata: Metadata = {
-  title: 'Overview · Atlas',
+  title: 'Overview · exomemri',
   description: 'Your learning memory at a glance.',
 }
 
@@ -30,7 +30,6 @@ async function loadProfile(token: string): Promise<Profile | null> {
 }
 
 export default async function DashboardPage() {
-  // The layout already gated auth/onboarding, so a token is expected here.
   const token = (await cookies()).get('atlas_token')?.value ?? ''
   const [profile, apiSpaces, recentSources] = await Promise.all([
     loadProfile(token),
@@ -47,16 +46,29 @@ export default async function DashboardPage() {
       <main className={styles.main}>
         <ContourBg />
         <div className={styles.inner}>
-          <TopBar profile={profile} totalSources={totalSources} spaceCount={spaces.length} />
-
-          <Plate
-            num="01"
-            title="Your Learning Spaces"
+          <TopBar
+            profile={profile}
+            totalSources={totalSources}
+            spaceCount={spaces.length}
           />
-          <SpacesGrid spaces={spaces} />
 
-          <Plate num="02" title="Recently captured" />
-          <CaptureFeed sources={captures} />
+          <section id="spaces" className={styles.section}>
+            <Plate num="01" title="Your Learning Spaces" />
+            <SpacesGrid spaces={spaces} />
+          </section>
+
+          <section id="captures" className={styles.section}>
+            <Plate
+              num="02"
+              title="Recently captured"
+              link={
+                captures.length > 0
+                  ? { label: `${captures.length} latest`, href: '#captures' }
+                  : undefined
+              }
+            />
+            <CaptureFeed sources={captures} />
+          </section>
         </div>
       </main>
     </div>

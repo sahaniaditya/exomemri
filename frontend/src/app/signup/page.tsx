@@ -5,21 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 
 import { apiFetch } from "@/lib/api"
 import Link from 'next/link'
-
-function Glyph({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="14.5" stroke="#2C5D4F" />
-      <path
-        d="M16 1.5v29M1.5 16h29M6 6c6 5 14 5 20 0M6 26c6-5 14-5 20 0M4.2 10.5c7 3.5 16.6 3.5 23.6 0M4.2 21.5c7-3.5 16.6-3.5 23.6 0"
-        stroke="#2C5D4F"
-        strokeWidth="1"
-        opacity=".55"
-      />
-      <circle cx="16" cy="16" r="2.4" fill="#B5623C" />
-    </svg>
-  )
-}
+import { Lockup } from '@/components/brand/Lockup'
 
 function ContourBg() {
   return (
@@ -170,10 +156,9 @@ const handleEmailSignUp = async (e: React.FormEvent) => {
         <Link
           href="/"
           className="absolute left-8 top-7 flex items-center gap-2.5 no-underline"
-          style={{ fontFamily: 'Newsreader', fontSize: 20, letterSpacing: '-0.03em', color: '#1B1A16', textDecoration: 'none' }}
+          style={{ fontSize: 19, color: '#1B1A16', textDecoration: 'none' }}
         >
-          <Glyph size={24} />
-          <span style={{ fontWeight: 500 }}>atlas<span style={{ color: '#2C5D4F' }}>.ai</span></span>
+          <Lockup size={24} />
         </Link>
 
         <div className="relative z-10 w-full" style={{ maxWidth: 440 }}>
@@ -424,7 +409,7 @@ const handleEmailSignUp = async (e: React.FormEvent) => {
           </div>
 
           <p style={{ marginTop: 20, textAlign: 'center', fontFamily: 'IBM Plex Mono', fontSize: 11, color: '#9AA69C', letterSpacing: '0.06em' }}>
-            © {new Date().getFullYear()} Atlas.ai · Your AI learning memory
+            © {new Date().getFullYear()} exomemri · Your AI learning memory
           </p>
         </div>
       </div>

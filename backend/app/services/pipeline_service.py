@@ -16,6 +16,7 @@ import anyio
 
 from app.repositories.chunk_repo import ChunkRepo
 from app.schemas.common import User
+from app.services.concept_service import ConceptService
 from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 class PipelineService:
     def __init__(
         self,
+        concepts: ConceptService,
         extracts: ExtractService,
         embeddings: EmbeddingService,
         llm: LLMService,
@@ -36,6 +38,7 @@ class PipelineService:
     ) -> None:
         self._space_service = space_service
         self._graph = build_pipeline(
+            concepts=concepts,
             extracts=extracts,
             embeddings=embeddings,
             llm=llm,

@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import styles from './dashboard.module.css'
-import Glyph from './Glyph'
+import { Lockup } from '@/components/brand/Lockup'
 import { SOURCE_GLYPH } from '@/lib/dashboard-data'
 import type { Source, Space } from '@/lib/spaces'
 
@@ -23,11 +23,7 @@ export default function SourceSidebar({ space, sources, activeSourceId }: Source
   return (
     <aside className={styles.side}>
       <Link className={styles.brand} href="/dashboard">
-        <Glyph size={24} />
-        <span>
-          <span className={styles.wordmark}>atlas</span>
-          <span style={{ color: '#2C5D4F' }}>.ai</span>
-        </span>
+        <Lockup size={24} />
       </Link>
 
       <Link href={`/dashboard/spaces/${space.id}`} className={styles.navitem} style={{ marginBottom: 8 }}>

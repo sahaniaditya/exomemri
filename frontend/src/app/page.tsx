@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------
-   Atlas — "Never lose anything you learn online again."
+   exomemri — "Never lose anything you learn online again."
    "Start free" -> /signup, "Log in" -> /login
 ----------------------------------------------------------------- */
 import { Audience } from '@/components/marketing/Audience';

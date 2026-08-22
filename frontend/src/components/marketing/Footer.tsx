@@ -1,16 +1,13 @@
 import Link from 'next/link';
 
-import { Glyph } from './Glyph';
+import { Lockup } from '@/components/brand/Lockup';
 
 export function Footer() {
   return (
     <footer className="divide">
       <div className="wrap footer-row">
         <Link href="/" className="brand brand-sm">
-          <Glyph size={22} />
-          <span className="wordmark">
-            atlas<span className="accent">.ai</span>
-          </span>
+          <Lockup size={22} />
         </Link>
         <div className="footer-links">
           <a className="footlink" href="#features">Features</a>
@@ -20,7 +17,7 @@ export function Footer() {
           <a className="footlink" href="/signup">Start free</a>
         </div>
         <span className="mono [font-size:12px] [color:#9AA69C]">
-          © {new Date().getFullYear()} Atlas.ai · Your AI learning memory
+          © {new Date().getFullYear()} exomemri · Your AI learning memory
         </span>
       </div>
     </footer>

@@ -15,7 +15,7 @@ export function Solution() {
               everything you learn.
             </h2>
             <p className="dim [font-size:18.5px] [margin:26px_0_20px]">
-              Atlas isn&apos;t another notebook. It&apos;s a learning memory
+              exomemri isn&apos;t another notebook. It&apos;s a learning memory
               that captures, understands, and connects everything you study
               — automatically.
             </p>

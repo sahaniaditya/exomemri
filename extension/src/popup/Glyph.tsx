@@ -1,21 +1,40 @@
-/**
- * The Atlas mark — copied verbatim from the web app (frontend/src/app/page.tsx
- * and login/page.tsx) so the extension carries the exact same logo. The same
- * paths are rasterized into public/icon.png for the toolbar icon.
- */
-import { color } from "./theme"
+import { color, font } from "./theme"
 
-export function Glyph({ size = 24 }: { size?: number }) {
+/**
+ * The exomemri mark — copied from the web app's shared brand component
+ * (frontend/src/components/brand/Mark.tsx) so the extension carries the exact
+ * same logo. The same paths are rasterized into public/icon.png for the
+ * toolbar icon.
+ *
+ * Detail is shed below 40px and again below 20px, and the stroke gets
+ * relatively heavier as the mark shrinks, so the ring keeps its presence in
+ * the toolbar instead of thinning away.
+ */
+export function Glyph({ size = 24, surface = color.paper }: { size?: number; surface?: string }) {
+  const full = size >= 40
+  const medium = size >= 20
+  const ringPx = size >= 40 ? size * 0.021 : size >= 20 ? size * 0.05 : 1.2
+  const ring = (ringPx * 48) / size
+  const hairline = ring * (full ? 0.65 : 0.75)
+  const coreR = full ? 3.5 : medium ? 4.2 : 5
+
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <circle cx="16" cy="16" r="14.5" stroke={color.green} />
-      <path
-        d="M16 1.5v29M1.5 16h29M6 6c6 5 14 5 20 0M6 26c6-5 14-5 20 0M4.2 10.5c7 3.5 16.6 3.5 23.6 0M4.2 21.5c7-3.5 16.6-3.5 23.6 0"
-        stroke={color.green}
-        strokeWidth="1"
-        opacity=".55"
-      />
-      <circle cx="16" cy="16" r="2.4" fill={color.clay} />
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <circle cx="24" cy="24" r="21.2" stroke={color.green} strokeWidth={ring} />
+      {medium && (
+        <g stroke={color.green} strokeWidth={hairline} opacity=".5">
+          <ellipse cx="24" cy="24" rx="9.4" ry="21.2" />
+          <path d="M2.8 24h42.4" />
+          {full && (
+            <>
+              <path d="M6.4 13.2c10.4 4.6 24.8 4.6 35.2 0" />
+              <path d="M6.4 34.8c10.4-4.6 24.8-4.6 35.2 0" />
+            </>
+          )}
+        </g>
+      )}
+      <circle cx="32.6" cy="15.4" r={coreR * 1.7} fill={surface} />
+      <circle cx="32.6" cy="15.4" r={coreR} fill={color.clay} />
     </svg>
   )
 }
@@ -40,19 +59,21 @@ export function ContourBg({ style }: { style?: React.CSSProperties }) {
   )
 }
 
-/** Wordmark: "atlas" in ink, ".ai" in brand green — as in the web nav. */
+/** Wordmark: two-tone Newsreader — "exo" in forest, "memri" in ink. */
 export function Wordmark({ size = 16 }: { size?: number }) {
   return (
     <span
       style={{
-        fontFamily: "'Newsreader', Georgia, serif",
+        fontFamily: font.serif,
         fontSize: size,
-        fontWeight: 500,
-        letterSpacing: "-0.03em",
+        fontWeight: 400,
+        letterSpacing: "-0.022em",
+        lineHeight: 1,
         color: color.ink,
       }}
     >
-      atlas<span style={{ color: color.green }}>.ai</span>
+      <span style={{ color: color.green }}>exo</span>
+      memri
     </span>
   )
 }

@@ -11,7 +11,7 @@ export function WhyDifferent() {
           Not a note app. <span className="it accent">A memory.</span>
         </h2>
         <p className="dim text-center [max-width:560px] [margin:0_auto_52px] [font-size:18px]">
-          Other tools help you save information. Atlas helps you remember
+          Other tools help you save information. exomemri helps you remember
           it — and understand it over time.
         </p>
         <div className="crow">
@@ -24,7 +24,7 @@ export function WhyDifferent() {
             <div className="cli"><span className="dim">○</span><span className="dim">Remembers what you saved</span></div>
           </div>
           <div className="ccol [background:#F0F3F0]">
-            <div className="label accent [margin-bottom:8px]">Atlas</div>
+            <div className="label accent [margin-bottom:8px]">exomemri</div>
             <h3 className="serif accent [font-size:26px] [margin-bottom:8px]">Understand &amp; remember.</h3>
             <div className="cli cli-accent"><span className="accent">●</span><span>Understands what you&apos;ve learned</span></div>
             <div className="cli cli-accent"><span className="accent">●</span><span>Connects learning across every source</span></div>

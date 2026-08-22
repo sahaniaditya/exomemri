@@ -1,4 +1,4 @@
-"""RAG pipeline tests: chunk -> embed -> summarize -> ready, against fakes."""
+"""RAG pipeline tests: chunk -> embed -> summarize -> extract -> ready, against fakes."""
 
 from __future__ import annotations
 
@@ -7,11 +7,13 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.schemas.common import User
+from app.services.concept_service import ConceptService
 from app.services.pipeline_service import PipelineService
 from app.services.space_service import SpaceService
 from app.tests.conftest import (
     SEEDED_SPACE_ID,
     FakeChunkRepo,
+    FakeConceptRepo,
     FakeEmbeddingService,
     FakeLLMService,
     FakeSpaceRepo,
@@ -58,10 +60,17 @@ def dev_user() -> User:
 
 
 def _build_pipeline_service(
-    *, extracts, space_repo: FakeSpaceRepo, llm: FakeLLMService, embeddings, chunks: FakeChunkRepo
+    *,
+    extracts,
+    space_repo: FakeSpaceRepo,
+    llm: FakeLLMService,
+    embeddings,
+    chunks: FakeChunkRepo,
+    concepts: FakeConceptRepo,
 ) -> PipelineService:
     space_svc = SpaceService(space_repo)  # type: ignore[arg-type]
-    return PipelineService(extracts, embeddings, llm, chunks, space_svc)
+    concept_svc = ConceptService(concepts, space_svc, extracts, llm)  # type: ignore[arg-type]
+    return PipelineService(concept_svc, extracts, embeddings, llm, chunks, space_svc)
 
 
 async def test_pipeline_chunks_embeds_and_summarizes(
@@ -71,6 +80,7 @@ async def test_pipeline_chunks_embeds_and_summarizes(
     chunk_repo: FakeChunkRepo,
     embedding_service: FakeEmbeddingService,
     llm_service: FakeLLMService,
+    concept_repo: FakeConceptRepo,
 ) -> None:
     from app.services.extract_service import ExtractService
 
@@ -84,6 +94,7 @@ async def test_pipeline_chunks_embeds_and_summarizes(
         llm=llm_service,
         embeddings=embedding_service,
         chunks=chunk_repo,
+        concepts=concept_repo,
     )
 
     await pipeline.run(
@@ -105,6 +116,7 @@ async def test_pipeline_marks_failed_on_node_exception(
     chunk_repo: FakeChunkRepo,
     embedding_service: FakeEmbeddingService,
     llm_service: FakeLLMService,
+    concept_repo: FakeConceptRepo,
 ) -> None:
     source = _seed_source(space_repo, storage, extract_text="irrelevant")
 
@@ -114,6 +126,7 @@ async def test_pipeline_marks_failed_on_node_exception(
         llm=llm_service,
         embeddings=embedding_service,
         chunks=chunk_repo,
+        concepts=concept_repo,
     )
 
     await pipeline.run(

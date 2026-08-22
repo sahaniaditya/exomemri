@@ -226,6 +226,17 @@ class SpaceService:
             summarized_at=datetime.now(UTC).isoformat(),
         )
 
+    def list_unextracted_sources(self, *, space_id: UUID, limit: int) -> list[dict]:
+        """Sources in a space whose concepts have never been extracted."""
+        return self._spaces.list_unextracted_sources(space_id=str(space_id), limit=limit)
+
+    def mark_concepts_extracted(self, *, source_id: UUID, model: str) -> None:
+        self._spaces.mark_concepts_extracted(
+            source_id=str(source_id),
+            model=model,
+            extracted_at=datetime.now(UTC).isoformat(),
+        )
+
     def list_messages(self, source_id: UUID) -> list[dict]:
         return self._spaces.list_source_messages(source_id=str(source_id))
 

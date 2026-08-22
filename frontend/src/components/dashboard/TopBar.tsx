@@ -1,4 +1,9 @@
 'use client'
+
+/**
+ * Overview account chrome + greeting. Greeting/date are clock-local (see
+ * useSyncExternalStore below); counts come from the server page.
+ */
 import { useRouter } from 'next/navigation'
 import { useSyncExternalStore } from 'react'
 import { clearExtensionSession } from '@/lib/extension-session'
@@ -8,7 +13,9 @@ import styles from './dashboard.module.css'
 interface TopBarProps {
   profile: Profile | null
   totalSources: number
-  spaceCount?: number
+  spaceCount: number
+  /** Full hero + pulse on overview; compact greeting elsewhere. */
+  variant?: 'hero' | 'compact'
 }
 
 interface Clock {
@@ -22,9 +29,6 @@ function greetingFor(hour: number) {
   return 'Good evening'
 }
 
-// Greeting and date depend on the viewer's clock and timezone, so the server
-// render stays neutral and the real values arrive on hydration. The snapshot is
-// memoised because useSyncExternalStore compares it by identity.
 let clientClock: Clock | null = null
 function getClientClock(): Clock {
   if (!clientClock) {
@@ -40,61 +44,113 @@ function getClientClock(): Clock {
 }
 const subscribe = () => () => {}
 
-export default function TopBar({ profile, totalSources, spaceCount }: TopBarProps) {
+export default function TopBar({
+  profile,
+  totalSources,
+  spaceCount,
+  variant = 'hero',
+}: TopBarProps) {
   const router = useRouter()
   const clock = useSyncExternalStore<Clock | null>(subscribe, getClientClock, () => null)
   const name = profile?.full_name?.split(' ')[0] ?? 'there'
 
   const handleLogout = async () => {
     try {
-      // The route reads the httpOnly cookie server-side, tells FastAPI to
-      // destroy the session, and clears both cookies — none of which
-      // client JS can do for httpOnly cookies on its own.
       await fetch('/api/auth/logout', { method: 'POST' })
     } catch (error) {
       console.error('Logout failed:', error)
     } finally {
-      // The extension mirror lives in localStorage, so the client clears it.
       clearExtensionSession()
       router.push('/login')
     }
   }
 
-  return (
-    <div className={styles.top}>
-      <div className={styles.hello}>
-        <div className={styles.coord}>{clock?.date ?? ''}</div>
-        <h1>{clock ? `${clock.greeting}, ${name}.` : `Welcome back, ${name}.`}</h1>
-        <p className={styles.sub}>
-          {totalSources === 0
-            ? 'Capture your first source to start a Learning Space.'
-            : spaceCount === undefined
-              ? `${totalSources} ${totalSources === 1 ? 'source' : 'sources'} captured`
+  const empty = totalSources === 0
+  const account = (
+    <div className={styles.me}>
+      <div className={styles.avatar}>{initial(profile)}</div>
+      <div>
+        <div className={styles.nm}>{profile?.full_name ?? 'Your account'}</div>
+        <div className={styles.pl}>SIGNED IN</div>
+      </div>
+      <button
+        type="button"
+        className={styles.signout}
+        onClick={handleLogout}
+        title="Sign out"
+        aria-label="Sign out"
+      >
+        <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <path d="M16 17l5-5-5-5M21 12H9" />
+        </svg>
+      </button>
+    </div>
+  )
+
+  if (variant === 'compact') {
+    return (
+      <div className={styles.top}>
+        <div className={styles.hello}>
+          <div className={styles.coord}>{clock?.date ?? '\u00a0'}</div>
+          <h1>
+            {clock ? `${clock.greeting}, ${name}.` : `Welcome back, ${name}.`}
+          </h1>
+          <p className={styles.sub}>
+            {totalSources === 0
+              ? 'Capture your first source to start building this space.'
               : `${totalSources} ${totalSources === 1 ? 'source' : 'sources'} across ${spaceCount} ${
                   spaceCount === 1 ? 'space' : 'spaces'
                 }`}
-        </p>
+          </p>
+        </div>
+        {account}
+      </div>
+    )
+  }
+
+  return (
+    <header className={styles.hero}>
+      <div className={styles.heroTop}>
+        <div className={styles.hello}>
+          <div className={styles.coord}>{clock?.date ?? '\u00a0'}</div>
+          <h1>
+            {clock ? `${clock.greeting}, ${name}.` : `Welcome back, ${name}.`}
+          </h1>
+          <p className={styles.sub}>
+            {empty
+              ? 'Your learning memory is empty — create a space and capture something worth keeping.'
+              : 'Pick up a Learning Space, or scan what you captured most recently.'}
+          </p>
+        </div>
+        {account}
       </div>
 
-      <div className={styles.me}>
-        <div className={styles.avatar}>{initial(profile)}</div>
-        <div>
-          <div className={styles.nm}>{profile?.full_name ?? 'Your account'}</div>
-          <div className={styles.pl}>{totalSources} SOURCES</div>
+      <div className={styles.pulse} aria-label="Library at a glance">
+        <div className={styles.pulseCard}>
+          <div className={styles.pulseVal}>{spaceCount}</div>
+          <div className={styles.pulseKey}>Learning Spaces</div>
+          <div className={styles.pulseHint}>
+            {spaceCount === 0 ? 'Create your first' : 'Topics you are building'}
+          </div>
         </div>
-        <button
-          type="button"
-          className={styles.signout}
-          onClick={handleLogout}
-          title="Sign out"
-          aria-label="Sign out"
-        >
-          <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <path d="M16 17l5-5-5-5M21 12H9" />
-          </svg>
-        </button>
+        <div className={styles.pulseCard}>
+          <div className={styles.pulseVal}>{totalSources}</div>
+          <div className={styles.pulseKey}>Sources captured</div>
+          <div className={styles.pulseHint}>
+            {empty ? 'Waiting for your first save' : 'Across every space'}
+          </div>
+        </div>
+        <a className={styles.pulseCta} href="#spaces">
+          <span className={styles.pulseCtaEyebrow}>Next</span>
+          <span className={styles.pulseCtaTitle}>
+            {empty ? 'Start a Learning Space' : 'Browse your spaces'}
+          </span>
+          <span className={styles.pulseCtaArrow} aria-hidden="true">
+            →
+          </span>
+        </a>
       </div>
-    </div>
+    </header>
   )
 }

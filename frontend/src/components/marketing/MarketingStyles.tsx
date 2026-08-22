@@ -69,8 +69,7 @@ export function MarketingStyles() {
         border-bottom: 1px solid rgba(27,26,22,.09);
       }
       .navin { display: flex; align-items: center; justify-content: space-between; height: 68px; }
-      .brand { display: flex; align-items: center; gap: 11px; font-family: 'Newsreader'; font-size: 22px; letter-spacing: -0.02em; }
-      .wordmark { letter-spacing: -0.035em; font-weight: 500; }
+      .brand { display: flex; align-items: center; gap: 11px; font-size: 20px; }
       .navlinks { display: flex; gap: 34px; }
       .navlink { font-size: 15px; color: #3D3C36; transition: color .15s; }
       .navlink:hover { color: #2C5D4F; }

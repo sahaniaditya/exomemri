@@ -32,7 +32,7 @@ export function Popup() {
       setSession(s)
       setError("")
     } catch {
-      setError("Signed out — open atlas.ai to sign in.")
+      setError("Signed out — open exomemri to sign in.")
     }
   }
 
@@ -61,7 +61,7 @@ export function Popup() {
       setSpaceSaved(true)
       setTimeout(() => setSpaceSaved(false), 1500)
     } catch {
-      setError("Couldn't switch space — reopen atlas.ai to refresh your session.")
+      setError("Couldn't switch space — reopen exomemri to refresh your session.")
     } finally {
       setSwitching(false)
     }
@@ -175,7 +175,7 @@ export function Popup() {
 
               {spaces !== null && spaces.length === 0 && (
                 <div style={styles.hint}>
-                  No spaces yet — create one on atlas.ai to start capturing.
+                  No spaces yet — create one on exomemri to start capturing.
                 </div>
               )}
 

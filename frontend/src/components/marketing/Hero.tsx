@@ -24,7 +24,7 @@ export function Hero() {
               you learn online <span className="it accent">again.</span>
             </h1>
             <p className="dim [font-size:20px] [margin:28px_0_36px] [max-width:520px] [line-height:1.55]">
-              Atlas captures every video, article, and AI chat you learn from,
+              exomemri captures every video, article, and AI chat you learn from,
               understands it, and remembers it for you — so you can recall or
               connect anything, instantly.
             </p>

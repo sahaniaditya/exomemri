@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import styles from './dashboard.module.css'
-import Glyph from './Glyph'
+import { Lockup } from '@/components/brand/Lockup'
 import type { Space } from '@/lib/spaces'
 
 interface SpacesSidebarProps {
@@ -13,11 +13,7 @@ export default function SpacesSidebar({ spaces, activeSpaceId }: SpacesSidebarPr
   return (
     <aside className={styles.side}>
       <Link className={styles.brand} href="/dashboard">
-        <Glyph size={24} />
-        <span>
-          <span className={styles.wordmark}>atlas</span>
-          <span style={{ color: '#2C5D4F' }}>.ai</span>
-        </span>
+        <Lockup size={24} />
       </Link>
 
       {/* <button type="button" className={styles.newbtn}>
@@ -78,6 +74,22 @@ export default function SpacesSidebar({ spaces, activeSpaceId }: SpacesSidebarPr
               )
             })
           )}
+        </nav>
+      </div>
+
+      {/* The map is scoped to whichever space is open, so it lives here rather
+          than in the global nav. */}
+      <div className={styles.navsec}>
+        <nav className={styles.nav}>
+          <Link className={styles.navitem} href={`/dashboard/spaces/${activeSpaceId}/map`}>
+            <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
+              <circle cx="6" cy="7" r="2.5" />
+              <circle cx="18" cy="6" r="2.5" />
+              <circle cx="12" cy="17" r="2.5" />
+              <path d="M8.2 8.2 10.6 15M15.9 7.6 13.4 15M8.4 6.6h7.2" />
+            </svg>
+            Knowledge map
+          </Link>
         </nav>
       </div>
 

@@ -10,7 +10,7 @@ export function Features() {
           <span className="plateline" />
         </div>
         <div className="flex justify-between items-end flex-wrap [gap:20px] [margin-bottom:44px]">
-          <h2 className="serif [font-size:46px]">What Atlas does for you.</h2>
+          <h2 className="serif [font-size:46px]">What exomemri does for you.</h2>
           <p className="dim [max-width:380px] [font-size:16.5px]">
             Every feature exists to make studying smooth: effortless to
             save, impossible to lose, and built to make things actually
@@ -44,7 +44,7 @@ export function Features() {
                 </div>
               </div>
               <div className="feature-media-side">
-                <div className="label label-sm [margin-bottom:16px]">Atlas · while you browse</div>
+                <div className="label label-sm [margin-bottom:16px]">exomemri · while you browse</div>
                 <div className="flex justify-center [margin-bottom:14px]">
                   <svg width="112" height="112" viewBox="0 0 112 112">
                     <circle className="ring-track" cx="56" cy="56" r="50" />
@@ -65,7 +65,7 @@ export function Features() {
               <div className="fnum">F7</div>
               <h3 className="ft ft-sm">Learn while you browse</h3>
               <p className="dim [font-size:15.5px]">
-                Open a new video and Atlas already knows what you&apos;ve
+                Open a new video and exomemri already knows what you&apos;ve
                 studied. A side panel tells you what&apos;s new, so you
                 never waste time relearning what you&apos;ve covered.
               </p>

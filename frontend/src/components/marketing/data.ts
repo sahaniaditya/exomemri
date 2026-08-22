@@ -4,7 +4,7 @@ export const FULL_ANSWER =
 export const NAV_LINKS = [
   { label: 'How it works', href: '#how' },
   { label: 'Features', href: '#features' },
-  { label: 'Why Atlas', href: '#why' },
+  { label: 'Why exomemri', href: '#why' },
   { label: 'FAQ', href: '#faq' },
 ];
 
@@ -27,7 +27,7 @@ export const FEATURES_MAIN = [
   {
     n: 'F4',
     title: 'Knowledge that merges itself',
-    body: "When three videos and an article all explain load balancers, Atlas combines them into one clear, connected note — with references back to every source. Real understanding, not duplicate clutter.",
+    body: "When three videos and an article all explain load balancers, exomemri combines them into one clear, connected note — with references back to every source. Real understanding, not duplicate clutter.",
   },
   {
     n: 'F5',
@@ -37,7 +37,7 @@ export const FEATURES_MAIN = [
   {
     n: 'F6',
     title: 'Know what you know',
-    body: "Atlas tracks what you've actually learned versus what you've merely saved. See your coverage on a topic, spot weak areas, and get told exactly what to study next — like a tutor, not a filing cabinet.",
+    body: "exomemri tracks what you've actually learned versus what you've merely saved. See your coverage on a topic, spot weak areas, and get told exactly what to study next — like a tutor, not a filing cabinet.",
   },
 ];
 
@@ -50,7 +50,7 @@ export const STEPS = [
   {
     n: 2,
     title: 'Understand',
-    body: 'Atlas instantly summarizes each source, pulls out the key concepts, and merges what you learn across sources into one clean, connected picture.',
+    body: 'exomemri instantly summarizes each source, pulls out the key concepts, and merges what you learn across sources into one clean, connected picture.',
   },
   {
     n: 3,
@@ -69,12 +69,12 @@ export const AUDIENCE = [
 export const FAQS = [
   {
     q: "Isn't this just another note-taking app?",
-    a: 'No. Note apps give you a blank page. Atlas captures your sources automatically, understands them, and tracks what you actually know — so it works like memory, not a notebook.',
+    a: 'No. Note apps give you a blank page. exomemri captures your sources automatically, understands them, and tracks what you actually know — so it works like memory, not a notebook.',
     open: true,
   },
   {
     q: 'How is it different from NotebookLM or Recall?',
-    a: 'Those tools store and let you chat with your sources. Atlas adds a model of your understanding: coverage, gaps, and "you already know 70% of this" context while you browse — built around learning over months, not single documents.',
+    a: 'Those tools store and let you chat with your sources. exomemri adds a model of your understanding: coverage, gaps, and "you already know 70% of this" context while you browse — built around learning over months, not single documents.',
   },
   {
     q: 'Do I have to copy-paste anything?',

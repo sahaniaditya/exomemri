@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { Glyph } from './Glyph';
+import { Lockup } from '@/components/brand/Lockup';
 import { NAV_LINKS } from './data';
 
 export function Nav() {
@@ -8,10 +8,7 @@ export function Nav() {
     <div className="nav">
       <div className="wrap navin">
         <Link href="/" className="brand">
-          <Glyph />
-          <span className="wordmark">
-            atlas<span className="accent">.ai</span>
-          </span>
+          <Lockup size={26} />
         </Link>
         <nav className="navlinks">
           {NAV_LINKS.map((l) => (

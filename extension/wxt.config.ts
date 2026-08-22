@@ -8,7 +8,7 @@ export default defineConfig({
   srcDir: "src",
   modules: ["@wxt-dev/module-react"],
   manifest: {
-    name: "Atlas",
+    name: "exomemri",
     description: "Capture what you learn online into a Learning Space.",
     // The Atlas mark (public/icon.svg — identical to the web app's glyph),
     // rasterized per size so Chrome never has to downscale a 128px source.

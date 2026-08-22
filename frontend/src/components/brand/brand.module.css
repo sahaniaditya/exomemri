@@ -1,0 +1,26 @@
+/*
+ * exomemri brand marks. Shared by marketing, auth, dashboard and anywhere
+ * else the logo appears, so the identity can never drift between surfaces.
+ *
+ * Both font stacks name the family literally *and* via the CSS variable:
+ * marketing/auth load the faces with an @import, the dashboard loads them
+ * through next/font (lib/fonts.ts) as --font-newsreader.
+ */
+
+.lockup {
+  display: inline-flex;
+  align-items: center;
+}
+
+.mark {
+  display: block;
+  flex: none;
+}
+
+.wordmark {
+  font-family: 'Newsreader', var(--font-newsreader), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  line-height: 1;
+  white-space: nowrap;
+}

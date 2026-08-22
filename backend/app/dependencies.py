@@ -9,6 +9,7 @@ from fastapi import Depends, Header
 from app.config import Settings, get_settings
 from app.errors import AuthError
 from app.repositories.chunk_repo import ChunkRepo
+from app.repositories.concept_repo import ConceptRepo
 from app.repositories.profile_repo import ProfileRepo
 from app.repositories.space_repo import SpaceRepo
 from app.repositories.storage_repo import StorageRepo, get_storage_repo
@@ -17,6 +18,7 @@ from app.schemas.auth import AuthUser
 from app.schemas.common import User
 from app.services.auth_service import AuthService
 from app.services.capture_service import CaptureService
+from app.services.concept_service import ConceptService
 from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
@@ -119,11 +121,23 @@ def get_source_chat_service(
 ) -> SourceChatService:
     return SourceChatService(spaces, extracts, llm, embeddings, chunks)
 
+def get_concept_repo() -> ConceptRepo:
+    return ConceptRepo(get_service_client())
+
+def get_concept_service(
+    concepts: ConceptRepo = Depends(get_concept_repo),
+    spaces: SpaceService = Depends(get_space_service),
+    extracts: ExtractService = Depends(get_extract_service),
+    llm: LLMService = Depends(get_llm_service),
+) -> ConceptService:
+    return ConceptService(concepts, spaces, extracts, llm)
+
 def get_pipeline_service(
+    concepts: ConceptService = Depends(get_concept_service),
     extracts: ExtractService = Depends(get_extract_service),
     embeddings: EmbeddingService = Depends(get_embedding_service),
     llm: LLMService = Depends(get_llm_service),
     chunks: ChunkRepo = Depends(get_chunk_repo),
     space_service: SpaceService = Depends(get_space_service),
 ) -> PipelineService:
-    return PipelineService(extracts, embeddings, llm, chunks, space_service)
+    return PipelineService(concepts, extracts, embeddings, llm, chunks, space_service)

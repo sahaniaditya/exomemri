@@ -13,7 +13,7 @@ import SourceSidebar from '@/components/dashboard/SourceSidebar'
 import TopBar from '@/components/dashboard/TopBar'
 
 export const metadata: Metadata = {
-  title: 'Source · Atlas',
+  title: 'Source · exomemri',
 }
 
 async function loadProfile(token: string): Promise<Profile | null> {
@@ -60,7 +60,7 @@ export default async function SourcePage({ params }: SourcePageProps) {
       <main className={styles.main}>
         <ContourBg />
         <div className={styles.inner}>
-          <TopBar profile={profile} totalSources={totalSources} spaceCount={spaces.length} />
+          <TopBar profile={profile} totalSources={totalSources} spaceCount={spaces.length} variant="compact" />
           <SourceChat
             sourceId={sourceId}
             sourceTitle={activeSource.title}

@@ -1,9 +1,9 @@
 {
   "name": "atlas-extension",
-  "displayName": "Atlas",
+  "displayName": "exomemri",
   "version": "0.1.0",
-  "description": "Atlas capture extension — one-click capture of what you learn online into a Learning Space.",
-  "author": "AtlasAi",
+  "description": "exomemri capture extension — one-click capture of what you learn online into a Learning Space.",
+  "author": "exomemri",
   "private": true,
   "type": "module",
   "scripts": {

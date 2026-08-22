@@ -167,6 +167,30 @@ class SpaceRepo:
             {"processing_status": status}
         ).eq("id", source_id).execute()
 
+    def list_unextracted_sources(self, *, space_id: str, limit: int) -> list[dict]:
+        """Sources in a space with no concept extraction yet, oldest first.
+
+        Oldest-first so a repeatedly-called backfill makes monotonic progress
+        instead of re-picking the same recent rows.
+        """
+        res = (
+            self._client.table("sources")
+            .select("*")
+            .eq("space_id", space_id)
+            .is_("concepts_extracted_at", "null")
+            .order("captured_at")
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+
+    def mark_concepts_extracted(
+        self, *, source_id: str, model: str, extracted_at: str
+    ) -> None:
+        self._client.table("sources").update(
+            {"concepts_model": model, "concepts_extracted_at": extracted_at}
+        ).eq("id", source_id).execute()
+
     def list_source_messages(self, *, source_id: str) -> list[dict]:
         res = (
             self._client.table("source_messages")

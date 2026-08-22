@@ -16,7 +16,7 @@ import TopBar from '@/components/dashboard/TopBar'
 
 
 export const metadata: Metadata = {
-  title: 'Learning Space · Atlas',
+  title: 'Learning Space · exomemri',
   description: 'Sources captured into this learning space.',
 }
 
@@ -61,7 +61,7 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
       <main className={styles.main}>
         <ContourBg />
         <div className={styles.inner}>
-          <TopBar profile={profile} totalSources={totalSources} spaceCount={spaces.length} />
+          <TopBar profile={profile} totalSources={totalSources} spaceCount={spaces.length} variant="compact" />
 
           <Plate num="01" title={activeSpace.name} />
           <CaptureFeed sources={captures} />

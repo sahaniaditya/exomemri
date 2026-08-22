@@ -26,7 +26,9 @@ from app.dependencies import (  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.repositories.storage_repo import get_storage_repo  # noqa: E402
 from app.schemas.common import User  # noqa: E402
+from app.schemas.concepts import ExtractedConcept  # noqa: E402
 from app.services.capture_service import CaptureService  # noqa: E402
+from app.services.concept_service import ConceptService  # noqa: E402
 from app.services.session_service import SessionService  # noqa: E402
 from app.services.space_service import SpaceService  # noqa: E402
 
@@ -211,6 +213,23 @@ class FakeSpaceRepo:
                 summarized_at=summarized_at,
             )
 
+    def list_unextracted_sources(self, *, space_id: str, limit: int) -> list[dict]:
+        rows = [
+            r
+            for r in self.sources.values()
+            if r["space_id"] == space_id and not r.get("concepts_extracted_at")
+        ]
+        rows.sort(key=lambda r: r["captured_at"])
+        return rows[:limit]
+
+    def mark_concepts_extracted(
+        self, *, source_id: str, model: str, extracted_at: str
+    ) -> None:
+        if source_id in self.sources:
+            self.sources[source_id].update(
+                concepts_model=model, concepts_extracted_at=extracted_at
+            )
+
     def list_source_messages(self, *, source_id: str) -> list[dict]:
         rows = [m for m in self.messages.values() if m["source_id"] == source_id]
         rows.sort(key=lambda m: m["created_at"])
@@ -263,6 +282,102 @@ class FakeChunkRepo:
         ]
 
 
+class FakeConceptRepo:
+    """In-memory stand-in for ``concepts``/``source_concepts``.
+
+    Enforces the ``(space_id, slug)`` unique index the canonicalization relies on
+    — without it the tests would pass while the real database rejected the
+    upsert.
+    """
+
+    def __init__(self) -> None:
+        self.concepts: dict[str, dict] = {}
+        self.edges: list[dict] = []
+
+    def list_labels(self, *, space_id: str) -> list[str]:
+        return [c["label"] for c in self.concepts.values() if c["space_id"] == space_id]
+
+    def upsert_concepts(self, rows: list[dict]) -> list[dict]:
+        out = []
+        for row in rows:
+            existing = next(
+                (
+                    c
+                    for c in self.concepts.values()
+                    if c["space_id"] == row["space_id"] and c["slug"] == row["slug"]
+                ),
+                None,
+            )
+            if existing:
+                out.append(existing)
+                continue
+            created = {"id": str(uuid4()), **row}
+            self.concepts[created["id"]] = created
+            out.append(created)
+        return out
+
+    def replace_source_concepts(self, *, source_id: str, edges: list[dict]) -> None:
+        self.edges = [e for e in self.edges if e["source_id"] != source_id]
+        self.edges.extend(edges)
+
+    def delete_orphan_concepts(self, *, space_id: str) -> None:
+        referenced = {e["concept_id"] for e in self.edges}
+        for cid in [
+            c["id"]
+            for c in self.concepts.values()
+            if c["space_id"] == space_id and c["id"] not in referenced
+        ]:
+            self.concepts.pop(cid, None)
+
+    def get_space_graph(self, *, user_id: str, space_id: str) -> dict:  # noqa: ARG002
+        edges = [e for e in self.edges if e["space_id"] == space_id]
+        degree: dict[str, int] = {}
+        for e in edges:
+            degree[e["concept_id"]] = degree.get(e["concept_id"], 0) + 1
+        concepts = [
+            {
+                "id": c["id"],
+                "label": c["label"],
+                "slug": c["slug"],
+                "degree": degree.get(c["id"], 0),
+            }
+            for c in self.concepts.values()
+            if c["space_id"] == space_id
+        ]
+        concepts.sort(key=lambda c: (-c["degree"], c["label"]))
+        return {
+            "concepts": concepts,
+            "sources": [
+                {
+                    "id": s["id"],
+                    "title": s["title"],
+                    "type": s["type"],
+                    "captured_at": s["captured_at"],
+                }
+                for s in self._sources_in(space_id)
+            ],
+            "edges": [
+                {
+                    "source_id": e["source_id"],
+                    "concept_id": e["concept_id"],
+                    "weight": e["weight"],
+                }
+                for e in edges
+            ],
+            "pending": sum(
+                1 for s in self._sources_in(space_id) if not s.get("concepts_extracted_at")
+            ),
+        }
+
+    # Wired by the `concept_repo` fixture so the graph read can see sources.
+    _space_repo: FakeSpaceRepo | None = None
+
+    def _sources_in(self, space_id: str) -> list[dict]:
+        if self._space_repo is None:
+            return []
+        return [s for s in self._space_repo.sources.values() if s["space_id"] == space_id]
+
+
 class FakeEmbeddingService:
     """Deterministic vectors (no network) — same text always embeds the same."""
 
@@ -292,6 +407,20 @@ class FakeLLMService:
         self, *, title: str, source_type: str, summary: str, extract: str, history: list[dict]
     ) -> str:  # noqa: ARG002
         return f"Reply grounded in: {extract[:200]}"
+
+    async def extract_concepts(
+        self, *, title: str, extract: str, vocabulary: list[str]  # noqa: ARG002
+    ) -> list[ExtractedConcept]:
+        """Two concepts derived from the title, plus one already in the space.
+
+        Echoing back a vocabulary label is what lets a test assert that a second
+        source on the same subject merges onto one node instead of forking.
+        """
+        labels = [f"{title} basics", "Shared subject"]
+        return [
+            ExtractedConcept(label=label, weight=1.0 - (i * 0.3))
+            for i, label in enumerate(labels)
+        ]
 
 
 class FakePipelineService:
@@ -324,6 +453,13 @@ def chunk_repo() -> FakeChunkRepo:
 
 
 @pytest.fixture
+def concept_repo(space_repo: FakeSpaceRepo) -> FakeConceptRepo:
+    repo = FakeConceptRepo()
+    repo._space_repo = space_repo
+    return repo
+
+
+@pytest.fixture
 def embedding_service() -> FakeEmbeddingService:
     return FakeEmbeddingService()
 
@@ -343,6 +479,7 @@ def client(
     storage: FakeStorage,
     space_repo: FakeSpaceRepo,
     chunk_repo: FakeChunkRepo,
+    concept_repo: FakeConceptRepo,
     embedding_service: FakeEmbeddingService,
     llm_service: FakeLLMService,
     pipeline_service: FakePipelineService,
@@ -350,6 +487,7 @@ def client(
     from app.config import get_settings
     from app.dependencies import (
         get_chunk_repo,
+        get_concept_service,
         get_embedding_service,
         get_llm_service,
         get_pipeline_service,
@@ -365,6 +503,9 @@ def client(
     session_svc = SessionService(space_repo, space_svc)  # type: ignore[arg-type]
     capture_svc = CaptureService(settings, storage, space_svc)  # type: ignore[arg-type]
     extract_svc = ExtractService(storage)  # type: ignore[arg-type]
+    concept_svc = ConceptService(
+        concept_repo, space_svc, extract_svc, llm_service  # type: ignore[arg-type]
+    )
     chat_svc = SourceChatService(
         space_svc, extract_svc, llm_service, embedding_service, chunk_repo  # type: ignore[arg-type]
     )
@@ -379,6 +520,7 @@ def client(
     app.dependency_overrides[get_space_service] = lambda: space_svc
     app.dependency_overrides[get_authenticated_app_user] = lambda: dev_user
     app.dependency_overrides[get_chunk_repo] = lambda: chunk_repo
+    app.dependency_overrides[get_concept_service] = lambda: concept_svc
     app.dependency_overrides[get_embedding_service] = lambda: embedding_service
     app.dependency_overrides[get_llm_service] = lambda: llm_service
     app.dependency_overrides[get_source_chat_service] = lambda: chat_svc
