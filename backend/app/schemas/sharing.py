@@ -1,4 +1,4 @@
-"""Read-only space-sharing contracts.
+"""Read-only capture-sharing contracts.
 
 Like the other schema modules, these Pydantic models are the source of truth for
 the OpenAPI schema, which generates the extension's TS types
@@ -11,6 +11,8 @@ from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+from app.schemas.common import ProcessingStatus, SourceType
 
 
 class InviteCollaboratorRequest(BaseModel):
@@ -28,15 +30,21 @@ class CollaboratorListResponse(BaseModel):
     collaborators: list[CollaboratorResponse]
 
 
-class SharedSpaceSummary(BaseModel):
-    """One space shared with the current user — read-only, curated content only."""
+class SharedSourceSummary(BaseModel):
+    """One capture shared with the current user — read-only."""
 
-    id: UUID
-    name: str
-    slug: str
+    source_id: UUID
+    title: str
+    type: SourceType
+    url: str | None = None
+    author: str | None = None
+    captured_at: datetime | None = None
+    processing_status: ProcessingStatus
+    space_id: UUID
+    space_name: str
     owner_username: str | None = None
     shared_at: datetime | None = None
 
 
-class SharedSpaceListResponse(BaseModel):
-    spaces: list[SharedSpaceSummary]
+class SharedSourceListResponse(BaseModel):
+    sources: list[SharedSourceSummary]

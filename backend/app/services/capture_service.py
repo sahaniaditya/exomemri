@@ -286,14 +286,17 @@ class CaptureService:
     async def artifact_url(
         self, *, user: User, source_id: UUID, key: str
     ) -> ArtifactUrlResponse:
-        """Short-lived signed GET URL for one artifact of an owned source.
+        """Short-lived signed GET URL for one artifact of a viewable source.
 
         The bucket is private, so this is the only way the web app reads a
         captured artifact. The path is always resolved against the row's own
         ``storage_prefix`` — a client-supplied path is never used directly.
+        A per-source collaborator can read; they cannot walk into another
+        source's prefix because the key is allowlisted and joined onto this
+        row's prefix.
         """
         source = await anyio.to_thread.run_sync(
-            partial(self._spaces.require_owned_source, user, source_id)
+            partial(self._spaces.require_viewable_source, user, source_id)
         )
         path = f"{source['storage_prefix']}/{_validated_artifact_key(key)}"
         url = await self._storage.create_signed_url(path, ARTIFACT_URL_TTL_SECONDS)

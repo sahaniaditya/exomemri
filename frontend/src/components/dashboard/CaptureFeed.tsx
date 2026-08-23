@@ -5,7 +5,7 @@
  * While any row is still processing, refresh the server tree so
  * Processing → Ready / Failed without a manual reload.
  */
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -21,6 +21,7 @@ interface CaptureFeedProps {
   /** Override empty-state copy for space-scoped feeds. */
   emptyTitle?: string
   emptyBody?: string
+  extraActions?: (source: CapturedSource) => ReactNode
 }
 
 const POLL_MS = 2500
@@ -46,10 +47,60 @@ function StatusBadge({ status }: { status: CapturedSource['status'] }) {
   )
 }
 
+export function CaptureRow({
+  source,
+  extraActions,
+}: {
+  source: CapturedSource
+  extraActions?: ReactNode
+}) {
+  return (
+    <div className={styles.srcRow}>
+      <Link
+        href={`/dashboard/spaces/${source.spaceId}/sources/${source.id}`}
+        className={styles.srcLink}
+      >
+        <div className={styles.src}>
+          <div className={styles.srcico} aria-hidden="true">
+            <SourceIcon kind={source.kind} size={16} />
+          </div>
+          <div className={styles.srcmain}>
+            <div className={styles.srctitle}>{source.title}</div>
+            <div className={styles.srcmeta}>
+              <span className={styles.tag}>{source.spaceName}</span>
+              <span className={styles.metaSep} aria-hidden="true">
+                ·
+              </span>
+              <span>{source.meta}</span>
+              <span className={styles.metaSep} aria-hidden="true">
+                ·
+              </span>
+              <span>{source.capturedAt}</span>
+            </div>
+          </div>
+          <StatusBadge status={source.status} />
+        </div>
+      </Link>
+      <div className={styles.srcActions}>
+        {extraActions}
+        {source.url ? <OriginalLink url={source.url} /> : null}
+        <Link
+          href={`/dashboard/spaces/${source.spaceId}/sources/${source.id}`}
+          className={styles.srcOpenInApp}
+          aria-label={`Open ${source.title} in exomemri`}
+        >
+          <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default function CaptureFeed({
   sources,
   emptyTitle = 'No captures yet',
   emptyBody = 'Install the browser extension, open a video or article, and save it into a Learning Space — it will show up here.',
+  extraActions,
 }: CaptureFeedProps) {
   const router = useRouter()
   const pending = sources.some(source => isCaptureProcessing(source.status))
@@ -75,43 +126,11 @@ export default function CaptureFeed({
     <div className={styles.feedPanel}>
       <div className={styles.feed}>
         {sources.map(source => (
-          <div key={source.id} className={styles.srcRow}>
-            <Link
-              href={`/dashboard/spaces/${source.spaceId}/sources/${source.id}`}
-              className={styles.srcLink}
-            >
-              <div className={styles.src}>
-                <div className={styles.srcico} aria-hidden="true">
-                  <SourceIcon kind={source.kind} size={16} />
-                </div>
-                <div className={styles.srcmain}>
-                  <div className={styles.srctitle}>{source.title}</div>
-                  <div className={styles.srcmeta}>
-                    <span className={styles.tag}>{source.spaceName}</span>
-                    <span className={styles.metaSep} aria-hidden="true">
-                      ·
-                    </span>
-                    <span>{source.meta}</span>
-                    <span className={styles.metaSep} aria-hidden="true">
-                      ·
-                    </span>
-                    <span>{source.capturedAt}</span>
-                  </div>
-                </div>
-                <StatusBadge status={source.status} />
-              </div>
-            </Link>
-            <div className={styles.srcActions}>
-              {source.url ? <OriginalLink url={source.url} /> : null}
-              <Link
-                href={`/dashboard/spaces/${source.spaceId}/sources/${source.id}`}
-                className={styles.srcOpenInApp}
-                aria-label={`Open ${source.title} in exomemri`}
-              >
-                <span aria-hidden="true">→</span>
-              </Link>
-            </div>
-          </div>
+          <CaptureRow
+            key={source.id}
+            source={source}
+            extraActions={extraActions?.(source)}
+          />
         ))}
       </div>
     </div>

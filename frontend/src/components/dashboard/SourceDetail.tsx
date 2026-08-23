@@ -21,6 +21,8 @@ import {
 import type { Source } from '@/lib/spaces'
 import type { ChatMessage, SummaryResponse } from '@/lib/sources'
 import type { SourceNote } from '@/lib/notes'
+import type { Collaborator } from '@/lib/sharing'
+import ShareManager from './ShareManager'
 
 const KIND_LABEL: Record<SourceKind, string> = {
   video: 'YouTube',
@@ -38,6 +40,8 @@ interface SourceDetailProps {
   initialSummary: SummaryResponse | null
   initialMessages: ChatMessage[]
   initialNote: SourceNote
+  initialCollaborators?: Collaborator[]
+  readOnly?: boolean
 }
 
 export default function SourceDetail({
@@ -46,9 +50,12 @@ export default function SourceDetail({
   initialSummary,
   initialMessages,
   initialNote,
+  initialCollaborators = [],
+  readOnly = false,
 }: SourceDetailProps) {
   const router = useRouter()
   const [chatOpen, setChatOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const kind = SOURCE_KIND[source.type]
   const status = captureStatus(source.processing_status)
 
@@ -127,19 +134,36 @@ export default function SourceDetail({
 
           <div className={styles.captureActions}>
             {source.url ? <OriginalLink url={source.url} /> : null}
-            <button
-              type="button"
-              className={styles.captureAskBtn}
-              onClick={() => setChatOpen(true)}
-              aria-expanded={chatOpen}
-              disabled={status === 'processing'}
-            >
-              <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">
-                <path d="M5 8.5C5 6.6 6.8 5 9 5h6c2.2 0 4 1.6 4 3.5V14c0 1.9-1.8 3.5-4 3.5h-3.2L8 21v-3.5C6.2 17.3 5 15.8 5 14V8.5Z" />
-                <path d="M9 10h6M9 13h4" />
-              </svg>
-              Ask this capture
-            </button>
+            {readOnly ? null : (
+              <>
+                <button
+                  type="button"
+                  className={styles.captureShareBtn}
+                  onClick={() => setShareOpen(true)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">
+                    <circle cx="8" cy="10" r="2.4" />
+                    <circle cx="16" cy="7" r="2.4" />
+                    <circle cx="16" cy="15" r="2.4" />
+                    <path d="M10 10.8 14 8.2M10 11.4 14 13.8" />
+                  </svg>
+                  Share
+                </button>
+                <button
+                  type="button"
+                  className={styles.captureAskBtn}
+                  onClick={() => setChatOpen(true)}
+                  aria-expanded={chatOpen}
+                  disabled={status === 'processing'}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">
+                    <path d="M5 8.5C5 6.6 6.8 5 9 5h6c2.2 0 4 1.6 4 3.5V14c0 1.9-1.8 3.5-4 3.5h-3.2L8 21v-3.5C6.2 17.3 5 15.8 5 14V8.5Z" />
+                    <path d="M9 10h6M9 13h4" />
+                  </svg>
+                  Ask this capture
+                </button>
+              </>
+            )}
           </div>
         </header>
 
@@ -170,10 +194,20 @@ export default function SourceDetail({
           </div>
         )}
 
-        <SourceNotes sourceId={source.id} initialNote={initialNote} />
+        <SourceNotes sourceId={source.id} initialNote={initialNote} editable={!readOnly} />
       </div>
 
-      {chatOpen ? (
+      {readOnly ? null : (
+        <ShareManager
+          key={source.id}
+          sourceId={source.id}
+          initialCollaborators={initialCollaborators}
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
+
+      {!readOnly && chatOpen ? (
         <SourceChatPanel
           sourceId={source.id}
           sourceTitle={source.title}

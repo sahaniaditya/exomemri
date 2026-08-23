@@ -31,7 +31,12 @@ from app.schemas.sources import (
     UploadUrlRequest,
     UploadUrlResponse,
 )
-from app.schemas.spaces import ArtifactUrlResponse, SourceListResponse
+from app.schemas.spaces import (
+    ArtifactUrlResponse,
+    SetSourceFolderRequest,
+    SourceListResponse,
+    SourceSummary,
+)
 from app.services.capture_service import CaptureService
 from app.services.note_service import NoteService
 from app.services.pipeline_service import PipelineService
@@ -138,3 +143,14 @@ async def create_note_image_upload(
     svc: NoteService = Depends(get_note_service),
 ) -> NoteImageUploadResponse:
     return await svc.create_image_upload(user=user, source_id=source_id, payload=body)
+
+
+@router.patch("/{source_id}/folder", response_model=SourceSummary)
+def set_source_folder(
+    source_id: UUID,
+    body: SetSourceFolderRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: SpaceService = Depends(get_space_service),
+) -> SourceSummary:
+    return svc.set_source_folder(user, source_id, body.folder_id)
+

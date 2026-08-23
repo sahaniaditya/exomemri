@@ -46,13 +46,13 @@ class NoteService:
 
     async def get_note(self, *, user: User, source_id: UUID) -> NoteResponse:
         source = await anyio.to_thread.run_sync(
-            partial(self._spaces.require_owned_source, user, source_id)
+            partial(self._spaces.require_viewable_source, user, source_id)
         )
         row = await anyio.to_thread.run_sync(
             partial(
                 self._notes.get_by_source,
                 source_id=str(source_id),
-                user_id=str(user.id),
+                user_id=source["user_id"],
             )
         )
         if not row:

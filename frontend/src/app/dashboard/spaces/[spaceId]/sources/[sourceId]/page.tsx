@@ -5,6 +5,7 @@ import { atlasFontVars } from '@/lib/fonts'
 import { listSpaceSources, listSpaces } from '@/lib/spaces'
 import { getSourceSummary, listSourceMessages } from '@/lib/sources'
 import { getSourceNote } from '@/lib/notes'
+import { listCollaborators } from '@/lib/sharing'
 import styles from '@/components/dashboard/dashboard.module.css'
 import ContourBg from '@/components/dashboard/ContourBg'
 import SourceDetail from '@/components/dashboard/SourceDetail'
@@ -31,10 +32,11 @@ export default async function SourcePage({ params }: SourcePageProps) {
   const activeSource = sourcesInSpace.find(s => s.id === sourceId)
   if (!activeSpace || !activeSource) notFound()
 
-  const [summary, messages, note] = await Promise.all([
+  const [summary, messages, note, collaborators] = await Promise.all([
     getSourceSummary(token, sourceId),
     listSourceMessages(token, sourceId),
     getSourceNote(token, sourceId),
+    listCollaborators(token, sourceId),
   ])
 
   return (
@@ -49,6 +51,7 @@ export default async function SourcePage({ params }: SourcePageProps) {
             initialSummary={summary}
             initialMessages={messages}
             initialNote={note}
+            initialCollaborators={collaborators}
           />
         </div>
       </main>

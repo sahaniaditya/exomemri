@@ -3,14 +3,14 @@ import { cookies } from 'next/headers'
 import { apiFetch } from '@/lib/api'
 
 /**
- * Collaborators on one space (owner-only, enforced by the backend). Thin
+ * Collaborators on one capture (owner-only, enforced by the backend). Thin
  * proxy over the backend so the browser never needs the bearer token.
  */
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ spaceId: string }> }
+  { params }: { params: Promise<{ sourceId: string }> }
 ) {
-  const { spaceId } = await params
+  const { sourceId } = await params
   const cookieStore = await cookies()
   const token = cookieStore.get('atlas_token')?.value
 
@@ -19,7 +19,7 @@ export async function GET(
   }
 
   try {
-    const res = await apiFetch(`/v1/spaces/${spaceId}/collaborators`, {}, token)
+    const res = await apiFetch(`/v1/sources/${sourceId}/collaborators`, {}, token)
     const data = await res.json()
     return NextResponse.json(data, { status: res.status })
   } catch (error) {
@@ -30,9 +30,9 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ spaceId: string }> }
+  { params }: { params: Promise<{ sourceId: string }> }
 ) {
-  const { spaceId } = await params
+  const { sourceId } = await params
   const cookieStore = await cookies()
   const token = cookieStore.get('atlas_token')?.value
 
@@ -46,7 +46,7 @@ export async function POST(
   try {
     const body = await request.json()
     const res = await apiFetch(
-      `/v1/spaces/${spaceId}/collaborators`,
+      `/v1/sources/${sourceId}/collaborators`,
       { method: 'POST', body: JSON.stringify(body) },
       token
     )

@@ -207,7 +207,7 @@ export interface paths {
         };
         /**
          * List Shared With Me
-         * @description Spaces another Atlas user has shared read-only access to with me.
+         * @description Captures another Atlas user has shared read-only access to with me.
          */
         get: operations["list_shared_with_me_v1_shared_with_me_get"];
         put?: never;
@@ -271,6 +271,58 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{source_id}/collaborators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Collaborators */
+        get: operations["list_collaborators_v1_sources__source_id__collaborators_get"];
+        put?: never;
+        /** Invite Collaborator */
+        post: operations["invite_collaborator_v1_sources__source_id__collaborators_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{source_id}/collaborators/{collaborator_user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Collaborator */
+        delete: operations["revoke_collaborator_v1_sources__source_id__collaborators__collaborator_user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{source_id}/folder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set Source Folder */
+        patch: operations["set_source_folder_v1_sources__source_id__folder_patch"];
         trace?: never;
     };
     "/v1/sources/{source_id}/messages": {
@@ -361,41 +413,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/spaces/{space_id}/collaborators": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Collaborators */
-        get: operations["list_collaborators_v1_spaces__space_id__collaborators_get"];
-        put?: never;
-        /** Invite Collaborator */
-        post: operations["invite_collaborator_v1_spaces__space_id__collaborators_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/spaces/{space_id}/collaborators/{collaborator_user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Revoke Collaborator */
-        delete: operations["revoke_collaborator_v1_spaces__space_id__collaborators__collaborator_user_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/spaces/{space_id}/coverage": {
         parameters: {
             query?: never;
@@ -417,6 +434,42 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Space Folders */
+        get: operations["list_space_folders_v1_spaces__space_id__folders_get"];
+        put?: never;
+        /** Create Space Folder */
+        post: operations["create_space_folder_v1_spaces__space_id__folders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/folders/{folder_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Space Folder */
+        delete: operations["delete_space_folder_v1_spaces__space_id__folders__folder_id__delete"];
+        options?: never;
+        head?: never;
+        /** Rename Space Folder */
+        patch: operations["rename_space_folder_v1_spaces__space_id__folders__folder_id__patch"];
         trace?: never;
     };
     "/v1/spaces/{space_id}/graph": {
@@ -640,6 +693,14 @@ export interface components {
             topics: components["schemas"]["SyllabusTopic"][];
         };
         /**
+         * CreateFolderRequest
+         * @description Payload for creating a folder inside a space.
+         */
+        CreateFolderRequest: {
+            /** Name */
+            name: string;
+        };
+        /**
          * CreateSpaceRequest
          * @description Payload for creating a Learning Space, e.g. ``{"name": "Claude Code"}``.
          */
@@ -648,6 +709,33 @@ export interface components {
             goal_text?: string | null;
             /** Name */
             name: string;
+        };
+        /** FolderListResponse */
+        FolderListResponse: {
+            /** Folders */
+            folders: components["schemas"]["FolderSummary"][];
+        };
+        /** FolderSummary */
+        FolderSummary: {
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Source Count
+             * @default 0
+             */
+            source_count: number;
+            /**
+             * Space Id
+             * Format: uuid
+             */
+            space_id: string;
         };
         /**
          * GraphEdge
@@ -835,6 +923,11 @@ export interface components {
             /** Processed */
             processed: number;
         };
+        /** RenameFolderRequest */
+        RenameFolderRequest: {
+            /** Name */
+            name: string;
+        };
         /** SendMessageRequest */
         SendMessageRequest: {
             /** Content */
@@ -861,29 +954,50 @@ export interface components {
              */
             space_id: string;
         };
-        /** SharedSpaceListResponse */
-        SharedSpaceListResponse: {
-            /** Spaces */
-            spaces: components["schemas"]["SharedSpaceSummary"][];
+        /**
+         * SetSourceFolderRequest
+         * @description Assign a capture to a folder, or ``null`` to ungroup it.
+         */
+        SetSourceFolderRequest: {
+            /** Folder Id */
+            folder_id?: string | null;
+        };
+        /** SharedSourceListResponse */
+        SharedSourceListResponse: {
+            /** Sources */
+            sources: components["schemas"]["SharedSourceSummary"][];
         };
         /**
-         * SharedSpaceSummary
-         * @description One space shared with the current user — read-only, curated content only.
+         * SharedSourceSummary
+         * @description One capture shared with the current user — read-only.
          */
-        SharedSpaceSummary: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Name */
-            name: string;
+        SharedSourceSummary: {
+            /** Author */
+            author?: string | null;
+            /** Captured At */
+            captured_at?: string | null;
             /** Owner Username */
             owner_username?: string | null;
+            processing_status: components["schemas"]["ProcessingStatus"];
             /** Shared At */
             shared_at?: string | null;
-            /** Slug */
-            slug: string;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /**
+             * Space Id
+             * Format: uuid
+             */
+            space_id: string;
+            /** Space Name */
+            space_name: string;
+            /** Title */
+            title: string;
+            type: components["schemas"]["SourceType"];
+            /** Url */
+            url?: string | null;
         };
         /**
          * SourceCounts
@@ -952,6 +1066,8 @@ export interface components {
             author?: string | null;
             /** Captured At */
             captured_at?: string | null;
+            /** Folder Id */
+            folder_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -1597,7 +1713,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SharedSpaceListResponse"];
+                    "application/json": components["schemas"]["SharedSourceListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1736,6 +1852,145 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ArtifactUrlResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_collaborators_v1_sources__source_id__collaborators_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollaboratorListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invite_collaborator_v1_sources__source_id__collaborators_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteCollaboratorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollaboratorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_collaborator_v1_sources__source_id__collaborators__collaborator_user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+                collaborator_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_source_folder_v1_sources__source_id__folder_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetSourceFolderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceSummary"];
                 };
             };
             /** @description Validation Error */
@@ -2025,7 +2280,7 @@ export interface operations {
             };
         };
     };
-    list_collaborators_v1_spaces__space_id__collaborators_get: {
+    get_space_coverage_v1_spaces__space_id__coverage_get: {
         parameters: {
             query?: never;
             header?: {
@@ -2044,7 +2299,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CollaboratorListResponse"];
+                    "application/json": components["schemas"]["CoverageResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2058,7 +2313,40 @@ export interface operations {
             };
         };
     };
-    invite_collaborator_v1_spaces__space_id__collaborators_post: {
+    list_space_folders_v1_spaces__space_id__folders_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FolderListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_space_folder_v1_spaces__space_id__folders_post: {
         parameters: {
             query?: never;
             header?: {
@@ -2071,7 +2359,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InviteCollaboratorRequest"];
+                "application/json": components["schemas"]["CreateFolderRequest"];
             };
         };
         responses: {
@@ -2081,7 +2369,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CollaboratorResponse"];
+                    "application/json": components["schemas"]["FolderSummary"];
                 };
             };
             /** @description Validation Error */
@@ -2095,7 +2383,7 @@ export interface operations {
             };
         };
     };
-    revoke_collaborator_v1_spaces__space_id__collaborators__collaborator_user_id__delete: {
+    delete_space_folder_v1_spaces__space_id__folders__folder_id__delete: {
         parameters: {
             query?: never;
             header?: {
@@ -2103,7 +2391,7 @@ export interface operations {
             };
             path: {
                 space_id: string;
-                collaborator_user_id: string;
+                folder_id: string;
             };
             cookie?: never;
         };
@@ -2127,7 +2415,7 @@ export interface operations {
             };
         };
     };
-    get_space_coverage_v1_spaces__space_id__coverage_get: {
+    rename_space_folder_v1_spaces__space_id__folders__folder_id__patch: {
         parameters: {
             query?: never;
             header?: {
@@ -2135,10 +2423,15 @@ export interface operations {
             };
             path: {
                 space_id: string;
+                folder_id: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameFolderRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -2146,7 +2439,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CoverageResponse"];
+                    "application/json": components["schemas"]["FolderSummary"];
                 };
             };
             /** @description Validation Error */

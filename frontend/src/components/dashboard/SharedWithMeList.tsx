@@ -1,18 +1,22 @@
 import Link from 'next/link'
 import styles from './dashboard.module.css'
-import type { SharedSpaceSummary } from '@/lib/sharing'
+import type { SharedSourceSummary } from '@/lib/sharing'
 
-export default function SharedWithMeList({ spaces }: { spaces: SharedSpaceSummary[] }) {
+export default function SharedWithMeList({
+  sources,
+}: {
+  sources: SharedSourceSummary[]
+}) {
   return (
     <div className={styles.chips}>
-      {spaces.map(space => (
+      {sources.map(source => (
         <Link
-          key={space.id}
-          href={`/dashboard/shared/${space.id}`}
+          key={source.source_id}
+          href={`/dashboard/shared/sources/${source.source_id}`}
           className={styles.chip}
         >
-          {space.name}
-          {space.owner_username && ` · ${space.owner_username}`}
+          {source.title}
+          {source.owner_username && ` · ${source.owner_username}`}
         </Link>
       ))}
     </div>

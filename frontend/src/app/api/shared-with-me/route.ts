@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { apiFetch } from '@/lib/api'
 
-/** Spaces another Atlas user has shared read-only access to with the caller. */
+/** Captures another Atlas user has shared read-only access to with the caller. */
 export async function GET() {
   const cookieStore = await cookies()
   const token = cookieStore.get('atlas_token')?.value
@@ -16,9 +16,9 @@ export async function GET() {
     const data = await res.json()
     return NextResponse.json(data, { status: res.status })
   } catch (error) {
-    console.error('Failed to load spaces shared with you:', error)
+    console.error('Failed to load captures shared with you:', error)
     return NextResponse.json(
-      { detail: 'Failed to load spaces shared with you' },
+      { detail: 'Failed to load captures shared with you' },
       { status: 500 }
     )
   }

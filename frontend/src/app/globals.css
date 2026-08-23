@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Tailwind preflight zeroes margin on every element. Native <dialog>
+   relies on margin: auto (plus inset: 0) to sit in the viewport center,
+   so without this they pin to the top-left. */
+dialog:modal {
+  position: fixed;
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}

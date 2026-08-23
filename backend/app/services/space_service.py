@@ -17,7 +17,7 @@ from app.errors import ConflictError, NotFoundError
 from app.repositories.collaborator_repo import CollaboratorRepo
 from app.repositories.space_repo import SpaceRepo
 from app.schemas.common import User
-from app.schemas.spaces import SourceCounts, SourceSummary, SpaceSummary
+from app.schemas.spaces import FolderSummary, SourceCounts, SourceSummary, SpaceSummary
 
 logger = logging.getLogger(__name__)
 
@@ -132,34 +132,19 @@ class SpaceService:
             )
         return space
 
-    def require_viewable_space(self, user: User, space_id: UUID) -> dict:
-        """The space row if the caller owns it OR is a read-only collaborator.
-
-        Still 404, not 403, on failure — same unenumerable-ids rule as
-        ``require_owned_space``. This is strictly a superset of that check:
-        every owner-only call site keeps using ``require_owned_space``
-        unchanged, and only the curated-content reads (sources, summaries,
-        the knowledge-map graph) route through this one instead.
-        """
-        space = self._spaces.get_space(user_id=str(user.id), space_id=str(space_id))
-        if space:
-            return space
-        if self._collaborators.is_collaborator(space_id=str(space_id), user_id=str(user.id)):
-            space = self._spaces.get_space_any(space_id=str(space_id))
-            if space:
-                return space
-        raise NotFoundError(
-            "Learning Space not found.", detail={"space_id": str(space_id)}
-        )
-
     def require_viewable_source(self, user: User, source_id: UUID) -> dict:
-        """Like ``require_viewable_space``, for a single source."""
+        """The source row if the caller owns it OR has a per-source grant.
+
+        Still 404, not 403, on failure — source ids stay unenumerable.
+        Space membership never implies source access: the collaborator check
+        is on ``source_id``, not ``space_id``.
+        """
         source = self._spaces.get_source(user_id=str(user.id), source_id=str(source_id))
         if source:
             return source
         source = self._spaces.get_source_any(source_id=str(source_id))
         if source and self._collaborators.is_collaborator(
-            space_id=source["space_id"], user_id=str(user.id)
+            source_id=str(source_id), user_id=str(user.id)
         ):
             return source
         raise NotFoundError("Source not found.", detail={"source_id": str(source_id)})
@@ -170,10 +155,10 @@ class SpaceService:
         self, user: User, *, space_id: UUID | None = None, limit: int = 20
     ) -> list[SourceSummary]:
         if space_id is not None:
-            # A superset of ownership — lets a read-only collaborator see the
-            # space's captures without granting them any write access.
-            self.require_viewable_space(user, space_id)
-            rows = self._spaces.list_sources_for_space(space_id=str(space_id), limit=limit)
+            self.require_owned_space(user, space_id)
+            rows = self._spaces.list_sources(
+                user_id=str(user.id), space_id=str(space_id), limit=limit
+            )
         else:
             rows = self._spaces.list_sources(user_id=str(user.id), limit=limit)
         return [self._to_source_summary(row) for row in rows]
@@ -248,6 +233,7 @@ class SpaceService:
             author=row.get("author"),
             captured_at=row.get("captured_at"),
             processing_status=row["processing_status"],
+            folder_id=UUID(row["folder_id"]) if row.get("folder_id") else None,
         )
 
     def update_processing_status(self, *, source_id: UUID, status: str) -> None:
@@ -288,3 +274,88 @@ class SpaceService:
             role=role,
             content=content,
         )
+
+    def _require_folder(self, user: User, space_id: UUID, folder_id: UUID) -> dict:
+        self.require_owned_space(user, space_id)
+        folder = self._spaces.get_folder(space_id=str(space_id), folder_id=str(folder_id))
+        if not folder:
+            raise NotFoundError("Folder not found.", detail={"folder_id": str(folder_id)})
+        return folder
+
+    def _to_folder_summary(self, row: dict) -> FolderSummary:
+        return FolderSummary(
+            id=UUID(row["id"]),
+            space_id=UUID(row["space_id"]),
+            name=row["name"],
+            created_at=row.get("created_at"),
+            source_count=int(row.get("source_count") or 0),
+        )
+
+    def list_folders(self, user: User, space_id: UUID) -> list[FolderSummary]:
+        self.require_owned_space(user, space_id)
+        rows = self._spaces.list_folders(space_id=str(space_id))
+        return [self._to_folder_summary(row) for row in rows]
+
+    def create_folder(self, user: User, space_id: UUID, name: str) -> FolderSummary:
+        self.require_owned_space(user, space_id)
+        clean = name.strip()
+        try:
+            row = self._spaces.create_folder(
+                space_id=str(space_id), user_id=str(user.id), name=clean
+            )
+        except Exception as exc:  # noqa: BLE001 - map the unique index to 409
+            if _is_unique_violation(exc):
+                raise ConflictError(
+                    "You already have a folder with that name in this space.",
+                    detail={"name": clean},
+                ) from exc
+            logger.error("folder_create_failed")
+            raise
+        logger.info("folder_created", extra={"space_id": str(space_id), "folder_id": row["id"]})
+        row.setdefault("source_count", 0)
+        return self._to_folder_summary(row)
+
+    def rename_folder(
+        self, user: User, space_id: UUID, folder_id: UUID, name: str
+    ) -> FolderSummary:
+        folder = self._require_folder(user, space_id, folder_id)
+        clean = name.strip()
+        try:
+            row = self._spaces.rename_folder(folder_id=str(folder_id), name=clean)
+        except Exception as exc:  # noqa: BLE001 - map the unique index to 409
+            if _is_unique_violation(exc):
+                raise ConflictError(
+                    "You already have a folder with that name in this space.",
+                    detail={"name": clean},
+                ) from exc
+            logger.error("folder_rename_failed")
+            raise
+        row["source_count"] = folder.get("source_count", 0)
+        return self._to_folder_summary(row)
+
+    def delete_folder(self, user: User, space_id: UUID, folder_id: UUID) -> None:
+        self._require_folder(user, space_id, folder_id)
+        self._spaces.delete_folder(folder_id=str(folder_id))
+        logger.info(
+            "folder_deleted",
+            extra={"space_id": str(space_id), "folder_id": str(folder_id)},
+        )
+
+    def set_source_folder(
+        self, user: User, source_id: UUID, folder_id: UUID | None
+    ) -> SourceSummary:
+        source = self.require_owned_source(user, source_id)
+        if folder_id is not None:
+            folder = self._spaces.get_folder(
+                space_id=source["space_id"], folder_id=str(folder_id)
+            )
+            if not folder:
+                raise NotFoundError(
+                    "Folder not found.", detail={"folder_id": str(folder_id)}
+                )
+        row = self._spaces.set_source_folder(
+            source_id=str(source_id),
+            folder_id=str(folder_id) if folder_id else None,
+        )
+        merged = {**source, **row}
+        return self._to_source_summary(merged)

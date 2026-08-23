@@ -60,8 +60,8 @@ class SpaceRepo:
     def get_space_any(self, *, space_id: str) -> dict | None:
         """Return the space with no owner filter.
 
-        Only for the viewer-read path, after collaborator access has already
-        been checked — see ``SpaceService.require_viewable_space``.
+        Left for callers that have already authorized access some other way.
+        Sharing is per-source now, so space-level viewability is not a thing.
         """
         res = (
             self._client.table("spaces")
@@ -157,8 +157,7 @@ class SpaceRepo:
     def list_sources_for_space(self, *, space_id: str, limit: int = 20) -> list[dict]:
         """Sources in one space, with no owner filter.
 
-        Only for the viewer-read path, called after the caller's access to
-        ``space_id`` has already been authorized (owner or collaborator) —
+        The caller must already have authorized access to ``space_id``;
         this method itself enforces nothing.
         """
         res = (
@@ -262,4 +261,72 @@ class SpaceRepo:
             "content": content,
         }
         res = self._client.table("source_messages").insert(row).execute()
+        return res.data[0]
+
+
+    # --- folders ---
+
+    def create_folder(self, *, space_id: str, user_id: str, name: str) -> dict:
+        res = (
+            self._client.table("space_folders")
+            .insert({"space_id": space_id, "user_id": user_id, "name": name})
+            .execute()
+        )
+        return res.data[0]
+
+    def list_folders(self, *, space_id: str) -> list[dict]:
+        """Folders in a space, with per-folder source counts, name-sorted."""
+        res = (
+            self._client.table("space_folders")
+            .select("*")
+            .eq("space_id", space_id)
+            .order("name")
+            .execute()
+        )
+        folders = res.data or []
+        counts_res = (
+            self._client.table("sources")
+            .select("folder_id")
+            .eq("space_id", space_id)
+            .execute()
+        )
+        counts: dict[str, int] = {}
+        for row in counts_res.data or []:
+            fid = row.get("folder_id")
+            if fid:
+                counts[fid] = counts.get(fid, 0) + 1
+        for folder in folders:
+            folder["source_count"] = counts.get(folder["id"], 0)
+        return folders
+
+    def get_folder(self, *, space_id: str, folder_id: str) -> dict | None:
+        res = (
+            self._client.table("space_folders")
+            .select("*")
+            .eq("id", folder_id)
+            .eq("space_id", space_id)
+            .maybe_single()
+            .execute()
+        )
+        return res.data if res else None
+
+    def rename_folder(self, *, folder_id: str, name: str) -> dict:
+        res = (
+            self._client.table("space_folders")
+            .update({"name": name})
+            .eq("id", folder_id)
+            .execute()
+        )
+        return res.data[0]
+
+    def delete_folder(self, *, folder_id: str) -> None:
+        self._client.table("space_folders").delete().eq("id", folder_id).execute()
+
+    def set_source_folder(self, *, source_id: str, folder_id: str | None) -> dict:
+        res = (
+            self._client.table("sources")
+            .update({"folder_id": folder_id})
+            .eq("id", source_id)
+            .execute()
+        )
         return res.data[0]

@@ -4,11 +4,12 @@
  * Per-capture notebook — TipTap doc with emoji, links, and uploaded images.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
+import NoteImageView from './NoteImageView'
 import styles from './dashboard.module.css'
 import {
   EMPTY_NOTE_DOC,
@@ -36,11 +37,15 @@ const NoteImage = Image.extend({
       },
     }
   },
+  addNodeView() {
+    return ReactNodeViewRenderer(NoteImageView)
+  },
 })
 
 interface SourceNotesProps {
   sourceId: string
   initialNote: SourceNote
+  editable?: boolean
 }
 
 async function resolveImageSrc(sourceId: string, key: string): Promise<string | null> {
@@ -81,7 +86,7 @@ async function hydrateImageUrls(
   return clone as Record<string, unknown>
 }
 
-export default function SourceNotes({ sourceId, initialNote }: SourceNotesProps) {
+export default function SourceNotes({ sourceId, initialNote, editable = true }: SourceNotesProps) {
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(initialNote.updated_at)
@@ -105,13 +110,20 @@ export default function SourceNotes({ sourceId, initialNote }: SourceNotesProps)
     ],
     content: EMPTY_NOTE_DOC,
     immediatelyRender: false,
-    onUpdate: () => setDirty(true),
+    editable,
+    onUpdate: () => {
+      if (editable) setDirty(true)
+    },
     editorProps: {
       attributes: {
         class: styles.notesEditor,
       },
     },
   })
+
+  useEffect(() => {
+    editor?.setEditable(editable)
+  }, [editor, editable])
 
   useEffect(() => {
     if (!editor) return
@@ -225,7 +237,7 @@ export default function SourceNotes({ sourceId, initialNote }: SourceNotesProps)
     editor?.isEmpty
 
   return (
-    <section className={styles.notesSection} aria-label="Your notes">
+    <section className={styles.notesSection} aria-label={editable ? "Your notes" : "Owner's notes"}>
       <div className={styles.capturePlate}>
         <span className={styles.capturePlateIcon} aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7">
@@ -235,13 +247,13 @@ export default function SourceNotes({ sourceId, initialNote }: SourceNotesProps)
         </span>
         <div className={styles.capturePlateCopy}>
           <span className={styles.capturePlateNum}>05</span>
-          <span className={styles.capturePlateTitle}>Your notes</span>
+          <span className={styles.capturePlateTitle}>{editable ? "Your notes" : "Owner's notes"}</span>
         </div>
         <span className={styles.capturePlateLine} />
       </div>
 
       <div className={styles.notesCard}>
-        <div className={styles.notesToolbar}>
+        {editable ? <div className={styles.notesToolbar}>
           <button
             type="button"
             className={styles.notesTool}
@@ -343,7 +355,7 @@ export default function SourceNotes({ sourceId, initialNote }: SourceNotesProps)
           >
             {saving ? 'Saving…' : 'Save'}
           </button>
-        </div>
+        </div> : null}
 
         <EditorContent editor={editor} />
       </div>

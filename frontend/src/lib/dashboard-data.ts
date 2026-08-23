@@ -60,6 +60,7 @@ export interface CapturedSource {
   status: CaptureStatus
   /** Original article / video URL when the capture had one. */
   url: string | null
+  folderId: string | null
 }
 
 /** Terminal + in-flight labels the capture feed / detail chrome show. */
@@ -240,5 +241,6 @@ export function toCapturedSource(source: Source): CapturedSource {
     capturedAt: relativeTime(source.captured_at),
     status: captureStatus(source.processing_status),
     url: source.url,
+    folderId: source.folder_id ?? null,
   }
 }

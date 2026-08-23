@@ -122,6 +122,7 @@ class FakeSpaceRepo:
         self.sources: dict[str, dict] = {}
         self.active: dict[str, str | None] = {}
         self.messages: dict[str, dict] = {}
+        self.folders: dict[str, dict] = {}
         # Wired by the `coverage_repo` fixture so list_spaces can surface the
         # cached percentage, mirroring the real RPC's LEFT JOIN.
         self._coverage_repo: FakeCoverageRepo | None = None
@@ -313,6 +314,62 @@ class FakeSpaceRepo:
         }
         self.messages[row["id"]] = row
         return row
+
+
+    # --- folders ---
+
+    def create_folder(self, *, space_id: str, user_id: str, name: str) -> dict:
+        for row in self.folders.values():
+            if row["space_id"] == space_id and row["name"].lower() == name.lower():
+                raise RuntimeError("duplicate key value violates unique constraint (23505)")
+        row = {
+            "id": str(uuid4()),
+            "space_id": space_id,
+            "user_id": user_id,
+            "name": name,
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+        self.folders[row["id"]] = row
+        return dict(row)
+
+    def list_folders(self, *, space_id: str) -> list[dict]:
+        out = []
+        for row in self.folders.values():
+            if row["space_id"] != space_id:
+                continue
+            count = sum(1 for s in self.sources.values() if s.get("folder_id") == row["id"])
+            out.append({**row, "source_count": count})
+        out.sort(key=lambda r: r["name"].lower())
+        return out
+
+    def get_folder(self, *, space_id: str, folder_id: str) -> dict | None:
+        row = self.folders.get(folder_id)
+        if not row or row["space_id"] != space_id:
+            return None
+        count = sum(1 for s in self.sources.values() if s.get("folder_id") == folder_id)
+        return {**row, "source_count": count}
+
+    def rename_folder(self, *, folder_id: str, name: str) -> dict:
+        row = self.folders[folder_id]
+        for other in self.folders.values():
+            if (
+                other["id"] != folder_id
+                and other["space_id"] == row["space_id"]
+                and other["name"].lower() == name.lower()
+            ):
+                raise RuntimeError("duplicate key value violates unique constraint (23505)")
+        row["name"] = name
+        return dict(row)
+
+    def delete_folder(self, *, folder_id: str) -> None:
+        self.folders.pop(folder_id, None)
+        for source in self.sources.values():
+            if source.get("folder_id") == folder_id:
+                source["folder_id"] = None
+
+    def set_source_folder(self, *, source_id: str, folder_id: str | None) -> dict:
+        self.sources[source_id]["folder_id"] = folder_id
+        return dict(self.sources[source_id])
 
 
 class FakeChunkRepo:
@@ -514,36 +571,38 @@ class FakeProfileSettingsRepo:
 
 
 class FakeCollaboratorRepo:
-    """In-memory stand-in for ``space_collaborators``."""
+    """In-memory stand-in for ``source_collaborators``."""
 
     def __init__(self) -> None:
         self.grants: dict[tuple[str, str], dict] = {}
-        # Wired by the `collaborator_repo` fixture for the joined-profile reads.
+        # Wired by the `collaborator_repo` fixture for joined reads.
         self._space_repo: FakeSpaceRepo | None = None
         self._profile_repo: FakeProfileRepo | None = None
 
-    def add(self, *, space_id: str, user_id: str, invited_by: str) -> dict:
-        key = (space_id, user_id)
-        if key not in self.grants:
-            self.grants[key] = {
-                "id": str(uuid4()),
-                "space_id": space_id,
-                "user_id": user_id,
-                "invited_by": invited_by,
-                "created_at": datetime.now(UTC).isoformat(),
-            }
+    def add(self, *, source_id: str, space_id: str, user_id: str, invited_by: str) -> dict:
+        key = (source_id, user_id)
+        if key in self.grants:
+            raise RuntimeError("duplicate key value violates unique constraint (23505)")
+        self.grants[key] = {
+            "id": str(uuid4()),
+            "source_id": source_id,
+            "space_id": space_id,
+            "user_id": user_id,
+            "invited_by": invited_by,
+            "created_at": datetime.now(UTC).isoformat(),
+        }
         return self.grants[key]
 
-    def remove(self, *, space_id: str, user_id: str) -> None:
-        self.grants.pop((space_id, user_id), None)
+    def remove(self, *, source_id: str, user_id: str) -> None:
+        self.grants.pop((source_id, user_id), None)
 
-    def is_collaborator(self, *, space_id: str, user_id: str) -> bool:
-        return (space_id, user_id) in self.grants
+    def is_collaborator(self, *, source_id: str, user_id: str) -> bool:
+        return (source_id, user_id) in self.grants
 
-    def list_for_space(self, *, space_id: str) -> list[dict]:
+    def list_for_source(self, *, source_id: str) -> list[dict]:
         out = []
         for (sid, uid), row in self.grants.items():
-            if sid != space_id:
+            if sid != source_id:
                 continue
             profile = self._profile_repo.profiles.get(uid) if self._profile_repo else None
             out.append(
@@ -562,8 +621,16 @@ class FakeCollaboratorRepo:
         for (sid, uid), row in self.grants.items():
             if uid != user_id:
                 continue
-            space = self._space_repo.spaces.get(sid) if self._space_repo else None
-            out.append({**row, "spaces": space})
+            source = self._space_repo.sources.get(sid) if self._space_repo else None
+            space = None
+            if source and self._space_repo:
+                space = self._space_repo.spaces.get(source["space_id"])
+            elif self._space_repo:
+                space = self._space_repo.spaces.get(row["space_id"])
+            nested_source = dict(source) if source else None
+            if nested_source and space:
+                nested_source["spaces"] = {"id": space["id"], "name": space["name"]}
+            out.append({**row, "sources": nested_source, "spaces": space})
         return out
 
 

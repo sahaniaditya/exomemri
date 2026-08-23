@@ -157,6 +157,16 @@ export function Popup() {
             />
             {session ? "Connected" : "Signed out"}
           </span>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => window.close()}
+            style={styles.close}
+            onMouseOver={(e) => (e.currentTarget.style.color = color.ink)}
+            onMouseOut={(e) => (e.currentTarget.style.color = color.sage)}
+          >
+            ×
+          </button>
         </header>
 
         {error && <div style={styles.error}>{error}</div>}
@@ -295,6 +305,22 @@ const styles: Record<string, React.CSSProperties> = {
     color: color.sage,
   },
   dot: { width: 6, height: 6, borderRadius: "50%", display: "inline-block" },
+  close: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 22,
+    height: 22,
+    marginLeft: 2,
+    padding: 0,
+    border: "none",
+    borderRadius: 4,
+    background: "transparent",
+    color: color.sage,
+    fontSize: 18,
+    lineHeight: 1,
+    cursor: "pointer",
+  },
 
   plate: { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 },
   plateNum: { fontFamily: font.mono, fontSize: 11, fontWeight: 500, color: color.green },

@@ -1,49 +1,98 @@
 'use client'
-import { useState } from 'react'
+
+/**
+ * Invite someone to view this capture. Native <dialog> opened with
+ * showModal(), matching NewSpaceDialog so focus, Esc and the backdrop
+ * come from the platform.
+ */
+import { useEffect, useRef, useState } from 'react'
 import styles from './dashboard.module.css'
 import type { Collaborator } from '@/lib/sharing'
 
 interface ShareManagerProps {
-  spaceId: string
+  sourceId: string
   initialCollaborators: Collaborator[]
+  open: boolean
+  onClose: () => void
 }
 
-export default function ShareManager({ spaceId, initialCollaborators }: ShareManagerProps) {
+function inviteErrorMessage(status: number, data: unknown): string {
+  const envelope = data as { error?: { message?: string }; detail?: string }
+  if (status === 401) return 'Your session has expired. Please log in again.'
+  if (status === 404) return 'No Atlas user with that username.'
+  if (status === 409) return 'This capture is already shared with them.'
+  return envelope.error?.message ?? envelope.detail ?? 'Could not share this capture.'
+}
+
+export default function ShareManager({
+  sourceId,
+  initialCollaborators,
+  open,
+  onClose,
+}: ShareManagerProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
   const [collaborators, setCollaborators] = useState(initialCollaborators)
   const [username, setUsername] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleInvite = async () => {
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (open && !dialog.open) dialog.showModal()
+    if (!open && dialog.open) dialog.close()
+  }, [open])
+
+  function reset() {
+    setUsername('')
+    setError(null)
+    setBusy(false)
+  }
+
+  function close() {
+    reset()
+    onClose()
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
     const clean = username.trim().toLowerCase()
-    if (!clean || busy) return
+    if (clean.length < 3 || busy) return
+
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`/api/spaces/${spaceId}/collaborators`, {
+      const res = await fetch(`/api/sources/${sourceId}/collaborators`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: clean }),
       })
-      const data = await res.json()
+      const data: unknown = await res.json()
       if (!res.ok) {
-        setError(data.error?.message ?? data.detail ?? 'Could not share this space.')
+        setError(inviteErrorMessage(res.status, data))
         return
       }
+      const invited = data as Collaborator
       setCollaborators(prev =>
-        prev.some(c => c.user_id === data.user_id) ? prev : [...prev, data]
+        prev.some(c => c.user_id === invited.user_id) ? prev : [...prev, invited]
       )
       setUsername('')
     } catch {
-      setError('Could not share this space. Please try again.')
+      setError('Could not share this capture. Please try again.')
     } finally {
       setBusy(false)
     }
   }
 
-  const handleRevoke = async (userId: string) => {
+  async function handleRevoke(userId: string) {
     try {
-      await fetch(`/api/spaces/${spaceId}/collaborators/${userId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/sources/${sourceId}/collaborators/${userId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        setError('Could not remove that person. Please try again.')
+        return
+      }
       setCollaborators(prev => prev.filter(c => c.user_id !== userId))
     } catch {
       setError('Could not remove that person. Please try again.')
@@ -51,53 +100,76 @@ export default function ShareManager({ spaceId, initialCollaborators }: ShareMan
   }
 
   return (
-    <div className={styles.rcard}>
-      <div className={styles.chatinputbar}>
+    <dialog
+      ref={dialogRef}
+      className={styles.dialog}
+      onCancel={event => {
+        event.preventDefault()
+        close()
+      }}
+      onClose={close}
+    >
+      <form className={styles.dialogForm} onSubmit={submit}>
+        <h2 className={styles.dialogTitle}>Share this capture</h2>
+        <p className={styles.dialogSub}>
+          They&apos;ll get read-only access to the summary and notes. Chat and
+          the rest of the space stay yours.
+        </p>
+
+        <label className={styles.dialogLabel} htmlFor="share-username">
+          Atlas username
+        </label>
         <input
-          className={styles.chatinput}
+          id="share-username"
+          className={styles.dialogInput}
           value={username}
-          onChange={e => setUsername(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              handleInvite()
-            }
-          }}
-          placeholder="Atlas username to share read-only access with"
+          onChange={event => setUsername(event.target.value)}
+          placeholder="their-username"
+          autoComplete="off"
+          spellCheck={false}
+          minLength={3}
+          maxLength={32}
+          autoFocus
+          required
           disabled={busy}
         />
-        <button
-          type="button"
-          className={styles.chatsend}
-          onClick={handleInvite}
-          disabled={busy || !username.trim()}
-          aria-label="Share"
-        >
-          Share
-        </button>
-      </div>
-      {error && <p className={styles.covempty}>{error}</p>}
 
-      {collaborators.length > 0 && (
-        <div className={styles.covsection}>
-          <div className={styles.covsectiontitle}>Can view this space</div>
-          <div className={styles.covchips}>
-            {collaborators.map(c => (
-              <span key={c.user_id} className={styles.covchip}>
-                {c.full_name ?? c.username}
-                <button
-                  type="button"
-                  className={styles.covchipremove}
-                  onClick={() => handleRevoke(c.user_id)}
-                  aria-label={`Stop sharing with ${c.username}`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
+        {error ? <div className={styles.dialogError}>{error}</div> : null}
+
+        {collaborators.length > 0 ? (
+          <div className={styles.dialogPeople}>
+            <div className={styles.covsectiontitle}>Can view this capture</div>
+            <div className={styles.covchips}>
+              {collaborators.map(c => (
+                <span key={c.user_id} className={styles.covchip}>
+                  {c.full_name ?? c.username}
+                  <button
+                    type="button"
+                    className={styles.covchipremove}
+                    onClick={() => void handleRevoke(c.user_id)}
+                    aria-label={`Stop sharing with ${c.username}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
+        ) : null}
+
+        <div className={styles.dialogActions}>
+          <button type="button" className={styles.dialogCancel} onClick={close}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className={styles.dialogSubmit}
+            disabled={busy || username.trim().length < 3}
+          >
+            {busy ? 'Sharing…' : 'Share'}
+          </button>
         </div>
-      )}
-    </div>
+      </form>
+    </dialog>
   )
 }

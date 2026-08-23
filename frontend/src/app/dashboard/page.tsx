@@ -77,7 +77,7 @@ export default async function DashboardPage() {
           {sharedSpaces.length > 0 && (
             <section id="shared" className={styles.section}>
               <Plate num="03" title="Shared with you" />
-              <SharedWithMeList spaces={sharedSpaces} />
+              <SharedWithMeList sources={sharedSpaces} />
             </section>
           )}
         </div>
