@@ -18,7 +18,7 @@ from uuid import UUID, uuid4
 import anyio
 
 from app.config import Settings
-from app.errors import ValidationError
+from app.errors import StorageError, ValidationError
 from app.repositories.storage_repo import StorageRepo
 from app.schemas.common import ProcessingStatus, SourceType, User
 from app.schemas.sources import (
@@ -28,6 +28,7 @@ from app.schemas.sources import (
     UploadUrlResponse,
 )
 from app.schemas.spaces import ArtifactUrlResponse
+from app.services.concept_service import ConceptService
 from app.services.space_service import SpaceService
 from app.services.streak_service import StreakService
 
@@ -100,11 +101,13 @@ class CaptureService:
         storage: StorageRepo,
         spaces: SpaceService,
         streaks: StreakService,
+        concepts: ConceptService,
     ) -> None:
         self._settings = settings
         self._storage = storage
         self._spaces = spaces
         self._streaks = streaks
+        self._concepts = concepts
 
     async def _write_meta(
         self,
@@ -301,6 +304,35 @@ class CaptureService:
         path = f"{source['storage_prefix']}/{_validated_artifact_key(key)}"
         url = await self._storage.create_signed_url(path, ARTIFACT_URL_TTL_SECONDS)
         return ArtifactUrlResponse(url=url, expires_in=ARTIFACT_URL_TTL_SECONDS)
+
+    async def delete(self, *, user: User, source_id: UUID) -> None:
+        """Permanently remove a capture the caller owns.
+
+        The row goes first so the UI cannot keep showing a source whose files
+        are already gone. Storage and the knowledge-map edges are then cleaned
+        up; leftover objects are logged rather than failing the request, so a
+        storage blip cannot undelete the capture.
+        """
+        source = await anyio.to_thread.run_sync(
+            partial(self._spaces.delete_source, user, source_id)
+        )
+        await anyio.to_thread.run_sync(
+            partial(
+                self._concepts.prune_source,
+                source_id=source_id,
+                space_id=UUID(source["space_id"]),
+            )
+        )
+        try:
+            await self._storage.delete_prefix(source["storage_prefix"])
+        except StorageError:
+            logger.error(
+                "source_storage_delete_failed",
+                extra={
+                    "source_id": str(source_id),
+                    "prefix": source["storage_prefix"],
+                },
+            )
 
     # --- space/table access (sync SDK, offloaded to keep the path async) ---
 

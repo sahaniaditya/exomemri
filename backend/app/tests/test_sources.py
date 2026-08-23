@@ -1,4 +1,4 @@
-"""Capture endpoint tests (POST /v1/sources)."""
+"""Capture endpoint tests (POST /v1/sources, DELETE /v1/sources/{id})."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from app.tests.conftest import (
     OTHER_USER_SPACE_ID,
     SEEDED_SPACE_ID,
+    FakeConceptRepo,
     FakeSpaceRepo,
     FakeStorage,
 )
@@ -173,3 +174,104 @@ def test_recapturing_the_same_page_updates_one_row(
     assert second == first
     assert len(space_repo.sources) == 1
     assert space_repo.sources[first]["title"] == "Post (v2)"
+
+
+def test_delete_capture_removes_row_and_artifacts(
+    client: TestClient, storage: FakeStorage, space_repo: FakeSpaceRepo
+) -> None:
+    resp = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/post",
+            "title": "Post",
+            "content": "cleaned article text",
+        },
+    )
+    source_id = resp.json()["source_id"]
+    prefix = space_repo.sources[source_id]["storage_prefix"]
+    assert any(path.startswith(prefix) for path in storage.uploads)
+
+    deleted = client.delete(f"/v1/sources/{source_id}")
+    assert deleted.status_code == 204
+    assert source_id not in space_repo.sources
+    assert not any(
+        path == prefix or path.startswith(f"{prefix}/") for path in storage.uploads
+    )
+
+
+def test_delete_unknown_capture_is_404(client: TestClient) -> None:
+    resp = client.delete("/v1/sources/00000000-0000-0000-0000-0000000000aa")
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "not_found"
+
+
+def test_delete_unowned_capture_is_404(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    other_id = "00000000-0000-0000-0000-0000000000bb"
+    space_repo.sources[other_id] = {
+        "id": other_id,
+        "space_id": OTHER_USER_SPACE_ID,
+        "user_id": "00000000-0000-0000-0000-0000000000ff",
+        "type": "article",
+        "title": "Not yours",
+        "url": None,
+        "author": None,
+        "storage_prefix": (
+            f"users/00000000-0000-0000-0000-0000000000ff/spaces/"
+            f"{OTHER_USER_SPACE_ID}/sources/{other_id}"
+        ),
+        "content_hash": "hash-not-yours",
+        "processing_status": "ready",
+        "captured_at": "2026-08-18T00:00:00+00:00",
+    }
+    resp = client.delete(f"/v1/sources/{other_id}")
+    assert resp.status_code == 404
+    assert other_id in space_repo.sources
+
+
+def test_delete_capture_prunes_orphan_concepts(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    concept_repo: FakeConceptRepo,
+) -> None:
+    source_id = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/concepts",
+            "title": "Concepts",
+            "content": "cleaned article text",
+        },
+    ).json()["source_id"]
+    created = concept_repo.upsert_concepts(
+        [
+            {
+                "space_id": SPACE,
+                "user_id": DEV_USER,
+                "label": "Load balancer",
+                "slug": "load-balancer",
+            }
+        ]
+    )[0]
+    concept_repo.replace_source_concepts(
+        source_id=source_id,
+        edges=[
+            {
+                "source_id": source_id,
+                "concept_id": created["id"],
+                "space_id": SPACE,
+                "user_id": DEV_USER,
+                "weight": 1.0,
+            }
+        ],
+    )
+
+    resp = client.delete(f"/v1/sources/{source_id}")
+    assert resp.status_code == 204
+    assert source_id not in space_repo.sources
+    assert created["id"] not in concept_repo.concepts
+    assert concept_repo.edges == []

@@ -193,6 +193,10 @@ class SpaceRepo:
         )
         return res.data if res else None
 
+    def delete_source(self, *, source_id: str) -> None:
+        """Drop the source row. Dependents cascade in Postgres."""
+        self._client.table("sources").delete().eq("id", source_id).execute()
+
     def update_source_summary(
         self,
         *,

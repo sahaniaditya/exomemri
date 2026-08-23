@@ -174,6 +174,16 @@ class ConceptService:
         )
         return RebuildResponse(processed=processed, failed=failed, pending=len(remaining))
 
+    def prune_source(self, *, source_id: UUID, space_id: UUID) -> None:
+        """Drop this source's concept edges and any concepts nobody mentions.
+
+        Safe after the source row is already gone: ``source_concepts`` cascade
+        on the real database, and the explicit delete keeps the in-memory fake
+        in the same shape.
+        """
+        self._concepts.replace_source_concepts(source_id=str(source_id), edges=[])
+        self._concepts.delete_orphan_concepts(space_id=str(space_id))
+
     async def _mark_done(self, source_id: str) -> None:
         await anyio.to_thread.run_sync(
             partial(

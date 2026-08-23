@@ -1279,9 +1279,10 @@
 .srcActions {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 12px 0 4px;
+  gap: 2px;
+  padding: 0 14px 0 6px;
   flex: none;
+  flex-shrink: 0;
 }
 
 .srcRow:has(.moveWrapOpen) .srcActions {
@@ -1289,21 +1290,68 @@
   z-index: 6;
 }
 
-.srcOpenInApp {
+.srcOpenInApp,
+.srcDelete,
+.moveBtn,
+.srcActions .originalLinkIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
   border-radius: 8px;
-  color: var(--sage-light);
+  background: transparent;
+  color: var(--sage);
   text-decoration: none;
+  cursor: pointer;
   transition: color 0.15s ease, background 0.15s ease;
 }
 
-.srcOpenInApp:hover {
+.srcOpenInApp svg,
+.srcDelete svg,
+.moveBtn svg,
+.srcActions .originalLinkIcon svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  flex: none;
+}
+
+.srcOpenInApp:hover,
+.moveBtn:hover,
+.srcActions .originalLinkIcon:hover {
   color: var(--forest);
-  background: rgba(44, 93, 79, 0.08);
+  background: rgba(44, 93, 79, 0.1);
+}
+
+.srcDelete:hover:enabled {
+  color: var(--clay);
+  background: rgba(181, 98, 60, 0.1);
+}
+
+.srcDelete:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.moveWrapOpen .moveBtn {
+  color: var(--forest);
+  background: rgba(44, 93, 79, 0.12);
+}
+
+.srcActionSep {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: rgba(27, 26, 22, 0.12);
+  flex: none;
+}
+
+.srcActions .srcOpenInApp {
+  color: var(--forest);
 }
 
 .originalLink,
@@ -1439,6 +1487,18 @@
 }
 
 .srcmain {
+  flex: 1;
+  min-width: 0;
+}
+
+.srcTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.srcTitleRow .srctitle {
   flex: 1;
   min-width: 0;
 }
@@ -2091,6 +2151,47 @@ button.chip {
   background: var(--forest);
   transform: none;
   box-shadow: none;
+}
+
+.captureDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid rgba(181, 98, 60, 0.28);
+  border-radius: 10px;
+  background: rgba(181, 98, 60, 0.07);
+  color: var(--clay);
+  font-family: var(--font-instrument-sans), system-ui, sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.captureDeleteBtn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+}
+
+.captureDeleteBtn:hover:enabled {
+  background: var(--clay);
+  border-color: var(--clay);
+  color: var(--paper);
+  transform: translateY(-2px);
+}
+
+.captureDeleteBtn:active:enabled {
+  transform: translateY(0);
+}
+
+.captureDeleteBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .captureEmptySummary {
@@ -3811,20 +3912,7 @@ button.chip {
 }
 
 .moveBtn {
-  font-family: var(--font-ibm-plex-mono), monospace;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--forest);
-  background: rgba(44, 93, 79, 0.06);
-  border: 1px solid rgba(44, 93, 79, 0.22);
-  border-radius: 999px;
-  padding: 6px 11px;
   cursor: pointer;
-}
-
-.moveBtn:hover {
-  background: rgba(44, 93, 79, 0.1);
 }
 
 .moveMenu {

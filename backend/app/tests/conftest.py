@@ -12,7 +12,7 @@ os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("ANTHROPIC_MODEL_NAME", "claude-haiku-4-5")
-os.environ.setdefault("VOYAGE_API_KEY", "test-voyage-key")
+os.environ.setdefault("HF_TOKEN", "test-hf-token")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -75,6 +75,16 @@ class FakeStorage:
             raise StorageError("Failed to read artifact from storage")
         data, _content_type = self.uploads[path]
         return data.decode("utf-8")
+
+    async def delete_prefix(self, prefix: str) -> None:
+        from app.errors import StorageError
+
+        clean = prefix.strip().strip("/")
+        if not clean or ".." in clean or "/sources/" not in f"/{clean}/":
+            raise StorageError("Refusing to delete an invalid storage prefix")
+        rooted = f"{clean}/"
+        for path in [p for p in self.uploads if p == clean or p.startswith(rooted)]:
+            del self.uploads[path]
 
 
 class FakeNoteRepo:
@@ -256,6 +266,10 @@ class FakeSpaceRepo:
 
     def get_source_any(self, *, source_id: str) -> dict | None:
         return self.sources.get(source_id)
+
+    def delete_source(self, *, source_id: str) -> None:
+        self.sources.pop(source_id, None)
+        self.messages = {k: v for k, v in self.messages.items() if v["source_id"] != source_id}
 
     def update_processing_status(self, *, source_id: str, status: str) -> None:
         if source_id in self.sources:
@@ -842,10 +856,12 @@ def client(
     space_svc = SpaceService(space_repo, collaborator_repo)  # type: ignore[arg-type]
     session_svc = SessionService(space_repo, space_svc)  # type: ignore[arg-type]
     streak_svc = StreakService(profile_repo)  # type: ignore[arg-type]
-    capture_svc = CaptureService(settings, storage, space_svc, streak_svc)  # type: ignore[arg-type]
     extract_svc = ExtractService(storage)  # type: ignore[arg-type]
     concept_svc = ConceptService(
         concept_repo, space_svc, extract_svc, llm_service  # type: ignore[arg-type]
+    )
+    capture_svc = CaptureService(
+        settings, storage, space_svc, streak_svc, concept_svc  # type: ignore[arg-type]
     )
     coverage_svc = CoverageService(
         coverage_repo, concept_repo, space_svc, llm_service  # type: ignore[arg-type]
@@ -882,7 +898,7 @@ def client(
     app.dependency_overrides[get_llm_service] = lambda: llm_service
     app.dependency_overrides[get_source_chat_service] = lambda: chat_svc
     app.dependency_overrides[get_note_service] = lambda: note_svc
-    # The real pipeline calls Anthropic/Voyage over the network — never run it
+    # The real pipeline calls Anthropic/Hugging Face over the network — never run it
     # from the capture path in tests; dedicated pipeline tests exercise the
     # real graph directly against fakes instead.
     app.dependency_overrides[get_pipeline_service] = lambda: pipeline_service

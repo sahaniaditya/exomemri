@@ -1,7 +1,7 @@
 """Paragraph-aware chunking for the RAG pipeline.
 
 Not tiktoken: it encodes for OpenAI's BPE vocabularies, which don't match
-Anthropic's or Voyage's tokenizers, so a tiktoken count would just be a
+the embedding model's tokenizer, so a tiktoken count would just be a
 wrong-but-precise-looking number. ``token_count`` here is a rough
 ``len // 4`` estimate for observability only — never a scheduling constraint.
 """

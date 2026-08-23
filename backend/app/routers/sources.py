@@ -154,3 +154,12 @@ def set_source_folder(
 ) -> SourceSummary:
     return svc.set_source_folder(user, source_id, body.folder_id)
 
+
+@router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_source(
+    source_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: CaptureService = Depends(get_capture_service),
+) -> None:
+    await svc.delete(user=user, source_id=source_id)
+

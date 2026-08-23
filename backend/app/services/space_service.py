@@ -218,6 +218,16 @@ class SpaceService:
             )
         return source
 
+    def delete_source(self, user: User, source_id: UUID) -> dict:
+        """Owner-only: drop the source row. Storage cleanup is the caller's job."""
+        source = self.require_owned_source(user, source_id)
+        self._spaces.delete_source(source_id=str(source_id))
+        logger.info(
+            "source_deleted",
+            extra={"source_id": str(source_id), "space_id": source["space_id"]},
+        )
+        return source
+
     @staticmethod
     def _to_source_summary(row: dict) -> SourceSummary:
         # `select("*, spaces(name, slug)")` nests the joined space; it is absent
