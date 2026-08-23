@@ -12,7 +12,7 @@ os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("ANTHROPIC_MODEL_NAME", "claude-haiku-4-5")
-os.environ.setdefault("VOYAGE_API_KEY", "test-voyage-key")
+os.environ.setdefault("HF_TOKEN", "test-hf-token")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -882,7 +882,7 @@ def client(
     app.dependency_overrides[get_llm_service] = lambda: llm_service
     app.dependency_overrides[get_source_chat_service] = lambda: chat_svc
     app.dependency_overrides[get_note_service] = lambda: note_svc
-    # The real pipeline calls Anthropic/Voyage over the network — never run it
+    # The real pipeline calls Anthropic/Hugging Face over the network — never run it
     # from the capture path in tests; dedicated pipeline tests exercise the
     # real graph directly against fakes instead.
     app.dependency_overrides[get_pipeline_service] = lambda: pipeline_service

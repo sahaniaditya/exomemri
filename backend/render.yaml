@@ -23,8 +23,8 @@ services:
       # Claude Haiku (summarize/chat) — required, Settings fails to boot without it.
       - key: ANTHROPIC_API_KEY
         sync: false
-      # Voyage AI (chunk/query embeddings for RAG chat) — required, same reason.
-      - key: VOYAGE_API_KEY
+      # Hugging Face (chunk/query embeddings for RAG chat) — required, same reason.
+      - key: HF_TOKEN
         sync: false
       # Comma-separated allowed extension origins (e.g. chrome-extension://<id>).
       - key: CORS_EXTENSION_ORIGINS

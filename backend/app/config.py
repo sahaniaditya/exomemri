@@ -13,9 +13,9 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # Some local Python installs (notably python.org's macOS build) ship without
-# a usable system CA bundle, so outbound HTTPS (Anthropic, Voyage, Supabase)
-# fails with SSLCertVerificationError until this is set. setdefault so an
-# operator-provided SSL_CERT_FILE (e.g. a corporate CA) is never overridden.
+# a usable system CA bundle, so outbound HTTPS (Anthropic, Hugging Face,
+# Supabase) fails with SSLCertVerificationError until this is set. setdefault
+# so an operator-provided SSL_CERT_FILE (e.g. a corporate CA) is never overridden.
 os.environ.setdefault("SSL_CERT_FILE", certifi.where())
 
 # Fixed identity used by the hermetic test suite in place of a live JWT.
@@ -38,12 +38,12 @@ class Settings(BaseSettings):
     anthropic_api_key: str
     anthropic_model_name: str = "claude-haiku-4-5"
 
-    voyage_api_key: str
-    # voyage-4-lite: current generation, part of Voyage's 200M-free-token tier.
-    voyage_model_name: str = "voyage-4-lite"
-    # Fixed regardless of model default, so the pgvector column width never
-    # has to change alongside a model swap.
-    voyage_embedding_dimension: int = 1024
+    # Hugging Face Inference API (chunk/query embeddings for RAG chat).
+    hf_token: str
+    hf_embedding_model: str = "BAAI/bge-small-en-v1.5"
+    # Fixed to match source_chunks.embedding VECTOR(384); changing this
+    # requires a matching Supabase migration.
+    hf_embedding_dimension: int = 384
 
 
     # --- Test/dev identity (the active space now lives in Postgres) ---

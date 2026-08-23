@@ -55,7 +55,7 @@ Any change to a backend router/schema requires, in the same commit:
 ## Env vars
 
 - `backend/.env` — `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `ANTHROPIC_API_KEY` (summarize/chat),
-  `VOYAGE_API_KEY` (chunk/query embeddings for RAG chat). Prod also needs
+  `HF_TOKEN` (Hugging Face Inference API; chunk/query embeddings for RAG chat). Prod also needs
   `CORS_EXTENSION_ORIGINS`, `CORS_WEB_ORIGINS`, `CORS_ALLOW_ANY_EXTENSION=false`, `ENV=production`.
   CORS origins are scheme + host only — no trailing slash or path.
 - `frontend/.env.local` — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_BACKEND_URL`.
