@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import styles from './dashboard.module.css'
 import { Lockup } from '@/components/brand/Lockup'
 
@@ -12,7 +13,6 @@ const NAV = [
   {
     href: '/dashboard',
     label: 'Overview',
-    active: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
         <path d="M3 12l9-8 9 8" />
@@ -44,18 +44,25 @@ const NAV = [
     ),
   },
   {
-    href: '/dashboard/settings',
-    label: 'Settings',
+    href: '/dashboard/profile',
+    label: 'Profile',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5 19.5c1.2-3.2 3.7-5 7-5s5.8 1.8 7 5" />
       </svg>
     ),
   },
 ]
 
+function isNavActive(href: string, pathname: string): boolean {
+  const path = href.split('#')[0]
+  if (path === '/dashboard') return pathname === '/dashboard'
+  return pathname === path || pathname.startsWith(`${path}/`)
+}
+
 export default function Sidebar({ spaceCount, sourceCount }: SidebarProps) {
+  const pathname = usePathname()
   const counts: Record<string, number> = { spaces: spaceCount, sources: sourceCount }
 
   return (
@@ -69,7 +76,7 @@ export default function Sidebar({ spaceCount, sourceCount }: SidebarProps) {
         <nav className={styles.nav} aria-label="Workspace">
           {NAV.map(item => {
             const count = 'key' in item && item.key ? counts[item.key] : undefined
-            const isActive = 'active' in item && item.active
+            const isActive = isNavActive(item.href, pathname)
             return (
               <Link
                 key={item.href}

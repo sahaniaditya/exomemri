@@ -3872,3 +3872,115 @@ button.chip {
   color: #9b3b2e;
   padding: 6px 10px 4px;
 }
+
+/* ---------- profile page ---------- */
+.profileHero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.profileAvatar {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+}
+
+.profileName {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.profileHandle {
+  margin-top: 4px;
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 13px;
+  color: var(--sage);
+}
+
+.profileFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 32px;
+  margin: 0;
+}
+
+.profileField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.profileField dt {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+
+.profileField dd {
+  margin: 0;
+  font-size: 15.5px;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.profileMuted {
+  color: var(--muted);
+}
+
+.profileStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 14px 0 24px;
+}
+
+.profileStat {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 16px 18px;
+}
+
+.profileStatVal {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 26px;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.profileStatKey {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sage);
+  margin-top: 10px;
+}
+
+.profileStatHint {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+@media (max-width: 760px) {
+  .profileFields {
+    grid-template-columns: 1fr;
+  }
+
+  .profileStats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
