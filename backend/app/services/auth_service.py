@@ -57,6 +57,10 @@ class AuthService:
             raise NotFoundError("User profile data not found.")
         return profile
 
+    def get_me(self, user: AuthUser) -> dict:
+        """Full profile row plus the auth-layer email (not stored on profiles)."""
+        return {**self.get_profile(user.id), "email": user.email}
+
     def has_completed_onboarding(self, user_id: str) -> bool:
         return self._profiles.get_profile(user_id) is not None
 

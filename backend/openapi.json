@@ -188,6 +188,157 @@
         "title": "ChatMessage",
         "type": "object"
       },
+      "CollaboratorListResponse": {
+        "properties": {
+          "collaborators": {
+            "items": {
+              "$ref": "#/components/schemas/CollaboratorResponse"
+            },
+            "title": "Collaborators",
+            "type": "array"
+          }
+        },
+        "required": [
+          "collaborators"
+        ],
+        "title": "CollaboratorListResponse",
+        "type": "object"
+      },
+      "CollaboratorResponse": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username"
+        ],
+        "title": "CollaboratorResponse",
+        "type": "object"
+      },
+      "ConceptNode": {
+        "description": "A concept in the map. ``degree`` is how many sources reference it.",
+        "properties": {
+          "degree": {
+            "title": "Degree",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "slug",
+          "degree"
+        ],
+        "title": "ConceptNode",
+        "type": "object"
+      },
+      "CoverageResponse": {
+        "properties": {
+          "coverage_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Pct"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/SyllabusTopic"
+            },
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "space_id",
+          "coverage_pct",
+          "topics",
+          "generated_at"
+        ],
+        "title": "CoverageResponse",
+        "type": "object"
+      },
+      "CreateFolderRequest": {
+        "description": "Payload for creating a folder inside a space.",
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateFolderRequest",
+        "type": "object"
+      },
       "CreateSpaceRequest": {
         "description": "Payload for creating a Learning Space, e.g. ``{\"name\": \"Claude Code\"}``.",
         "properties": {
@@ -216,6 +367,90 @@
         "title": "CreateSpaceRequest",
         "type": "object"
       },
+      "FolderListResponse": {
+        "properties": {
+          "folders": {
+            "items": {
+              "$ref": "#/components/schemas/FolderSummary"
+            },
+            "title": "Folders",
+            "type": "array"
+          }
+        },
+        "required": [
+          "folders"
+        ],
+        "title": "FolderListResponse",
+        "type": "object"
+      },
+      "FolderSummary": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_count": {
+            "default": 0,
+            "title": "Source Count",
+            "type": "integer"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "space_id",
+          "name"
+        ],
+        "title": "FolderSummary",
+        "type": "object"
+      },
+      "GraphEdge": {
+        "description": "A source mentioning a concept, weighted by the LLM's salience score.",
+        "properties": {
+          "concept_id": {
+            "format": "uuid",
+            "title": "Concept Id",
+            "type": "string"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "source_id",
+          "concept_id",
+          "weight"
+        ],
+        "title": "GraphEdge",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -227,6 +462,21 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "InviteCollaboratorRequest": {
+        "properties": {
+          "username": {
+            "maxLength": 32,
+            "minLength": 3,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "title": "InviteCollaboratorRequest",
         "type": "object"
       },
       "LoginResponse": {
@@ -280,6 +530,89 @@
         "title": "MessageResponse",
         "type": "object"
       },
+      "NoteImageUploadRequest": {
+        "description": "Ask for a signed PUT URL for a note image under the source prefix.",
+        "properties": {
+          "content_type": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Content Type",
+            "type": "string"
+          },
+          "filename": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Filename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_type",
+          "filename"
+        ],
+        "title": "NoteImageUploadRequest",
+        "type": "object"
+      },
+      "NoteImageUploadResponse": {
+        "description": "Client PUTs bytes to ``upload_url`` with header ``x-upsert: true``.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "upload_url",
+          "token",
+          "path"
+        ],
+        "title": "NoteImageUploadResponse",
+        "type": "object"
+      },
+      "NoteResponse": {
+        "description": "The notebook for one source. Empty content when the user has never saved.",
+        "properties": {
+          "content": {
+            "additionalProperties": true,
+            "title": "Content",
+            "type": "object"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "source_id"
+        ],
+        "title": "NoteResponse",
+        "type": "object"
+      },
       "OnboardingStatusResponse": {
         "properties": {
           "has_completed_onboarding": {
@@ -293,8 +626,32 @@
         "title": "OnboardingStatusResponse",
         "type": "object"
       },
+      "PlanItem": {
+        "properties": {
+          "kind": {
+            "const": "uncovered_topic",
+            "title": "Kind",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "rationale"
+        ],
+        "title": "PlanItem",
+        "type": "object"
+      },
       "ProcessingStatus": {
-        "description": "Lifecycle of a source.\n\nPhase 0 only ever emits ``queued`` (nothing processes it yet); the full\nset is declared here so the generated client contract is stable across\nphases.",
+        "description": "Lifecycle of a captured source through the RAG pipeline.\n\nCapture inserts ``queued``. The background pipeline advances through\nfetching \u2192 chunking \u2192 embedding \u2192 summarizing \u2192 extracting, then\n``ready``. Any stage error lands on ``failed``.",
         "enum": [
           "queued",
           "fetching",
@@ -343,6 +700,140 @@
           "referral_source"
         ],
         "title": "ProfileUpsertRequest",
+        "type": "object"
+      },
+      "ProfileVisibilityRequest": {
+        "properties": {
+          "profile_public": {
+            "title": "Profile Public",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile_public"
+        ],
+        "title": "ProfileVisibilityRequest",
+        "type": "object"
+      },
+      "ProfileVisibilityResponse": {
+        "properties": {
+          "profile_public": {
+            "title": "Profile Public",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile_public"
+        ],
+        "title": "ProfileVisibilityResponse",
+        "type": "object"
+      },
+      "PublicProfileResponse": {
+        "description": "The public-facing subset of a profile.\n\nDeliberately excludes anything onboarding-survey-shaped (``goal_text``,\n``primary_role``, etc.) or content-level (concept labels, syllabus\ntopics, source titles) \u2014 those stay at the sensitivity tier the\nread-only sharing feature already established for invited collaborators,\nnot strangers.",
+        "properties": {
+          "current_streak": {
+            "title": "Current Streak",
+            "type": "integer"
+          },
+          "full_name": {
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "longest_streak": {
+            "title": "Longest Streak",
+            "type": "integer"
+          },
+          "spaces": {
+            "items": {
+              "$ref": "#/components/schemas/PublicSpaceSummary"
+            },
+            "title": "Spaces",
+            "type": "array"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "full_name",
+          "current_streak",
+          "longest_streak",
+          "spaces"
+        ],
+        "title": "PublicProfileResponse",
+        "type": "object"
+      },
+      "PublicSpaceSummary": {
+        "description": "A portfolio tile \u2014 counts only, never source titles, URLs, or content.",
+        "properties": {
+          "coverage_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Pct"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "coverage_pct",
+          "source_count"
+        ],
+        "title": "PublicSpaceSummary",
+        "type": "object"
+      },
+      "RebuildResponse": {
+        "description": "Outcome of one bounded backfill batch.",
+        "properties": {
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "processed": {
+            "title": "Processed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "processed",
+          "failed",
+          "pending"
+        ],
+        "title": "RebuildResponse",
+        "type": "object"
+      },
+      "RenameFolderRequest": {
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RenameFolderRequest",
         "type": "object"
       },
       "SendMessageRequest": {
@@ -413,6 +904,137 @@
         "title": "SetActiveSpaceRequest",
         "type": "object"
       },
+      "SetSourceFolderRequest": {
+        "description": "Assign a capture to a folder, or ``null`` to ungroup it.",
+        "properties": {
+          "folder_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Id"
+          }
+        },
+        "title": "SetSourceFolderRequest",
+        "type": "object"
+      },
+      "SharedSourceListResponse": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SharedSourceSummary"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sources"
+        ],
+        "title": "SharedSourceListResponse",
+        "type": "object"
+      },
+      "SharedSourceSummary": {
+        "description": "One capture shared with the current user \u2014 read-only.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "owner_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Username"
+          },
+          "processing_status": {
+            "$ref": "#/components/schemas/ProcessingStatus"
+          },
+          "shared_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared At"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          },
+          "space_name": {
+            "title": "Space Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "source_id",
+          "title",
+          "type",
+          "processing_status",
+          "space_id",
+          "space_name"
+        ],
+        "title": "SharedSourceSummary",
+        "type": "object"
+      },
       "SourceCounts": {
         "description": "Per-type capture counts for a space, as returned by the counts RPC.",
         "properties": {
@@ -466,6 +1088,42 @@
         "title": "SourceListResponse",
         "type": "object"
       },
+      "SourceNode": {
+        "description": "A captured source in the map, trimmed to what the canvas renders.",
+        "properties": {
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SourceType"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "type"
+        ],
+        "title": "SourceNode",
+        "type": "object"
+      },
       "SourceSummary": {
         "description": "A captured source. ``storage_prefix`` is deliberately not exposed \u2014\nartifacts are reached through ``GET /v1/sources/{id}/artifact-url``.",
         "properties": {
@@ -491,6 +1149,18 @@
               }
             ],
             "title": "Captured At"
+          },
+          "folder_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Id"
           },
           "id": {
             "format": "uuid",
@@ -590,6 +1260,44 @@
         "title": "Space",
         "type": "object"
       },
+      "SpaceGraphResponse": {
+        "description": "The whole map for one space, plus how much of it is still unmapped.",
+        "properties": {
+          "concepts": {
+            "items": {
+              "$ref": "#/components/schemas/ConceptNode"
+            },
+            "title": "Concepts",
+            "type": "array"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceNode"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "concepts",
+          "sources",
+          "edges",
+          "pending"
+        ],
+        "title": "SpaceGraphResponse",
+        "type": "object"
+      },
       "SpaceListResponse": {
         "properties": {
           "spaces": {
@@ -609,6 +1317,17 @@
       "SpaceSummary": {
         "description": "A space plus enough aggregate detail to render a dashboard tile.",
         "properties": {
+          "coverage_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Pct"
+          },
           "created_at": {
             "anyOf": [
               {
@@ -677,6 +1396,83 @@
         "title": "SpaceSummary",
         "type": "object"
       },
+      "StructuredSummary": {
+        "description": "The 4-part per-source summary, as a structured-output envelope.",
+        "properties": {
+          "examples": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Examples",
+            "type": "array"
+          },
+          "interview_points": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Interview Points",
+            "type": "array"
+          },
+          "key_concepts": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Key Concepts",
+            "type": "array"
+          },
+          "tldr": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 5,
+            "title": "Tldr",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tldr",
+          "key_concepts",
+          "examples",
+          "interview_points"
+        ],
+        "title": "StructuredSummary",
+        "type": "object"
+      },
+      "StudyPlanResponse": {
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlanItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "space_id",
+          "items",
+          "generated_at"
+        ],
+        "title": "StudyPlanResponse",
+        "type": "object"
+      },
       "SummaryResponse": {
         "properties": {
           "generated": {
@@ -693,6 +1489,9 @@
               }
             ],
             "title": "Model"
+          },
+          "sections": {
+            "$ref": "#/components/schemas/StructuredSummary"
           },
           "summarized_at": {
             "anyOf": [
@@ -713,11 +1512,33 @@
         },
         "required": [
           "summary",
+          "sections",
           "generated",
           "model",
           "summarized_at"
         ],
         "title": "SummaryResponse",
+        "type": "object"
+      },
+      "SyllabusTopic": {
+        "description": "One inferred syllabus topic and whether captured concepts cover it.",
+        "properties": {
+          "covered": {
+            "title": "Covered",
+            "type": "boolean"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "covered"
+        ],
+        "title": "SyllabusTopic",
         "type": "object"
       },
       "UploadUrlRequest": {
@@ -812,6 +1633,18 @@
           "path"
         ],
         "title": "UploadUrlResponse",
+        "type": "object"
+      },
+      "UpsertNoteRequest": {
+        "description": "Replace the notebook document for a source.",
+        "properties": {
+          "content": {
+            "additionalProperties": true,
+            "title": "Content",
+            "type": "object"
+          }
+        },
+        "title": "UpsertNoteRequest",
         "type": "object"
       },
       "User": {
@@ -915,7 +1748,7 @@
   },
   "info": {
     "description": "Phase 0 thin capture endpoint: writes raw artifacts to Supabase Storage.",
-    "title": "Atlas Capture API",
+    "title": "exomemri Capture API",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
@@ -1218,6 +2051,141 @@
         ]
       }
     },
+    "/v1/profile/visibility": {
+      "get": {
+        "operationId": "get_profile_visibility_v1_profile_visibility_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileVisibilityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Profile Visibility",
+        "tags": [
+          "profile"
+        ]
+      },
+      "put": {
+        "operationId": "set_profile_visibility_v1_profile_visibility_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileVisibilityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Profile Visibility",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/v1/profiles/{username}": {
+      "get": {
+        "description": "A user's opted-in public profile. No authentication required.",
+        "operationId": "get_public_profile_v1_profiles__username__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Public Profile",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
     "/v1/session": {
       "get": {
         "operationId": "get_session_v1_session_get",
@@ -1302,6 +2270,49 @@
         "summary": "Set Active Space",
         "tags": [
           "session"
+        ]
+      }
+    },
+    "/v1/shared-with-me": {
+      "get": {
+        "description": "Captures another Atlas user has shared read-only access to with me.",
+        "operationId": "list_shared_with_me_v1_shared_with_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedSourceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Shared With Me",
+        "tags": [
+          "sharing"
         ]
       }
     },
@@ -1524,6 +2535,235 @@
         ]
       }
     },
+    "/v1/sources/{source_id}/collaborators": {
+      "get": {
+        "operationId": "list_collaborators_v1_sources__source_id__collaborators_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollaboratorListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Collaborators",
+        "tags": [
+          "sharing"
+        ]
+      },
+      "post": {
+        "operationId": "invite_collaborator_v1_sources__source_id__collaborators_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteCollaboratorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollaboratorResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Invite Collaborator",
+        "tags": [
+          "sharing"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/collaborators/{collaborator_user_id}": {
+      "delete": {
+        "operationId": "revoke_collaborator_v1_sources__source_id__collaborators__collaborator_user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "collaborator_user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collaborator User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Collaborator",
+        "tags": [
+          "sharing"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/folder": {
+      "patch": {
+        "operationId": "set_source_folder_v1_sources__source_id__folder_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetSourceFolderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Source Folder",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
     "/v1/sources/{source_id}/messages": {
       "get": {
         "operationId": "get_messages_v1_sources__source_id__messages_get",
@@ -1631,6 +2871,180 @@
           }
         },
         "summary": "Post Message",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/note-images": {
+      "post": {
+        "operationId": "create_note_image_upload_v1_sources__source_id__note_images_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteImageUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteImageUploadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Note Image Upload",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/notes": {
+      "get": {
+        "operationId": "get_note_v1_sources__source_id__notes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Note",
+        "tags": [
+          "sources"
+        ]
+      },
+      "put": {
+        "operationId": "put_note_v1_sources__source_id__notes_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Note",
         "tags": [
           "sources"
         ]
@@ -1777,6 +3191,455 @@
         "summary": "Create Space",
         "tags": [
           "spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/coverage": {
+      "get": {
+        "description": "The space's inferred syllabus and how much of it is covered.\n\nGenerated on first read and cached; regenerated automatically once the\nspace's mapped concepts change since the last generation.",
+        "operationId": "get_space_coverage_v1_spaces__space_id__coverage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Space Coverage",
+        "tags": [
+          "coverage"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/folders": {
+      "get": {
+        "operationId": "list_space_folders_v1_spaces__space_id__folders_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Space Folders",
+        "tags": [
+          "spaces"
+        ]
+      },
+      "post": {
+        "operationId": "create_space_folder_v1_spaces__space_id__folders_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Space Folder",
+        "tags": [
+          "spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/folders/{folder_id}": {
+      "delete": {
+        "operationId": "delete_space_folder_v1_spaces__space_id__folders__folder_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "folder_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Folder Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Space Folder",
+        "tags": [
+          "spaces"
+        ]
+      },
+      "patch": {
+        "operationId": "rename_space_folder_v1_spaces__space_id__folders__folder_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "folder_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Folder Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameFolderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rename Space Folder",
+        "tags": [
+          "spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/graph": {
+      "get": {
+        "description": "Every concept, source and edge in one space \u2014 the map's whole payload.",
+        "operationId": "get_space_graph_v1_spaces__space_id__graph_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceGraphResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Space Graph",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/graph/rebuild": {
+      "post": {
+        "description": "Extract concepts for one bounded batch of not-yet-mapped sources.\n\nNew captures are mapped automatically by the capture pipeline; this exists\nfor sources captured before the map shipped, and for retrying ones whose\npipeline run failed. Bounded per call, so the client loops until\n``pending`` is 0.",
+        "operationId": "rebuild_space_graph_v1_spaces__space_id__graph_rebuild_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RebuildResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rebuild Space Graph",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/plan": {
+      "get": {
+        "description": "Uncovered coverage topics, sequenced as the next-to-study list.\n\nNo new gap detection and nothing cached \u2014 composed fresh from coverage\non every call.",
+        "operationId": "get_study_plan_v1_spaces__space_id__plan_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyPlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Study Plan",
+        "tags": [
+          "plan"
         ]
       }
     },

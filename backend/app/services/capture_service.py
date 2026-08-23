@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from datetime import UTC, datetime
 from functools import partial
 from uuid import UUID, uuid4
@@ -28,6 +29,7 @@ from app.schemas.sources import (
 )
 from app.schemas.spaces import ArtifactUrlResponse
 from app.services.space_service import SpaceService
+from app.services.streak_service import StreakService
 
 logger = logging.getLogger(__name__)
 
@@ -47,21 +49,34 @@ ALLOWED_ARTIFACT_KEYS = frozenset(
     }
 )
 
+# Note-image keys minted by NoteService: notes/images/<uuid>.<ext>
+NOTE_IMAGE_KEY_RE = re.compile(
+    r"^notes/images/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    r"\.(jpg|jpeg|png|webp|gif)$",
+    re.IGNORECASE,
+)
+
+
+def is_note_image_key(key: str) -> bool:
+    """True when ``key`` is a safe notes/images/<uuid>.<ext> relative path."""
+    return bool(NOTE_IMAGE_KEY_RE.match(key.strip().lstrip("/")))
+
 
 def _validated_artifact_key(key: str) -> str:
     """Guard the object key against traversal and against probing the bucket.
 
     An allowlist rather than sanitization: the capture flow writes a known,
     closed set of keys, so anything else is a bug or an attempt to walk the
-    bucket with someone else's prefix.
+    bucket with someone else's prefix. Note images use a UUID path under
+    ``notes/images/``.
     """
     clean = key.strip().lstrip("/")
-    if clean not in ALLOWED_ARTIFACT_KEYS:
-        raise ValidationError(
-            "Unknown artifact key.",
-            detail={"key": key, "allowed": sorted(ALLOWED_ARTIFACT_KEYS)},
-        )
-    return clean
+    if clean in ALLOWED_ARTIFACT_KEYS or is_note_image_key(clean):
+        return clean
+    raise ValidationError(
+        "Unknown artifact key.",
+        detail={"key": key, "allowed": sorted(ALLOWED_ARTIFACT_KEYS)},
+    )
 
 
 def compute_content_hash(content: str | None, url: str | None) -> str:
@@ -80,11 +95,16 @@ def build_source_prefix(user_id: UUID, space_id: UUID, source_id: UUID) -> str:
 
 class CaptureService:
     def __init__(
-        self, settings: Settings, storage: StorageRepo, spaces: SpaceService
+        self,
+        settings: Settings,
+        storage: StorageRepo,
+        spaces: SpaceService,
+        streaks: StreakService,
     ) -> None:
         self._settings = settings
         self._storage = storage
         self._spaces = spaces
+        self._streaks = streaks
 
     async def _write_meta(
         self,
@@ -172,6 +192,8 @@ class CaptureService:
             captured_at=captured_at,
         )
 
+        await self._record_activity(user)
+
         logger.info(
             "source_captured",
             extra={
@@ -251,6 +273,8 @@ class CaptureService:
             captured_at=captured_at,
         )
 
+        await self._record_activity(user)
+
         return UploadUrlResponse(
             source_id=UUID(row["id"]),
             processing_status=ProcessingStatus.queued,
@@ -262,14 +286,17 @@ class CaptureService:
     async def artifact_url(
         self, *, user: User, source_id: UUID, key: str
     ) -> ArtifactUrlResponse:
-        """Short-lived signed GET URL for one artifact of an owned source.
+        """Short-lived signed GET URL for one artifact of a viewable source.
 
         The bucket is private, so this is the only way the web app reads a
         captured artifact. The path is always resolved against the row's own
         ``storage_prefix`` — a client-supplied path is never used directly.
+        A per-source collaborator can read; they cannot walk into another
+        source's prefix because the key is allowlisted and joined onto this
+        row's prefix.
         """
         source = await anyio.to_thread.run_sync(
-            partial(self._spaces.require_owned_source, user, source_id)
+            partial(self._spaces.require_viewable_source, user, source_id)
         )
         path = f"{source['storage_prefix']}/{_validated_artifact_key(key)}"
         url = await self._storage.create_signed_url(path, ARTIFACT_URL_TTL_SECONDS)
@@ -321,6 +348,9 @@ class CaptureService:
                 captured_at=captured_at,
             )
         )
+
+    async def _record_activity(self, user: User) -> None:
+        await anyio.to_thread.run_sync(partial(self._streaks.record_activity, str(user.id)))
 
     def _absolute_upload_url(self, signed_url: str) -> str:
         base = self._settings.supabase_url.rstrip("/")

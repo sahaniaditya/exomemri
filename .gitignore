@@ -1,1 +1,7 @@
 docs/
+
+# Extension MV3 build. WXT writes `.output/`; this repo previously
+# committed an unpacked build at `output/` — ignore both so neither
+# comes back.
+extension/.output/
+extension/output/

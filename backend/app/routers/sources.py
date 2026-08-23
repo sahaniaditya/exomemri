@@ -4,15 +4,23 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 
 from app.dependencies import (
     get_authenticated_app_user,
     get_capture_service,
+    get_note_service,
+    get_pipeline_service,
     get_source_chat_service,
     get_space_service,
 )
 from app.schemas.common import User
+from app.schemas.notes import (
+    NoteImageUploadRequest,
+    NoteImageUploadResponse,
+    NoteResponse,
+    UpsertNoteRequest,
+)
 from app.schemas.sources import (
     CaptureRequest,
     CaptureResponse,
@@ -23,8 +31,15 @@ from app.schemas.sources import (
     UploadUrlRequest,
     UploadUrlResponse,
 )
-from app.schemas.spaces import ArtifactUrlResponse, SourceListResponse
+from app.schemas.spaces import (
+    ArtifactUrlResponse,
+    SetSourceFolderRequest,
+    SourceListResponse,
+    SourceSummary,
+)
 from app.services.capture_service import CaptureService
+from app.services.note_service import NoteService
+from app.services.pipeline_service import PipelineService
 from app.services.source_chat_service import SourceChatService
 from app.services.space_service import SpaceService
 
@@ -34,10 +49,17 @@ router = APIRouter(prefix="/sources", tags=["sources"])
 @router.post("", status_code=status.HTTP_202_ACCEPTED, response_model=CaptureResponse)
 async def capture_source(
     body: CaptureRequest,
+    background_tasks: BackgroundTasks,
     user: User = Depends(get_authenticated_app_user),
     svc: CaptureService = Depends(get_capture_service),
+    pipeline: PipelineService = Depends(get_pipeline_service),
 ) -> CaptureResponse:
-    return await svc.capture(user=user, payload=body)
+    result = await svc.capture(user=user, payload=body)
+    # Fired after the response is sent — capture itself never calls an LLM.
+    background_tasks.add_task(
+        pipeline.run, user=user, source_id=result.source_id, space_id=body.space_id
+    )
+    return result
 
 
 @router.post("/upload-url", response_model=UploadUrlResponse)
@@ -92,3 +114,43 @@ async def post_message(
     svc: SourceChatService = Depends(get_source_chat_service),
 ) -> SendMessageResponse:
     return await svc.send_message(user=user, source_id=source_id, content=body.content)
+
+
+@router.get("/{source_id}/notes", response_model=NoteResponse)
+async def get_note(
+    source_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> NoteResponse:
+    return await svc.get_note(user=user, source_id=source_id)
+
+
+@router.put("/{source_id}/notes", response_model=NoteResponse)
+async def put_note(
+    source_id: UUID,
+    body: UpsertNoteRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> NoteResponse:
+    return await svc.upsert_note(user=user, source_id=source_id, payload=body)
+
+
+@router.post("/{source_id}/note-images", response_model=NoteImageUploadResponse)
+async def create_note_image_upload(
+    source_id: UUID,
+    body: NoteImageUploadRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> NoteImageUploadResponse:
+    return await svc.create_image_upload(user=user, source_id=source_id, payload=body)
+
+
+@router.patch("/{source_id}/folder", response_model=SourceSummary)
+def set_source_folder(
+    source_id: UUID,
+    body: SetSourceFolderRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: SpaceService = Depends(get_space_service),
+) -> SourceSummary:
+    return svc.set_source_folder(user, source_id, body.folder_id)
+

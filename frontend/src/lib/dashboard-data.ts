@@ -2,10 +2,10 @@
  * Dashboard view model.
  *
  * Spaces and captured sources are real now (`GET /v1/spaces`, `GET /v1/sources`)
- * and reach the page through the mappers at the bottom of this file. Stats, the
- * review queue, study gaps and the activity timeline still have no read
- * endpoints, so `getDashboardData()` remains placeholder data shaped like the
- * eventual API response for those sections only.
+ * and reach the page through the mappers at the bottom of this file. Stats,
+ * study gaps and the activity timeline still have no read endpoints, so
+ * `getDashboardData()` remains placeholder data shaped like the eventual API
+ * response for those sections only.
  */
 import type { Source, Space, SourceType } from '@/lib/spaces'
 
@@ -41,8 +41,9 @@ export interface LearningSpace {
   id: string
   name: string
   slug: string
-  /** No coverage signal exists yet — real spaces report 0 until one does. */
-  coverage: number
+  /** Null until a coverage computation has run for this space (e.g. no
+   * concepts mapped yet) — not 0, which would read as "assessed and empty". */
+  coverage: number | null
   counts: { video: number; article: number; pdf: number; chat: number; note: number }
   lastActive: string
 }
@@ -55,12 +56,25 @@ export interface CapturedSource {
   kind: SourceKind
   meta: string
   capturedAt: string
-  status: 'summarized' | 'summarizing'
+  /** Derived from backend `processing_status`. */
+  status: CaptureStatus
+  /** Original article / video URL when the capture had one. */
+  url: string | null
+  folderId: string | null
 }
 
-export interface ReviewQueue {
-  total: number
-  breakdown: { spaceName: string; count: number }[]
+/** Terminal + in-flight labels the capture feed / detail chrome show. */
+export type CaptureStatus = 'ready' | 'processing' | 'failed'
+
+/** Collapse the pipeline enum into the three user-facing states. */
+export function captureStatus(processingStatus: string): CaptureStatus {
+  if (processingStatus === 'ready') return 'ready'
+  if (processingStatus === 'failed') return 'failed'
+  return 'processing'
+}
+
+export function isCaptureProcessing(status: CaptureStatus): boolean {
+  return status === 'processing'
 }
 
 export interface StudyGap {
@@ -81,7 +95,6 @@ export interface ActivityDay {
 export interface DashboardData {
   resume: ResumeItem | null
   stats: StatCard[]
-  review: ReviewQueue
   gaps: StudyGap[]
   week: { days: ActivityDay[]; deltaLabel: string }
   streakDays: number
@@ -114,20 +127,12 @@ export function getDashboardData(totals: DashboardTotals): DashboardData {
       { value: String(totals.spaceCount), label: 'Learning Spaces', delta: 'all time' },
       { value: '68', unit: '%', label: 'Avg. coverage', delta: 'across all spaces' },
     ],
-    review: {
-      total: 18,
-      breakdown: [
-        { spaceName: 'System Design', count: 9 },
-        { spaceName: 'Databases', count: 6 },
-        { spaceName: 'ML', count: 3 },
-      ],
-    },
     gaps: [
       {
         id: 'g1',
         concept: 'Quorum reads & writes',
         spaceName: 'Distributed Databases',
-        reason: 'saved, not reviewed',
+        reason: 'saved, not studied',
       },
       {
         id: 'g2',
@@ -163,7 +168,8 @@ export function getDashboardData(totals: DashboardTotals): DashboardData {
 
 // --- API → view model ---
 
-const SOURCE_KIND: Record<SourceType, SourceKind> = {
+/** Shared with `lib/graph.ts`, which needs the same mapping for map nodes. */
+export const SOURCE_KIND: Record<SourceType, SourceKind> = {
   youtube: 'video',
   article: 'article',
   ai_chat: 'chat',
@@ -208,7 +214,7 @@ export function toLearningSpace(space: Space): LearningSpace {
     id: space.id,
     name: space.name,
     slug: space.slug,
-    coverage: 0,
+    coverage: space.coverage_pct,
     counts: {
       video: counts.youtube,
       article: counts.article,
@@ -227,13 +233,14 @@ export function toCapturedSource(source: Source): CapturedSource {
     id: source.id,
     title: source.title,
     spaceName: source.space_name ?? '—',
-    spaceId:source.space_id,
+    spaceId: source.space_id,
     kind: SOURCE_KIND[source.type],
     meta: source.author
       ? `${SOURCE_LABEL[source.type]} · ${source.author}`
       : SOURCE_LABEL[source.type],
     capturedAt: relativeTime(source.captured_at),
-    // Nothing processes captures yet, so anything not `ready` is still in flight.
-    status: source.processing_status === 'ready' ? 'summarized' : 'summarizing',
+    status: captureStatus(source.processing_status),
+    url: source.url,
+    folderId: source.folder_id ?? null,
   }
 }

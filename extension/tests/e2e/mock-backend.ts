@@ -1,5 +1,5 @@
 /**
- * Minimal in-process stand-in for the Atlas capture backend.
+ * Minimal in-process stand-in for the exomemri capture backend.
  *
  * Runs on http://localhost:8000 (the URL the extension was built with) so the
  * background worker's fetches hit it for real — deterministic and with no

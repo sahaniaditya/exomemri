@@ -1,6 +1,7 @@
 # WXT
 .wxt/
 .output/
+output/
 stats.html
 stats-*.json
 

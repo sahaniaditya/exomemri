@@ -27,6 +27,39 @@ export const EXTENSION_SESSION_KEY = "atlas.session"
  */
 export const EXTENSION_SESSION_EVENT = "atlas:session-updated"
 
+/**
+ * Durable marker saying "this page is the Atlas web app", written once on
+ * mount and never removed — including while signed out.
+ *
+ * The extension reads tabs directly (it cannot rely on a content script being
+ * injected), and in dev every `localhost` port is a trusted origin. Without
+ * this marker the extension cannot tell a signed-out Atlas tab from an
+ * unrelated `localhost:8000` tab, and would sign the user out on seeing the
+ * latter. Keep in sync with `APP_MARKER_KEY` in
+ * `extension/src/lib/session-blob.ts`.
+ */
+export const EXTENSION_APP_MARKER_KEY = "atlas.app"
+
+/**
+ * How often an open tab re-mirrors the session, comfortably inside the access
+ * token's 1-hour lifetime.
+ *
+ * The extension treats an expired blob as signed out, so the mirror has to be
+ * refreshed while the tab sits open — otherwise the popup goes "signed out"
+ * an hour into a session the dashboard still considers live.
+ */
+export const EXTENSION_SESSION_REFRESH_MS = 15 * 60 * 1000
+
+/** Stamp this origin as the Atlas web app (idempotent, no-op on the server). */
+export function markExtensionHost(): void {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.setItem(EXTENSION_APP_MARKER_KEY, "1")
+  } catch {
+    // Site data blocked — the extension falls back to its other signals.
+  }
+}
+
 function announce(): void {
   if (typeof window === "undefined") return
   window.dispatchEvent(new Event(EXTENSION_SESSION_EVENT))
@@ -98,10 +131,13 @@ export function clearExtensionSession(): void {
  */
 export async function refreshExtensionSession(): Promise<void> {
   try {
-    const res = await fetch("/api/auth/bridge-session")
+    const res = await fetch("/api/auth/bridge-session", {
+      cache: "no-store",
+      credentials: "include",
+    })
     if (res.ok) {
       writeExtensionSession((await res.json()) as BridgeSessionResponse)
-    } else {
+    } else if (res.status === 401 || res.status === 403) {
       clearExtensionSession()
     }
   } catch {

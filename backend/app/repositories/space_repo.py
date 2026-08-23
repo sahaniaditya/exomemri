@@ -57,6 +57,21 @@ class SpaceRepo:
         )
         return res.data if res else None
 
+    def get_space_any(self, *, space_id: str) -> dict | None:
+        """Return the space with no owner filter.
+
+        Left for callers that have already authorized access some other way.
+        Sharing is per-source now, so space-level viewability is not a thing.
+        """
+        res = (
+            self._client.table("spaces")
+            .select("*")
+            .eq("id", space_id)
+            .maybe_single()
+            .execute()
+        )
+        return res.data if res else None
+
     def slug_exists(self, *, user_id: str, slug: str) -> bool:
         res = (
             self._client.table("spaces")
@@ -139,6 +154,33 @@ class SpaceRepo:
         res = query.order("captured_at", desc=True).limit(limit).execute()
         return res.data or []
 
+    def list_sources_for_space(self, *, space_id: str, limit: int = 20) -> list[dict]:
+        """Sources in one space, with no owner filter.
+
+        The caller must already have authorized access to ``space_id``;
+        this method itself enforces nothing.
+        """
+        res = (
+            self._client.table("sources")
+            .select("*, spaces(name, slug)")
+            .eq("space_id", space_id)
+            .order("captured_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+
+    def get_source_any(self, *, source_id: str) -> dict | None:
+        """Return the source with no owner filter — see ``list_sources_for_space``."""
+        res = (
+            self._client.table("sources")
+            .select("*")
+            .eq("id", source_id)
+            .maybe_single()
+            .execute()
+        )
+        return res.data if res else None
+
     def get_source(self, *, user_id: str, source_id: str) -> dict | None:
         """Return the source only if it belongs to ``user_id`` (authorization)."""
         res = (
@@ -152,15 +194,51 @@ class SpaceRepo:
         return res.data if res else None
 
     def update_source_summary(
-            self, *, source_id: str, summary_text: str, summary_model: str, summarized_at: str
-        ) -> None:
-            self._client.table("sources").update(
-                {
-                    "summary_text": summary_text,
-                    "summary_model": summary_model,
-                    "summarized_at": summarized_at,
-                }
-            ).eq("id", source_id).execute()
+        self,
+        *,
+        source_id: str,
+        summary_text: str,
+        summary_sections: dict,
+        summary_model: str,
+        summarized_at: str,
+    ) -> None:
+        self._client.table("sources").update(
+            {
+                "summary_text": summary_text,
+                "summary_sections": summary_sections,
+                "summary_model": summary_model,
+                "summarized_at": summarized_at,
+            }
+        ).eq("id", source_id).execute()
+
+    def update_processing_status(self, *, source_id: str, status: str) -> None:
+        self._client.table("sources").update(
+            {"processing_status": status}
+        ).eq("id", source_id).execute()
+
+    def list_unextracted_sources(self, *, space_id: str, limit: int) -> list[dict]:
+        """Sources in a space with no concept extraction yet, oldest first.
+
+        Oldest-first so a repeatedly-called backfill makes monotonic progress
+        instead of re-picking the same recent rows.
+        """
+        res = (
+            self._client.table("sources")
+            .select("*")
+            .eq("space_id", space_id)
+            .is_("concepts_extracted_at", "null")
+            .order("captured_at")
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []
+
+    def mark_concepts_extracted(
+        self, *, source_id: str, model: str, extracted_at: str
+    ) -> None:
+        self._client.table("sources").update(
+            {"concepts_model": model, "concepts_extracted_at": extracted_at}
+        ).eq("id", source_id).execute()
 
     def list_source_messages(self, *, source_id: str) -> list[dict]:
         res = (
@@ -183,4 +261,72 @@ class SpaceRepo:
             "content": content,
         }
         res = self._client.table("source_messages").insert(row).execute()
+        return res.data[0]
+
+
+    # --- folders ---
+
+    def create_folder(self, *, space_id: str, user_id: str, name: str) -> dict:
+        res = (
+            self._client.table("space_folders")
+            .insert({"space_id": space_id, "user_id": user_id, "name": name})
+            .execute()
+        )
+        return res.data[0]
+
+    def list_folders(self, *, space_id: str) -> list[dict]:
+        """Folders in a space, with per-folder source counts, name-sorted."""
+        res = (
+            self._client.table("space_folders")
+            .select("*")
+            .eq("space_id", space_id)
+            .order("name")
+            .execute()
+        )
+        folders = res.data or []
+        counts_res = (
+            self._client.table("sources")
+            .select("folder_id")
+            .eq("space_id", space_id)
+            .execute()
+        )
+        counts: dict[str, int] = {}
+        for row in counts_res.data or []:
+            fid = row.get("folder_id")
+            if fid:
+                counts[fid] = counts.get(fid, 0) + 1
+        for folder in folders:
+            folder["source_count"] = counts.get(folder["id"], 0)
+        return folders
+
+    def get_folder(self, *, space_id: str, folder_id: str) -> dict | None:
+        res = (
+            self._client.table("space_folders")
+            .select("*")
+            .eq("id", folder_id)
+            .eq("space_id", space_id)
+            .maybe_single()
+            .execute()
+        )
+        return res.data if res else None
+
+    def rename_folder(self, *, folder_id: str, name: str) -> dict:
+        res = (
+            self._client.table("space_folders")
+            .update({"name": name})
+            .eq("id", folder_id)
+            .execute()
+        )
+        return res.data[0]
+
+    def delete_folder(self, *, folder_id: str) -> None:
+        self._client.table("space_folders").delete().eq("id", folder_id).execute()
+
+    def set_source_folder(self, *, source_id: str, folder_id: str | None) -> dict:
+        res = (
+            self._client.table("sources")
+            .update({"folder_id": folder_id})
+            .eq("id", source_id)
+            .execute()
+        )
         return res.data[0]

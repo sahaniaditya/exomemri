@@ -16,7 +16,7 @@ import { requireActiveSpaceId } from "./session"
 /** Turn a backend error into user-facing copy, calling out expired sessions. */
 function captureErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError && err.status === 401) {
-    return "Session expired — reopen atlas.ai to refresh."
+    return "Session expired — reopen exomemri to refresh."
   }
   return err instanceof Error ? err.message : fallback
 }

@@ -47,7 +47,7 @@ def get_me(
     svc: AuthService = Depends(get_auth_service),
 ) -> dict:
     """Return the full profile row for the authenticated user."""
-    return svc.get_profile(user.id)
+    return svc.get_me(user)
 
 
 @router.get("/profile-status", response_model=OnboardingStatusResponse)
