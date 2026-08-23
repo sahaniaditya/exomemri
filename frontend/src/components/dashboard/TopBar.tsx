@@ -4,9 +4,8 @@
  * Overview account chrome + greeting. Greeting/date are clock-local (see
  * useSyncExternalStore below); counts come from the server page.
  */
-import { useRouter } from 'next/navigation'
 import { useSyncExternalStore } from 'react'
-import { clearExtensionSession } from '@/lib/extension-session'
+import { useLogout } from '@/lib/use-logout'
 import { initial, type Profile } from '@/lib/profile'
 import styles from './dashboard.module.css'
 
@@ -53,20 +52,10 @@ export default function TopBar({
   streakDays = 0,
   variant = 'hero',
 }: TopBarProps) {
-  const router = useRouter()
+  const { logout, loggingOut } = useLogout()
   const clock = useSyncExternalStore<Clock | null>(subscribe, getClientClock, () => null)
   const name = profile?.full_name?.split(' ')[0] ?? 'there'
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-    } catch (error) {
-      console.error('Logout failed:', error)
-    } finally {
-      clearExtensionSession()
-      router.push('/login')
-    }
-  }
 
   const empty = totalSources === 0
   const account = (
@@ -79,7 +68,8 @@ export default function TopBar({
       <button
         type="button"
         className={styles.signout}
-        onClick={handleLogout}
+        onClick={() => void logout()}
+        disabled={loggingOut}
         title="Sign out"
         aria-label="Sign out"
       >

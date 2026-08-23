@@ -63,15 +63,21 @@ class SharingService:
     def list_collaborators(self, owner: User, space_id: UUID) -> list[CollaboratorResponse]:
         self._spaces.require_owned_space(owner, space_id)
         rows = self._collaborators.list_for_space(space_id=str(space_id))
-        return [
-            CollaboratorResponse(
-                user_id=UUID(row["user_id"]),
-                username=(row.get("profiles") or {}).get("username", ""),
-                full_name=(row.get("profiles") or {}).get("full_name"),
-                created_at=row.get("created_at"),
+        # Resolve profiles separately — PostgREST cannot embed profiles until
+        # space_collaborators.user_id has an FK to public.profiles (it only
+        # references auth.users today).
+        out: list[CollaboratorResponse] = []
+        for row in rows:
+            profile = self._profiles.get_profile(row["user_id"]) or {}
+            out.append(
+                CollaboratorResponse(
+                    user_id=UUID(row["user_id"]),
+                    username=profile.get("username", ""),
+                    full_name=profile.get("full_name"),
+                    created_at=row.get("created_at"),
+                )
             )
-            for row in rows
-        ]
+        return out
 
     def list_shared_with_me(self, user: User) -> list[SharedSpaceSummary]:
         rows = self._collaborators.list_for_user(user_id=str(user.id))

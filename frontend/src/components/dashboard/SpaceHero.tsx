@@ -5,9 +5,8 @@
  * path into the knowledge map. Account chrome lives here so the page doesn't
  * stack a second greeting under the overview TopBar.
  */
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { clearExtensionSession } from '@/lib/extension-session'
+import { useLogout } from '@/lib/use-logout'
 import { initial, type Profile } from '@/lib/profile'
 import { relativeTime } from '@/lib/dashboard-data'
 import type { Space } from '@/lib/spaces'
@@ -28,20 +27,10 @@ const MIX: { key: keyof Space['source_counts']; label: string }[] = [
 ]
 
 export default function SpaceHero({ space, profile, sourceCount }: SpaceHeroProps) {
-  const router = useRouter()
+  const { logout, loggingOut } = useLogout()
   const empty = sourceCount === 0
   const activeMix = MIX.filter(item => space.source_counts[item.key] > 0)
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-    } catch (error) {
-      console.error('Logout failed:', error)
-    } finally {
-      clearExtensionSession()
-      router.push('/login')
-    }
-  }
 
   return (
     <header className={styles.spaceHero}>
@@ -85,7 +74,8 @@ export default function SpaceHero({ space, profile, sourceCount }: SpaceHeroProp
           <button
             type="button"
             className={styles.signout}
-            onClick={handleLogout}
+            onClick={() => void logout()}
+            disabled={loggingOut}
             title="Sign out"
             aria-label="Sign out"
           >

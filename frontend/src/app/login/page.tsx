@@ -3,10 +3,10 @@
 import { useState } from 'react'
 
 import { useRouter } from 'next/navigation'
-import { apiFetch } from "@/lib/api"
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { Lockup } from '@/components/brand/Lockup'
+import { refreshExtensionSession } from '@/lib/extension-session'
 
 function ContourBg() {
   return (
@@ -62,12 +62,13 @@ const handleEmailSignIn = async (e: React.FormEvent) => {
     const data = await res.json()
     if (!res.ok) throw new Error(data.detail || "Invalid credentials.")
 
-   
-   
-
+    await refreshExtensionSession()
     router.push(data.redirectTo)
-  } catch (error: any) {
-    setMessage({ text: error.message, type: 'error' })
+  } catch (error) {
+    setMessage({
+      text: error instanceof Error ? error.message : "Invalid credentials.",
+      type: "error",
+    })
   } finally {
     setLoading(false)
   }

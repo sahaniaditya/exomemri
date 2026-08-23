@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import SessionSync from "@/components/SessionSync";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -48,6 +49,7 @@ export default function RootLayout({
         style={{ backgroundColor: "#F4F1E9" }}
       >
         {children}
+        <SessionSync />
       </body>
     </html>
   );

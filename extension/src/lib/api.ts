@@ -1,5 +1,5 @@
 /**
- * Typed client for the Atlas capture backend.
+ * Typed client for the exomemri capture backend.
  *
  * Only the background worker imports this. Every request carries the logged-in
  * user's Supabase JWT (from the stored session) as a Bearer token; the backend

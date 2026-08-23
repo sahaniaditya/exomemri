@@ -49,10 +49,10 @@ class CollaboratorRepo:
         return bool(res and res.data)
 
     def list_for_space(self, *, space_id: str) -> list[dict]:
-        """Collaborators on one space, with their profile joined for display."""
+        """Collaborators on one space (profile fields resolved in the service)."""
         res = (
             self._client.table("space_collaborators")
-            .select("*, profiles(username, full_name)")
+            .select("*")
             .eq("space_id", space_id)
             .order("created_at")
             .execute()

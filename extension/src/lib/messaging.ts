@@ -9,6 +9,7 @@
 import { defineExtensionMessaging } from "@webext-core/messaging"
 
 import type { ExtractedCapture, SessionResponse, SpaceSummary } from "./contracts"
+import type { TabSessionRead } from "./read-tab-session"
 import type { StoredSession } from "./session-blob"
 
 /** Input for a PDF capture: the background fetches + PUTs the bytes itself. */
@@ -37,6 +38,10 @@ export interface ProtocolMap {
   syncSession(blob: StoredSession): { ok: boolean }
   /** Clear the stored session — signed out on the web app. */
   clearSession(): { ok: boolean }
+  /** Popup → background: persist a localStorage read taken from the active tab. */
+  ingestPageSession(payload: TabSessionRead & { url: string }): { ok: boolean }
+  /** Popup → background: re-read every reachable exomemri tab. */
+  resyncSession(): { ok: boolean }
 }
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>()

@@ -64,3 +64,16 @@ export function parseStoredSession(input: unknown): StoredSession | null {
     updated_at: typeof o.updated_at === "number" ? o.updated_at : 0,
   }
 }
+
+/**
+ * Durable marker the web app stamps into its own `localStorage` (see
+ * `frontend/src/lib/extension-session.ts`), independent of whether anyone is
+ * signed in.
+ *
+ * It answers a question the origin alone cannot: "is this page actually the
+ * exomemri web app?" Every `localhost` port is a trusted origin in dev, so
+ * without this marker an unrelated tab (the backend's `:8000/docs`, say) would
+ * look like a signed-out exomemri app and wipe a perfectly good session. Absence
+ * of `atlas.session` only means "signed out" on a page carrying this marker.
+ */
+export const APP_MARKER_KEY = "atlas.app"

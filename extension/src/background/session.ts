@@ -7,14 +7,48 @@
  * shapes it into the `SessionResponse` the popup already understands. No
  * `GET /v1/session` on the hot path — initialization is local and instant.
  */
-import { api } from "../lib/api"
+import { api, ApiError } from "../lib/api"
 import type { SessionResponse, SpaceSummary } from "../lib/contracts"
-import { readSession, writeSession } from "../lib/session-store"
+import { clearSession, readSession, writeSession } from "../lib/session-store"
+
+const SIGNED_OUT = "Signed out"
+
+/**
+ * Clock skew allowance on the mirrored token's expiry. The web app re-mirrors
+ * well before this fires (see frontend `SessionSync`); this is the backstop for
+ * a blob left behind by a browser that was closed for an hour.
+ */
+const EXPIRY_SKEW_SECONDS = 30
+
+/**
+ * Wrap a call that needs the stored token: a 401 means the mirrored token is no
+ * longer good, so drop it rather than leaving the popup showing a stale
+ * identity next to an error it cannot explain.
+ */
+async function withSessionInvalidation<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call()
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      await clearSession()
+      throw new Error(SIGNED_OUT, { cause: error })
+    }
+    throw error
+  }
+}
 
 /** Build the current session from the stored blob; throws if signed out. */
 export async function fetchSession(): Promise<SessionResponse> {
   const stored = await readSession()
-  if (!stored) throw new Error("Signed out")
+  if (!stored) throw new Error(SIGNED_OUT)
+
+  // An expired mirror is not a session. Treating it as one is what produced a
+  // popup showing an email next to "couldn't load spaces".
+  const now = Math.floor(Date.now() / 1000)
+  if (stored.expires_at > 0 && stored.expires_at + EXPIRY_SKEW_SECONDS < now) {
+    await clearSession()
+    throw new Error(SIGNED_OUT)
+  }
 
   // Belt-and-braces. The web app now announces its writes so the bridge relays
   // a newly created space immediately, but if that relay never arrived (a blob
@@ -22,7 +56,12 @@ export async function fetchSession(): Promise<SessionResponse> {
   // stuck with Save disabled. Only the no-active-space case pays for a request;
   // the normal path stays a local, instant read.
   if (!stored.space_id) {
-    const remote = await api.getSession().catch(() => null)
+    const remote = await withSessionInvalidation(() => api.getSession()).catch(
+      (error: unknown) => {
+        if (error instanceof Error && error.message === SIGNED_OUT) throw error
+        return null
+      },
+    )
     if (remote?.active_space) {
       await writeSession({
         ...stored,
@@ -49,9 +88,9 @@ export async function getActiveSpace(): Promise<SessionResponse["active_space"]>
 
 /** Active space id, or throw if signed out / no active space. */
 export async function requireActiveSpaceId(): Promise<string> {
-  const stored = await readSession()
-  if (!stored?.space_id) throw new Error("No active learning space")
-  return stored.space_id
+  const { active_space } = await fetchSession()
+  if (!active_space) throw new Error("No active learning space")
+  return active_space.id
 }
 
 /**
@@ -60,7 +99,7 @@ export async function requireActiveSpaceId(): Promise<string> {
  * without waiting for a session re-sync.
  */
 export async function listSpaces(): Promise<SpaceSummary[]> {
-  const resp = await api.listSpaces()
+  const resp = await withSessionInvalidation(() => api.listSpaces())
   return resp.spaces
 }
 
@@ -70,8 +109,8 @@ export async function listSpaces(): Promise<SpaceSummary[]> {
  * backend rejects a space the caller doesn't own, so errors propagate.
  */
 export async function setActiveSpace(spaceId: string): Promise<void> {
-  await api.setActiveSpace(spaceId)
-  const remote = await api.getSession()
+  await withSessionInvalidation(() => api.setActiveSpace(spaceId))
+  const remote = await withSessionInvalidation(() => api.getSession())
   const stored = await readSession()
   if (stored) {
     await writeSession({

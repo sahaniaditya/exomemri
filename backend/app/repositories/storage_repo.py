@@ -11,7 +11,8 @@ import logging
 from functools import lru_cache
 
 import anyio
-from supabase import Client, create_client
+import httpx
+from supabase import Client, ClientOptions, create_client
 
 from app.config import Settings, get_settings
 from app.errors import StorageError
@@ -21,7 +22,15 @@ logger = logging.getLogger(__name__)
 
 @lru_cache
 def _client(url: str, key: str) -> Client:
-    return create_client(url, key)
+    # Mirror supabase_client: PostgREST defaults to http2=True, which dies
+    # under concurrent threadpool load (ConnectionTerminated).
+    return create_client(
+        url,
+        key,
+        options=ClientOptions(
+            httpx_client=httpx.Client(http2=False, follow_redirects=True),
+        ),
+    )
 
 
 class StorageRepo:

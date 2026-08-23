@@ -5,12 +5,15 @@
  * captures the active tab's page; the popup just reflects status.
  *
  * Styling mirrors the web app's design system (see ./theme.ts) so the
- * extension reads as the same product as atlas.ai.
+ * extension reads as the same product as exomemri.
  */
 import { useEffect, useState } from "react"
+import { browser } from "wxt/browser"
 
 import type { SessionResponse, SpaceSummary } from "../lib/contracts"
 import { sendMessage } from "../lib/messaging"
+import { readTabSession } from "../lib/read-tab-session"
+import { parseStoredSession, STORED_SESSION_KEY } from "../lib/session-blob"
 import { ContourBg, Glyph, Wordmark } from "./Glyph"
 import { color, font } from "./theme"
 
@@ -19,6 +22,7 @@ type SaveStatus = "idle" | "saving" | "saved" | "error"
 export function Popup() {
   const [session, setSession] = useState<SessionResponse | null>(null)
   const [spaces, setSpaces] = useState<SpaceSummary[] | null>(null)
+  const [spacesError, setSpacesError] = useState("")
   const [error, setError] = useState("")
   const [spaceSaved, setSpaceSaved] = useState(false)
   const [switching, setSwitching] = useState(false)
@@ -26,29 +30,81 @@ export function Popup() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const [saveError, setSaveError] = useState("")
 
-  async function refresh() {
+  function wipeUi() {
+    setSession(null)
+    setSpaces(null)
+    setSpacesError("")
+    setError("Signed out — open exomemri to sign in.")
+    setSpaceSaved(false)
+    setSwitching(false)
+    setSaveStatus("idle")
+    setSaveError("")
+  }
+
+  async function refresh(): Promise<boolean> {
     try {
       const s = await sendMessage("getSession", undefined)
       setSession(s)
       setError("")
+      return true
     } catch {
-      setError("Signed out — open exomemri to sign in.")
+      wipeUi()
+      return false
     }
   }
 
   async function refreshSpaces() {
     try {
       setSpaces(await sendMessage("listSpaces", undefined))
+      setSpacesError("")
     } catch {
-      // Leave the picker in its loading state; the session error (if any)
-      // already explains a signed-out popup.
       setSpaces(null)
+      setSpacesError("Couldn't load spaces.")
     }
   }
 
   useEffect(() => {
-    void refresh()
-    void refreshSpaces()
+    // Opening the popup grants `activeTab`, so the tab the user is looking at
+    // can always be read — even if its content script was never injected or was
+    // orphaned by an extension reload. This is the path that makes a fresh
+    // login show up without the user refreshing the page.
+    async function pullFromActiveTab(): Promise<void> {
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
+      const url = tab?.url ?? tab?.pendingUrl
+      if (!tab?.id || !url) return
+
+      const read = await readTabSession(tab.id)
+      if (!read) return // Not scriptable — the background sweep is the fallback.
+
+      await sendMessage("ingestPageSession", { ...read, url }).catch(() => undefined)
+    }
+
+    async function boot() {
+      await pullFromActiveTab()
+      await sendMessage("resyncSession", undefined).catch(() => undefined)
+      const signedIn = await refresh()
+      if (signedIn) await refreshSpaces()
+    }
+    void boot()
+
+    const onStorageChanged: Parameters<typeof browser.storage.onChanged.addListener>[0] = (
+      changes,
+      area,
+    ) => {
+      if (area !== "local" || !(STORED_SESSION_KEY in changes)) return
+      const next = parseStoredSession(changes[STORED_SESSION_KEY]?.newValue)
+      if (!next) {
+        wipeUi()
+        return
+      }
+      setSpaces(null)
+      setSpacesError("")
+      void refresh().then((ok) => {
+        if (ok) void refreshSpaces()
+      })
+    }
+    browser.storage.onChanged.addListener(onStorageChanged)
+    return () => browser.storage.onChanged.removeListener(onStorageChanged)
   }, [])
 
   async function selectSpace(spaceId: string) {
@@ -107,7 +163,7 @@ export function Popup() {
 
         {session && (
           <>
-            {/* Plate label — the numbered mono eyebrow used across atlas.ai. */}
+            {/* Plate label — the numbered mono eyebrow used across exomemri. */}
             <div style={styles.plate}>
               <span style={styles.plateNum}>01</span>
               <span style={styles.plateLabel}>Capture</span>
@@ -141,7 +197,7 @@ export function Popup() {
                   if (!saveDisabled && saveStatus !== "saved")
                     e.currentTarget.style.background = color.green
                 }}
-                data-testid="atlas-save"
+                data-testid="exomemri-save"
               >
                 {saveStatus === "idle" && (
                   <>
@@ -154,7 +210,7 @@ export function Popup() {
               </button>
 
               {saveStatus === "error" && (
-                <div style={styles.error} data-testid="atlas-error">
+                <div style={styles.error} data-testid="exomemri-error">
                   {saveError}
                 </div>
               )}
@@ -171,7 +227,11 @@ export function Popup() {
                 {spaceSaved ? "Switched ✓" : "Capturing into"}
               </label>
 
-              {spaces === null && <div style={styles.hint}>Loading spaces…</div>}
+              {spaces === null && !spacesError && (
+                <div style={styles.hint}>Loading spaces…</div>
+              )}
+
+              {spacesError && <div style={styles.hint}>{spacesError}</div>}
 
               {spaces !== null && spaces.length === 0 && (
                 <div style={styles.hint}>
@@ -186,7 +246,7 @@ export function Popup() {
                   disabled={switching}
                   onChange={(e) => void selectSpace(e.target.value)}
                   style={styles.input}
-                  data-testid="atlas-space-picker"
+                  data-testid="exomemri-space-picker"
                   onFocus={(e) => (e.target.style.borderColor = color.green)}
                   onBlur={(e) => (e.target.style.borderColor = "rgba(27,26,22,.16)")}
                 >

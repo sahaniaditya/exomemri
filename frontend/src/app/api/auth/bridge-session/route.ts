@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { apiFetch } from '@/lib/api'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Turns the httpOnly session cookies into a client-readable payload for the
  * browser extension. Reads the cookies server-side, fetches the (now
