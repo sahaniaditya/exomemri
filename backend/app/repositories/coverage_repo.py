@@ -1,7 +1,7 @@
 """Data access for the ``space_coverage`` table.
 
-Separate from ``SpaceRepo`` for the same reason ``ConceptRepo``/``ReviewRepo``
-are: a distinct concern rather than more columns bolted onto ``spaces``. Uses
+Separate from ``SpaceRepo`` for the same reason ``ConceptRepo`` is: a distinct
+concern rather than more columns bolted onto ``spaces``. Uses
 the service-role client, so every query carries an explicit ``user_id`` filter
 as its authorization boundary.
 """

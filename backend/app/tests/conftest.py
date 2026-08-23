@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from uuid import uuid4
 
 # Provide required settings BEFORE the app/settings are imported so the
@@ -294,19 +294,6 @@ class FakeSpaceRepo:
                 concepts_model=model, concepts_extracted_at=extracted_at
             )
 
-    def list_unreviewed_sources(self, *, space_id: str, limit: int) -> list[dict]:
-        rows = [
-            r
-            for r in self.sources.values()
-            if r["space_id"] == space_id and not r.get("review_items_extracted_at")
-        ]
-        rows.sort(key=lambda r: r["captured_at"])
-        return rows[:limit]
-
-    def mark_review_items_extracted(self, *, source_id: str, extracted_at: str) -> None:
-        if source_id in self.sources:
-            self.sources[source_id].update(review_items_extracted_at=extracted_at)
-
     def list_source_messages(self, *, source_id: str) -> list[dict]:
         rows = [m for m in self.messages.values() if m["source_id"] == source_id]
         rows.sort(key=lambda m: m["created_at"])
@@ -453,74 +440,6 @@ class FakeConceptRepo:
         if self._space_repo is None:
             return []
         return [s for s in self._space_repo.sources.values() if s["space_id"] == space_id]
-
-
-class FakeReviewRepo:
-    """In-memory stand-in for ``review_items``.
-
-    Enforces the ``(source_id, prompt_text)`` unique index the same way the
-    real table does, via ``replace_source_items``'s delete-then-insert.
-    """
-
-    def __init__(self) -> None:
-        self.items: dict[str, dict] = {}
-        # Wired by the `review_repo` fixture so queue reads can look up titles.
-        self._space_repo: FakeSpaceRepo | None = None
-
-    def replace_source_items(
-        self, *, source_id: str, space_id: str, user_id: str, prompts: list[str]
-    ) -> None:
-        self.items = {k: v for k, v in self.items.items() if v["source_id"] != source_id}
-        for prompt in prompts:
-            item_id = str(uuid4())
-            self.items[item_id] = {
-                "id": item_id,
-                "source_id": source_id,
-                "space_id": space_id,
-                "user_id": user_id,
-                "prompt_text": prompt,
-                "last_reviewed_at": None,
-            }
-
-    def _due(self, *, space_id: str, user_id: str, staleness_days: int) -> list[dict]:
-        cutoff = datetime.now(UTC) - timedelta(days=staleness_days)
-        rows = [
-            r
-            for r in self.items.values()
-            if r["space_id"] == space_id
-            and r["user_id"] == user_id
-            and (
-                r["last_reviewed_at"] is None
-                or datetime.fromisoformat(r["last_reviewed_at"]) < cutoff
-            )
-        ]
-        rows.sort(key=lambda r: (r["last_reviewed_at"] is not None, r["last_reviewed_at"] or ""))
-        return rows
-
-    def list_due(
-        self, *, space_id: str, user_id: str, staleness_days: int, limit: int
-    ) -> list[dict]:
-        rows = self._due(space_id=space_id, user_id=user_id, staleness_days=staleness_days)
-        out = []
-        for r in rows[:limit]:
-            row = dict(r)
-            source = (self._space_repo.sources.get(r["source_id"]) if self._space_repo else None)
-            row["sources"] = {"title": source["title"]} if source else {}
-            out.append(row)
-        return out
-
-    def count_due(self, *, space_id: str, user_id: str, staleness_days: int) -> int:
-        return len(self._due(space_id=space_id, user_id=user_id, staleness_days=staleness_days))
-
-    def mark_reviewed(self, *, item_id: str, space_id: str, user_id: str) -> dict | None:
-        row = self.items.get(item_id)
-        if not row or row["space_id"] != space_id or row["user_id"] != user_id:
-            return None
-        row["last_reviewed_at"] = datetime.now(UTC).isoformat()
-        result = dict(row)
-        source = self._space_repo.sources.get(row["source_id"]) if self._space_repo else None
-        result["sources"] = {"title": source["title"]} if source else {}
-        return result
 
 
 class FakeCoverageRepo:
@@ -785,13 +704,6 @@ def concept_repo(space_repo: FakeSpaceRepo) -> FakeConceptRepo:
 
 
 @pytest.fixture
-def review_repo(space_repo: FakeSpaceRepo) -> FakeReviewRepo:
-    repo = FakeReviewRepo()
-    repo._space_repo = space_repo
-    return repo
-
-
-@pytest.fixture
 def coverage_repo(space_repo: FakeSpaceRepo) -> FakeCoverageRepo:
     repo = FakeCoverageRepo()
     space_repo._coverage_repo = repo
@@ -824,7 +736,6 @@ def client(
     space_repo: FakeSpaceRepo,
     chunk_repo: FakeChunkRepo,
     concept_repo: FakeConceptRepo,
-    review_repo: FakeReviewRepo,
     coverage_repo: FakeCoverageRepo,
     profile_repo: FakeProfileRepo,
     profile_settings_repo: FakeProfileSettingsRepo,
@@ -846,7 +757,6 @@ def client(
         get_plan_service,
         get_profile_repo,
         get_profile_service,
-        get_review_service,
         get_sharing_service,
         get_source_chat_service,
     )
@@ -855,7 +765,6 @@ def client(
     from app.services.note_service import NoteService
     from app.services.plan_service import PlanService
     from app.services.profile_service import ProfileService
-    from app.services.review_service import ReviewService
     from app.services.sharing_service import SharingService
     from app.services.source_chat_service import SourceChatService
     from app.services.streak_service import StreakService
@@ -871,11 +780,10 @@ def client(
     concept_svc = ConceptService(
         concept_repo, space_svc, extract_svc, llm_service  # type: ignore[arg-type]
     )
-    review_svc = ReviewService(review_repo, space_svc, streak_svc)  # type: ignore[arg-type]
     coverage_svc = CoverageService(
         coverage_repo, concept_repo, space_svc, llm_service  # type: ignore[arg-type]
     )
-    plan_svc = PlanService(coverage_svc, review_svc, space_svc)  # type: ignore[arg-type]
+    plan_svc = PlanService(coverage_svc, space_svc)  # type: ignore[arg-type]
     sharing_svc = SharingService(
         collaborator_repo, space_svc, profile_repo  # type: ignore[arg-type]
     )
@@ -898,7 +806,6 @@ def client(
     app.dependency_overrides[get_authenticated_app_user] = lambda: dev_user
     app.dependency_overrides[get_chunk_repo] = lambda: chunk_repo
     app.dependency_overrides[get_concept_service] = lambda: concept_svc
-    app.dependency_overrides[get_review_service] = lambda: review_svc
     app.dependency_overrides[get_coverage_service] = lambda: coverage_svc
     app.dependency_overrides[get_plan_service] = lambda: plan_svc
     app.dependency_overrides[get_profile_repo] = lambda: profile_repo

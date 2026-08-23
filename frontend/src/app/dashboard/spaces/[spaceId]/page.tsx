@@ -5,7 +5,6 @@ import { apiFetch } from '@/lib/api'
 import { toCapturedSource } from '@/lib/dashboard-data'
 import { atlasFontVars } from '@/lib/fonts'
 import type { Profile } from '@/lib/profile'
-import { getReviewQueue } from '@/lib/review'
 import { getSpaceCoverage } from '@/lib/coverage'
 import { getStudyPlan } from '@/lib/plan'
 import { listCollaborators } from '@/lib/sharing'
@@ -44,12 +43,11 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
   const { spaceId } = await params
   const token = (await cookies()).get('atlas_token')?.value ?? ''
 
-  const [profile, spaces, spaceSources, reviewQueue, coverage, planItems, collaborators] =
+  const [profile, spaces, spaceSources, coverage, planItems, collaborators] =
     await Promise.all([
       loadProfile(token),
       listSpaces(token),
       listSpaceSources(token, spaceId),
-      getReviewQueue(token, spaceId),
       getSpaceCoverage(token, spaceId),
       getStudyPlan(token, spaceId),
       listCollaborators(token, spaceId),
@@ -60,7 +58,6 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
 
   const captures = spaceSources.map(toCapturedSource)
   const sourceCount = activeSpace.source_counts.total
-  const dueCount = reviewQueue.items.length + reviewQueue.total_pending
 
   return (
     <div className={`${styles.app} ${atlasFontVars}`}>
@@ -94,35 +91,22 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
             />
           </section>
 
-          {dueCount > 0 && (
-            <section id="review" className={styles.section}>
-              <Plate
-                num="02"
-                title="Due for review"
-                link={{
-                  label: `${dueCount} ${dueCount === 1 ? 'item' : 'items'} · start`,
-                  href: `/dashboard/spaces/${spaceId}/review`,
-                }}
-              />
-            </section>
-          )}
-
           {planItems.length > 0 && (
             <section id="plan" className={styles.section}>
-              <Plate num="03" title="Study plan" />
-              <PlanCard spaceId={spaceId} items={planItems} />
+              <Plate num="02" title="Study plan" />
+              <PlanCard items={planItems} />
             </section>
           )}
 
           {captures.length > 0 && (
             <section id="coverage" className={styles.section}>
-              <Plate num="04" title="Coverage" />
+              <Plate num="03" title="Coverage" />
               <CoverageCard coverage={coverage} />
             </section>
           )}
 
           <section id="sharing" className={styles.section}>
-            <Plate num="05" title="Share (read-only)" />
+            <Plate num="04" title="Share (read-only)" />
             <ShareManager spaceId={spaceId} initialCollaborators={collaborators} />
           </section>
         </div>

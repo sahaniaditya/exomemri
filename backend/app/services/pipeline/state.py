@@ -16,5 +16,4 @@ class PipelineState(TypedDict, total=False):
     summary: str
     summary_sections: dict
     concept_count: int
-    review_item_count: int
     error: str | None

@@ -20,9 +20,9 @@ async def get_study_plan(
     user: User = Depends(get_authenticated_app_user),
     svc: PlanService = Depends(get_plan_service),
 ) -> StudyPlanResponse:
-    """Overdue reviews and uncovered coverage topics, resequenced into one list.
+    """Uncovered coverage topics, sequenced as the next-to-study list.
 
-    No new gap detection and nothing cached — composed fresh from the review
-    queue and coverage on every call.
+    No new gap detection and nothing cached — composed fresh from coverage
+    on every call.
     """
     return await svc.get_plan(user, space_id)

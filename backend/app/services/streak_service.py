@@ -1,10 +1,8 @@
 """Daily study streaks.
 
-Activity is deliberately narrow: capturing a source, or marking a review item
-reviewed — the two actions that already write a user-scoped timestamp today.
-UTC calendar days, no per-user timezone (no field to hold one exists on
-``profiles`` yet), no grace/freeze mechanics — a lean definition matching this
-feature's Later-priority scope, not a spaced-repetition-grade habit engine.
+Activity is deliberately narrow: capturing a source — the action that already
+writes a user-scoped timestamp today. UTC calendar days, no per-user timezone
+(no field to hold one exists on ``profiles`` yet), no grace/freeze mechanics.
 """
 
 from __future__ import annotations
@@ -24,8 +22,8 @@ class StreakService:
     def record_activity(self, user_id: str) -> None:
         """Count today toward the user's streak, if it hasn't been already.
 
-        Never raises — a streak bug must not block the capture or review
-        action that triggered it.
+        Never raises — a streak bug must not block the capture action that
+        triggered it.
         """
         try:
             self._record_activity(user_id)

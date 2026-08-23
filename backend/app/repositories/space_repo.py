@@ -241,24 +241,6 @@ class SpaceRepo:
             {"concepts_model": model, "concepts_extracted_at": extracted_at}
         ).eq("id", source_id).execute()
 
-    def list_unreviewed_sources(self, *, space_id: str, limit: int) -> list[dict]:
-        """Sources in a space with no review items generated yet, oldest first."""
-        res = (
-            self._client.table("sources")
-            .select("*")
-            .eq("space_id", space_id)
-            .is_("review_items_extracted_at", "null")
-            .order("captured_at")
-            .limit(limit)
-            .execute()
-        )
-        return res.data or []
-
-    def mark_review_items_extracted(self, *, source_id: str, extracted_at: str) -> None:
-        self._client.table("sources").update(
-            {"review_items_extracted_at": extracted_at}
-        ).eq("id", source_id).execute()
-
     def list_source_messages(self, *, source_id: str) -> list[dict]:
         res = (
             self._client.table("source_messages")

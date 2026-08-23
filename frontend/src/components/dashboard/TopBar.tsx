@@ -13,7 +13,7 @@ interface TopBarProps {
   profile: Profile | null
   totalSources: number
   spaceCount: number
-  /** Days of consecutive study activity (a capture or a review, UTC days). */
+  /** Days of consecutive study activity (a capture, UTC days). */
   streakDays?: number
   /** Full hero + pulse on overview; compact greeting elsewhere. */
   variant?: 'hero' | 'compact'

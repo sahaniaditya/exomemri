@@ -1526,34 +1526,6 @@
   margin-bottom: 14px;
 }
 
-.review .big {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.review .big .n {
-  font-family: var(--font-newsreader), Georgia, serif;
-  font-size: 40px;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-
-.review .big .u {
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.review .note {
-  font-size: 12px;
-  color: var(--sage);
-  text-align: center;
-  margin-top: 10px;
-  font-family: var(--font-ibm-plex-mono), monospace;
-  letter-spacing: 0.03em;
-}
-
 .chips {
   display: flex;
   gap: 7px;
@@ -3539,11 +3511,6 @@
   padding: 3px 8px;
   border-radius: 999px;
   margin-top: 2px;
-}
-
-.plankind_overdue_review {
-  background: rgba(181, 98, 60, 0.14);
-  color: var(--clay);
 }
 
 .plankind_uncovered_topic {

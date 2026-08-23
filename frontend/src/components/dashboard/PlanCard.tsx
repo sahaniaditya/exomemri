@@ -1,13 +1,11 @@
-import Link from 'next/link'
 import styles from './dashboard.module.css'
 import type { PlanItem } from '@/lib/plan'
 
 const KIND_LABEL: Record<PlanItem['kind'], string> = {
-  overdue_review: 'Review',
   uncovered_topic: 'Gap',
 }
 
-export default function PlanCard({ spaceId, items }: { spaceId: string; items: PlanItem[] }) {
+export default function PlanCard({ items }: { items: PlanItem[] }) {
   if (items.length === 0) {
     return (
       <div className={styles.rcard}>
@@ -31,11 +29,6 @@ export default function PlanCard({ spaceId, items }: { spaceId: string; items: P
           </li>
         ))}
       </ol>
-      {items.some(i => i.kind === 'overdue_review') && (
-        <Link href={`/dashboard/spaces/${spaceId}/review`} className={styles.railbtn}>
-          Start review session
-        </Link>
-      )}
     </div>
   )
 }

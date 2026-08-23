@@ -13,12 +13,10 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-PlanItemKind = Literal["overdue_review", "uncovered_topic"]
+PlanItemKind = Literal["uncovered_topic"]
 
-# How many of each kind feed the plan, and the total cap after interleaving.
-# V2 scope: a resequencing of already-computed gaps, not a new generator, so
-# these are simple caps rather than a pacing/scheduling algorithm.
-MAX_OVERDUE_REVIEW_ITEMS = 5
+# Cap on uncovered topics in the plan. V2 scope: a resequencing of
+# already-computed gaps, not a new generator.
 MAX_UNCOVERED_TOPICS = 5
 
 
@@ -26,9 +24,6 @@ class PlanItem(BaseModel):
     kind: PlanItemKind
     title: str
     rationale: str
-    # Set for `overdue_review` items, so the frontend can deep-link into the
-    # existing review flow instead of duplicating "mark reviewed" here.
-    review_item_id: UUID | None = None
 
 
 class StudyPlanResponse(BaseModel):

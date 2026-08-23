@@ -7,13 +7,12 @@
  */
 import { apiFetch } from '@/lib/api'
 
-export type PlanItemKind = 'overdue_review' | 'uncovered_topic'
+export type PlanItemKind = 'uncovered_topic'
 
 export interface PlanItem {
   kind: PlanItemKind
   title: string
   rationale: string
-  review_item_id: string | null
 }
 
 export interface StudyPlanResponse {

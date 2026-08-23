@@ -473,76 +473,14 @@ export interface paths {
         };
         /**
          * Get Study Plan
-         * @description Overdue reviews and uncovered coverage topics, resequenced into one list.
+         * @description Uncovered coverage topics, sequenced as the next-to-study list.
          *
-         *     No new gap detection and nothing cached — composed fresh from the review
-         *     queue and coverage on every call.
+         *     No new gap detection and nothing cached — composed fresh from coverage
+         *     on every call.
          */
         get: operations["get_study_plan_v1_spaces__space_id__plan_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/spaces/{space_id}/review/rebuild": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Rebuild Review Items
-         * @description Generate review items for one bounded batch of unprocessed sources.
-         *
-         *     New captures get items automatically once the pipeline's summary stage
-         *     runs; this exists for sources captured before the queue shipped, and for
-         *     retrying ones whose pipeline run failed. Bounded per call, so the client
-         *     loops until ``pending`` is 0.
-         */
-        post: operations["rebuild_review_items_v1_spaces__space_id__review_rebuild_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/spaces/{space_id}/review/today": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Today Queue
-         * @description Items due for review today in one space — the "study today" queue.
-         */
-        get: operations["get_today_queue_v1_spaces__space_id__review_today_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/spaces/{space_id}/review/{item_id}/reviewed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Mark Item Reviewed */
-        post: operations["mark_item_reviewed_v1_spaces__space_id__review__item_id__reviewed_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -807,13 +745,11 @@ export interface components {
         PlanItem: {
             /**
              * Kind
-             * @enum {string}
+             * @constant
              */
-            kind: "overdue_review" | "uncovered_topic";
+            kind: "uncovered_topic";
             /** Rationale */
             rationale: string;
-            /** Review Item Id */
-            review_item_id?: string | null;
             /** Title */
             title: string;
         };
@@ -892,52 +828,6 @@ export interface components {
          * @description Outcome of one bounded backfill batch.
          */
         RebuildResponse: {
-            /** Failed */
-            failed: number;
-            /** Pending */
-            pending: number;
-            /** Processed */
-            processed: number;
-        };
-        /**
-         * ReviewItem
-         * @description One reviewable interview point, materialized from a source's summary.
-         */
-        ReviewItem: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Last Reviewed At */
-            last_reviewed_at: string | null;
-            /** Prompt Text */
-            prompt_text: string;
-            /**
-             * Source Id
-             * Format: uuid
-             */
-            source_id: string;
-            /** Source Title */
-            source_title: string;
-            /**
-             * Space Id
-             * Format: uuid
-             */
-            space_id: string;
-        };
-        /** ReviewQueueResponse */
-        ReviewQueueResponse: {
-            /** Items */
-            items: components["schemas"]["ReviewItem"][];
-            /** Total Pending */
-            total_pending: number;
-        };
-        /**
-         * ReviewRebuildResponse
-         * @description Outcome of one bounded backfill batch.
-         */
-        ReviewRebuildResponse: {
             /** Failed */
             failed: number;
             /** Pending */
@@ -2356,106 +2246,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudyPlanResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    rebuild_review_items_v1_spaces__space_id__review_rebuild_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string;
-            };
-            path: {
-                space_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReviewRebuildResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_today_queue_v1_spaces__space_id__review_today_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string;
-            };
-            path: {
-                space_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReviewQueueResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    mark_item_reviewed_v1_spaces__space_id__review__item_id__reviewed_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string;
-            };
-            path: {
-                space_id: string;
-                item_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReviewItem"];
                 };
             };
             /** @description Validation Error */

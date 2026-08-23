@@ -275,16 +275,6 @@ class SpaceService:
             extracted_at=datetime.now(UTC).isoformat(),
         )
 
-    def list_unreviewed_sources(self, *, space_id: UUID, limit: int) -> list[dict]:
-        """Sources in a space with no review items generated yet."""
-        return self._spaces.list_unreviewed_sources(space_id=str(space_id), limit=limit)
-
-    def mark_review_items_extracted(self, *, source_id: UUID) -> None:
-        self._spaces.mark_review_items_extracted(
-            source_id=str(source_id),
-            extracted_at=datetime.now(UTC).isoformat(),
-        )
-
     def list_messages(self, source_id: UUID) -> list[dict]:
         return self._spaces.list_source_messages(source_id=str(source_id))
 

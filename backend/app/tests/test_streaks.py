@@ -1,14 +1,13 @@
-"""Streak tests: StreakService logic, plus its two trigger points."""
+"""Streak tests: StreakService logic, plus the capture trigger point."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from app.services.streak_service import StreakService
-from app.tests.conftest import SEEDED_SPACE_ID, FakeProfileRepo, FakeReviewRepo, FakeSpaceRepo
+from app.tests.conftest import SEEDED_SPACE_ID, FakeProfileRepo
 
 DEV_USER = "00000000-0000-0000-0000-0000000000a1"
 SPACE = SEEDED_SPACE_ID
@@ -97,35 +96,4 @@ def test_capturing_a_source_records_activity(
             "content": "cleaned article text",
         },
     )
-    assert profile_repo.profiles[DEV_USER]["current_streak"] == 1
-
-
-def test_marking_a_review_item_reviewed_records_activity(
-    client: TestClient,
-    space_repo: FakeSpaceRepo,
-    review_repo: FakeReviewRepo,
-    profile_repo: FakeProfileRepo,
-) -> None:
-    source_id = str(uuid4())
-    space_repo.sources[source_id] = {
-        "id": source_id,
-        "space_id": SPACE,
-        "user_id": DEV_USER,
-        "type": "note",
-        "title": "A note",
-        "captured_at": "2026-08-18T00:00:00+00:00",
-    }
-    item_id = str(uuid4())
-    review_repo.items[item_id] = {
-        "id": item_id,
-        "source_id": source_id,
-        "space_id": SPACE,
-        "user_id": DEV_USER,
-        "prompt_text": "Explain the thing",
-        "last_reviewed_at": None,
-    }
-
-    resp = client.post(f"/v1/spaces/{SPACE}/review/{item_id}/reviewed")
-
-    assert resp.status_code == 200
     assert profile_repo.profiles[DEV_USER]["current_streak"] == 1

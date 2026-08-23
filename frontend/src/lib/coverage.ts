@@ -2,7 +2,7 @@
  * Coverage % per space, as returned by the backend.
  *
  * Shapes mirror `CoverageResponse` in `backend/app/schemas/coverage.py`.
- * Hand-written per feature, following `lib/review.ts` — there is no generated
+ * Hand-written per feature, following `lib/spaces.ts` — there is no generated
  * database types file.
  */
 import { apiFetch } from '@/lib/api'

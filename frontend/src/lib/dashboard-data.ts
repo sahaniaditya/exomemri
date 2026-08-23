@@ -2,10 +2,10 @@
  * Dashboard view model.
  *
  * Spaces and captured sources are real now (`GET /v1/spaces`, `GET /v1/sources`)
- * and reach the page through the mappers at the bottom of this file. Stats, the
- * review queue, study gaps and the activity timeline still have no read
- * endpoints, so `getDashboardData()` remains placeholder data shaped like the
- * eventual API response for those sections only.
+ * and reach the page through the mappers at the bottom of this file. Stats,
+ * study gaps and the activity timeline still have no read endpoints, so
+ * `getDashboardData()` remains placeholder data shaped like the eventual API
+ * response for those sections only.
  */
 import type { Source, Space, SourceType } from '@/lib/spaces'
 
@@ -76,11 +76,6 @@ export function isCaptureProcessing(status: CaptureStatus): boolean {
   return status === 'processing'
 }
 
-export interface ReviewQueue {
-  total: number
-  breakdown: { spaceName: string; count: number }[]
-}
-
 export interface StudyGap {
   id: string
   concept: string
@@ -99,7 +94,6 @@ export interface ActivityDay {
 export interface DashboardData {
   resume: ResumeItem | null
   stats: StatCard[]
-  review: ReviewQueue
   gaps: StudyGap[]
   week: { days: ActivityDay[]; deltaLabel: string }
   streakDays: number
@@ -132,20 +126,12 @@ export function getDashboardData(totals: DashboardTotals): DashboardData {
       { value: String(totals.spaceCount), label: 'Learning Spaces', delta: 'all time' },
       { value: '68', unit: '%', label: 'Avg. coverage', delta: 'across all spaces' },
     ],
-    review: {
-      total: 18,
-      breakdown: [
-        { spaceName: 'System Design', count: 9 },
-        { spaceName: 'Databases', count: 6 },
-        { spaceName: 'ML', count: 3 },
-      ],
-    },
     gaps: [
       {
         id: 'g1',
         concept: 'Quorum reads & writes',
         spaceName: 'Distributed Databases',
-        reason: 'saved, not reviewed',
+        reason: 'saved, not studied',
       },
       {
         id: 'g2',

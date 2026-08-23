@@ -1,7 +1,7 @@
 """Data access for the ``space_collaborators`` table.
 
-Separate from ``SpaceRepo`` for the same reason ``ConceptRepo``/``ReviewRepo``
-are: a distinct concern rather than more methods bolted onto the sources repo.
+Separate from ``SpaceRepo`` for the same reason ``ConceptRepo`` is: a distinct
+concern rather than more methods bolted onto the sources repo.
 Uses the service-role client, so every query carries an explicit filter as its
 authorization boundary.
 """
