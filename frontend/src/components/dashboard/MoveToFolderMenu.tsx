@@ -82,12 +82,17 @@ export default function MoveToFolderMenu({
         className={styles.moveBtn}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label="Move to folder"
+        title="Move to folder"
         onClick={() => {
           setError(null)
           setOpen(value => !value)
         }}
       >
-        Move
+        <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">
+          <path d="M4 8.5h16v10.5H4z" />
+          <path d="M4 8.5 7 5h5.5l2 3.5" />
+        </svg>
       </button>
       {open && (
         <div className={styles.moveMenu} role="menu">

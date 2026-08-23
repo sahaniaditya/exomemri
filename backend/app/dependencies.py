@@ -90,15 +90,6 @@ def get_sharing_service(
     return SharingService(collaborators, space_service, profiles)
 
 
-def get_capture_service(
-    settings: Settings = Depends(get_settings),
-    storage: StorageRepo = Depends(get_storage_repo),
-    space_service: SpaceService = Depends(get_space_service),
-    streaks: StreakService = Depends(get_streak_service),
-) -> CaptureService:
-    return CaptureService(settings, storage, space_service, streaks)
-
-
 def get_note_repo() -> NoteRepo:
     return NoteRepo(get_service_client())
 
@@ -186,6 +177,17 @@ def get_concept_service(
     llm: LLMService = Depends(get_llm_service),
 ) -> ConceptService:
     return ConceptService(concepts, spaces, extracts, llm)
+
+
+def get_capture_service(
+    settings: Settings = Depends(get_settings),
+    storage: StorageRepo = Depends(get_storage_repo),
+    space_service: SpaceService = Depends(get_space_service),
+    streaks: StreakService = Depends(get_streak_service),
+    concepts: ConceptService = Depends(get_concept_service),
+) -> CaptureService:
+    return CaptureService(settings, storage, space_service, streaks, concepts)
+
 
 def get_coverage_repo() -> CoverageRepo:
     return CoverageRepo(get_service_client())

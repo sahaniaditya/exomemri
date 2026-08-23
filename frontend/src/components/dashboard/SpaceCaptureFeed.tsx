@@ -178,6 +178,7 @@ export default function SpaceCaptureFeed({
                 key={source.id}
                 source={source}
                 extraActions={rowActions(source)}
+                canDelete={canEdit}
               />
             ))
           )}
@@ -234,6 +235,7 @@ export default function SpaceCaptureFeed({
                   key={source.id}
                   source={source}
                   extraActions={rowActions(source)}
+                  canDelete={canEdit}
                 />
               ))
             )}

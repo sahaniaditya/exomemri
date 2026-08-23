@@ -71,7 +71,7 @@ export default async function DashboardPage() {
                   : undefined
               }
             />
-            <CaptureFeed sources={captures} />
+            <CaptureFeed sources={captures} canDelete />
           </section>
 
           {sharedSpaces.length > 0 && (

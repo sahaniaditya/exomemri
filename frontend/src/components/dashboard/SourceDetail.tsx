@@ -12,6 +12,7 @@ import SourceNotes from './SourceNotes'
 import SourceChatPanel from './SourceChatPanel'
 import OriginalLink from './OriginalLink'
 import SourceIcon from './SourceIcon'
+import DeleteCaptureButton from './DeleteCaptureButton'
 import {
   SOURCE_KIND,
   captureStatus,
@@ -162,6 +163,12 @@ export default function SourceDetail({
                   </svg>
                   Ask this capture
                 </button>
+                <DeleteCaptureButton
+                  sourceId={source.id}
+                  title={source.title}
+                  redirectTo={`/dashboard/spaces/${source.space_id}`}
+                  variant="hero"
+                />
               </>
             )}
           </div>

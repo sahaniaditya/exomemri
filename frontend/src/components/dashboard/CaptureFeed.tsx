@@ -15,6 +15,7 @@ import {
 import styles from './dashboard.module.css'
 import SourceIcon from './SourceIcon'
 import OriginalLink from './OriginalLink'
+import DeleteCaptureButton from './DeleteCaptureButton'
 
 interface CaptureFeedProps {
   sources: CapturedSource[]
@@ -22,6 +23,7 @@ interface CaptureFeedProps {
   emptyTitle?: string
   emptyBody?: string
   extraActions?: (source: CapturedSource) => ReactNode
+  canDelete?: boolean
 }
 
 const POLL_MS = 2500
@@ -37,22 +39,20 @@ function StatusBadge({ status }: { status: CapturedSource['status'] }) {
   }
   if (status === 'failed') {
     return (
-      <span className={`${styles.status} ${styles.fail}`}>
-        Failed
-      </span>
+      <span className={`${styles.status} ${styles.fail}`}>Failed</span>
     )
   }
-  return (
-    <span className={`${styles.status} ${styles.done}`}>Ready</span>
-  )
+  return null
 }
 
 export function CaptureRow({
   source,
   extraActions,
+  canDelete,
 }: {
   source: CapturedSource
   extraActions?: ReactNode
+  canDelete?: boolean
 }) {
   return (
     <div className={styles.srcRow}>
@@ -65,7 +65,10 @@ export function CaptureRow({
             <SourceIcon kind={source.kind} size={16} />
           </div>
           <div className={styles.srcmain}>
-            <div className={styles.srctitle}>{source.title}</div>
+            <div className={styles.srcTitleRow}>
+              <div className={styles.srctitle}>{source.title}</div>
+              <StatusBadge status={source.status} />
+            </div>
             <div className={styles.srcmeta}>
               <span className={styles.tag}>{source.spaceName}</span>
               <span className={styles.metaSep} aria-hidden="true">
@@ -78,18 +81,26 @@ export function CaptureRow({
               <span>{source.capturedAt}</span>
             </div>
           </div>
-          <StatusBadge status={source.status} />
         </div>
       </Link>
       <div className={styles.srcActions}>
         {extraActions}
-        {source.url ? <OriginalLink url={source.url} /> : null}
+        {source.url ? <OriginalLink url={source.url} compact /> : null}
+        {canDelete ? (
+          <DeleteCaptureButton sourceId={source.id} title={source.title} />
+        ) : null}
+        {extraActions || source.url || canDelete ? (
+          <span className={styles.srcActionSep} aria-hidden="true" />
+        ) : null}
         <Link
           href={`/dashboard/spaces/${source.spaceId}/sources/${source.id}`}
           className={styles.srcOpenInApp}
-          aria-label={`Open ${source.title} in exomemri`}
+          aria-label={`Open ${source.title}`}
+          title="Open"
         >
-          <span aria-hidden="true">→</span>
+          <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
         </Link>
       </div>
     </div>
@@ -101,6 +112,7 @@ export default function CaptureFeed({
   emptyTitle = 'No captures yet',
   emptyBody = 'Install the browser extension, open a video or article, and save it into a Learning Space — it will show up here.',
   extraActions,
+  canDelete,
 }: CaptureFeedProps) {
   const router = useRouter()
   const pending = sources.some(source => isCaptureProcessing(source.status))
@@ -130,6 +142,7 @@ export default function CaptureFeed({
             key={source.id}
             source={source}
             extraActions={extraActions?.(source)}
+            canDelete={canDelete}
           />
         ))}
       </div>
