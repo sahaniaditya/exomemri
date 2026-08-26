@@ -1,25 +1,31 @@
-"""Per-capture user notebooks (TipTap JSON) and note-image uploads."""
+"""Per-capture named note pages (TipTap JSON) and note-image uploads."""
 
 from __future__ import annotations
 
+import logging
 from functools import partial
 from uuid import UUID, uuid4
 
 import anyio
 
 from app.config import Settings
-from app.errors import ValidationError
+from app.errors import ConflictError, NotFoundError, ValidationError
 from app.repositories.note_repo import NoteRepo
 from app.repositories.storage_repo import StorageRepo
 from app.schemas.common import User
 from app.schemas.notes import (
+    MAX_PAGES_PER_SOURCE,
+    CreateNotePageRequest,
     NoteImageUploadRequest,
     NoteImageUploadResponse,
-    NoteResponse,
-    UpsertNoteRequest,
+    NotePageListResponse,
+    NotePageResponse,
+    UpdateNotePageRequest,
 )
 from app.services.capture_service import is_note_image_key
 from app.services.space_service import SpaceService
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_NOTE_IMAGE_TYPES: dict[str, str] = {
     "image/jpeg": "jpg",
@@ -44,49 +50,99 @@ class NoteService:
         self._storage = storage
         self._settings = settings
 
-    async def get_note(self, *, user: User, source_id: UUID) -> NoteResponse:
+    async def list_pages(self, *, user: User, source_id: UUID) -> NotePageListResponse:
         source = await anyio.to_thread.run_sync(
             partial(self._spaces.require_viewable_source, user, source_id)
         )
-        row = await anyio.to_thread.run_sync(
+        rows = await anyio.to_thread.run_sync(
             partial(
-                self._notes.get_by_source,
+                self._notes.list_by_source,
                 source_id=str(source_id),
                 user_id=source["user_id"],
             )
         )
-        if not row:
-            return NoteResponse(
-                source_id=source_id,
-                content=EMPTY_DOC,
-                updated_at=None,
-            )
-        return NoteResponse(
-            source_id=UUID(source["id"]),
-            content=row.get("content") or EMPTY_DOC,
-            updated_at=row.get("updated_at"),
-        )
+        return NotePageListResponse(items=[self._to_page(row) for row in rows])
 
-    async def upsert_note(
-        self, *, user: User, source_id: UUID, payload: UpsertNoteRequest
-    ) -> NoteResponse:
+    async def create_page(
+        self, *, user: User, source_id: UUID, payload: CreateNotePageRequest
+    ) -> NotePageResponse:
         source = await anyio.to_thread.run_sync(
             partial(self._spaces.require_owned_source, user, source_id)
         )
-        content = payload.content or EMPTY_DOC
+        existing = await anyio.to_thread.run_sync(
+            partial(
+                self._notes.list_by_source,
+                source_id=str(source_id),
+                user_id=str(user.id),
+            )
+        )
+        if len(existing) >= MAX_PAGES_PER_SOURCE:
+            raise ConflictError(
+                "This capture already has the maximum number of note pages.",
+                detail={"max": MAX_PAGES_PER_SOURCE},
+            )
+        sort_order = (int(existing[-1]["sort_order"]) + 1) if existing else 0
+        note_id = str(uuid4())
         row = await anyio.to_thread.run_sync(
             partial(
-                self._notes.upsert,
+                self._notes.insert,
+                note_id=note_id,
                 source_id=str(source_id),
                 user_id=str(user.id),
                 space_id=source["space_id"],
-                content=content,
+                title=payload.title,
+                content=EMPTY_DOC,
+                sort_order=sort_order,
             )
         )
-        return NoteResponse(
-            source_id=source_id,
-            content=row.get("content") or content,
-            updated_at=row.get("updated_at"),
+        logger.info(
+            "note_page_created",
+            extra={"source_id": str(source_id), "note_id": note_id},
+        )
+        return self._to_page(row)
+
+    async def update_page(
+        self,
+        *,
+        user: User,
+        source_id: UUID,
+        note_id: UUID,
+        payload: UpdateNotePageRequest,
+    ) -> NotePageResponse:
+        await anyio.to_thread.run_sync(
+            partial(self._spaces.require_owned_source, user, source_id)
+        )
+        row = await anyio.to_thread.run_sync(
+            partial(
+                self._notes.update,
+                source_id=str(source_id),
+                note_id=str(note_id),
+                user_id=str(user.id),
+                title=payload.title,
+                content=payload.content,
+            )
+        )
+        if not row:
+            raise NotFoundError("Note page not found.", detail={"note_id": str(note_id)})
+        return self._to_page(row)
+
+    async def delete_page(self, *, user: User, source_id: UUID, note_id: UUID) -> None:
+        await anyio.to_thread.run_sync(
+            partial(self._spaces.require_owned_source, user, source_id)
+        )
+        deleted = await anyio.to_thread.run_sync(
+            partial(
+                self._notes.delete,
+                source_id=str(source_id),
+                note_id=str(note_id),
+                user_id=str(user.id),
+            )
+        )
+        if not deleted:
+            raise NotFoundError("Note page not found.", detail={"note_id": str(note_id)})
+        logger.info(
+            "note_page_deleted",
+            extra={"source_id": str(source_id), "note_id": str(note_id)},
         )
 
     async def create_image_upload(
@@ -116,6 +172,16 @@ class NoteService:
             upload_url=self._absolute_upload_url(signed["signed_url"]),
             token=signed["token"],
             path=object_path,
+        )
+
+    def _to_page(self, row: dict) -> NotePageResponse:
+        return NotePageResponse(
+            id=UUID(str(row["id"])),
+            source_id=UUID(str(row["source_id"])),
+            title=row["title"],
+            content=row.get("content") or EMPTY_DOC,
+            sort_order=int(row["sort_order"]),
+            updated_at=row.get("updated_at"),
         )
 
     def _absolute_upload_url(self, signed_url: str) -> str:

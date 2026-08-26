@@ -313,11 +313,16 @@ def test_collaborator_http_can_read_granted_capture_only(
     source_b = _seed_source(
         space_repo, space_id=OTHER_USER_SPACE_ID, user_id=OTHER_USER_ID
     )
-    note_repo.notes[source_a["id"]] = {
+    note_id = str(uuid4())
+    note_repo.notes[note_id] = {
+        "id": note_id,
         "source_id": source_a["id"],
         "user_id": OTHER_USER_ID,
         "space_id": OTHER_USER_SPACE_ID,
+        "title": "Untitled",
         "content": {"type": "doc", "content": [{"type": "paragraph"}]},
+        "sort_order": 0,
+        "created_at": "2026-08-18T00:00:00+00:00",
         "updated_at": "2026-08-18T00:00:00+00:00",
     }
     collaborator_repo.add(
@@ -330,7 +335,7 @@ def test_collaborator_http_can_read_granted_capture_only(
     assert client.get(f"/v1/sources/{source_a['id']}/summary").status_code == 200
     notes = client.get(f"/v1/sources/{source_a['id']}/notes")
     assert notes.status_code == 200
-    assert notes.json()["content"]["type"] == "doc"
+    assert notes.json()["items"][0]["content"]["type"] == "doc"
 
     artifact = client.get(
         f"/v1/sources/{source_a['id']}/artifact-url?key=raw/extracted.txt"
@@ -347,8 +352,15 @@ def test_collaborator_http_can_read_granted_capture_only(
 
     assert (
         client.put(
-            f"/v1/sources/{source_a['id']}/notes",
+            f"/v1/sources/{source_a['id']}/notes/{note_id}",
             json={"content": {"type": "doc", "content": []}},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            f"/v1/sources/{source_a['id']}/notes",
+            json={"title": "Nope"},
         ).status_code
         == 404
     )

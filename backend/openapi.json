@@ -339,6 +339,20 @@
         "title": "CreateFolderRequest",
         "type": "object"
       },
+      "CreateNotePageRequest": {
+        "description": "Create a blank page. Title defaults to Untitled.",
+        "properties": {
+          "title": {
+            "default": "Untitled",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "CreateNotePageRequest",
+        "type": "object"
+      },
       "CreateSpaceRequest": {
         "description": "Payload for creating a Learning Space, e.g. ``{\"name\": \"Claude Code\"}``.",
         "properties": {
@@ -582,17 +596,44 @@
         "title": "NoteImageUploadResponse",
         "type": "object"
       },
-      "NoteResponse": {
-        "description": "The notebook for one source. Empty content when the user has never saved.",
+      "NotePageListResponse": {
+        "description": "All notebook pages on a capture, ordered by ``sort_order``.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotePageResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "NotePageListResponse",
+        "type": "object"
+      },
+      "NotePageResponse": {
+        "description": "One named notebook page on a capture.",
         "properties": {
           "content": {
             "additionalProperties": true,
             "title": "Content",
             "type": "object"
           },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
           "source_id": {
             "format": "uuid",
             "title": "Source Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
             "type": "string"
           },
           "updated_at": {
@@ -608,9 +649,12 @@
           }
         },
         "required": [
-          "source_id"
+          "id",
+          "source_id",
+          "title",
+          "sort_order"
         ],
-        "title": "NoteResponse",
+        "title": "NotePageResponse",
         "type": "object"
       },
       "OnboardingStatusResponse": {
@@ -1541,6 +1585,38 @@
         "title": "SyllabusTopic",
         "type": "object"
       },
+      "UpdateNotePageRequest": {
+        "description": "Replace the page title and/or TipTap document. At least one is required.",
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "UpdateNotePageRequest",
+        "type": "object"
+      },
       "UploadUrlRequest": {
         "description": "Request a pre-signed upload for a large binary source (PDF).",
         "properties": {
@@ -1633,18 +1709,6 @@
           "path"
         ],
         "title": "UploadUrlResponse",
-        "type": "object"
-      },
-      "UpsertNoteRequest": {
-        "description": "Replace the notebook document for a source.",
-        "properties": {
-          "content": {
-            "additionalProperties": true,
-            "title": "Content",
-            "type": "object"
-          }
-        },
-        "title": "UpsertNoteRequest",
         "type": "object"
       },
       "User": {
@@ -2985,7 +3049,7 @@
     },
     "/v1/sources/{source_id}/notes": {
       "get": {
-        "operationId": "get_note_v1_sources__source_id__notes_get",
+        "operationId": "list_notes_v1_sources__source_id__notes_get",
         "parameters": [
           {
             "in": "path",
@@ -3012,7 +3076,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NoteResponse"
+                  "$ref": "#/components/schemas/NotePageListResponse"
                 }
               }
             },
@@ -3029,13 +3093,13 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Note",
+        "summary": "List Notes",
         "tags": [
           "sources"
         ]
       },
-      "put": {
-        "operationId": "put_note_v1_sources__source_id__notes_put",
+      "post": {
+        "operationId": "create_note_v1_sources__source_id__notes_post",
         "parameters": [
           {
             "in": "path",
@@ -3061,7 +3125,132 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpsertNoteRequest"
+                "$ref": "#/components/schemas/CreateNotePageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotePageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Note",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/notes/{note_id}": {
+      "delete": {
+        "operationId": "delete_note_v1_sources__source_id__notes__note_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Note",
+        "tags": [
+          "sources"
+        ]
+      },
+      "put": {
+        "operationId": "put_note_v1_sources__source_id__notes__note_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotePageRequest"
               }
             }
           },
@@ -3072,7 +3261,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NoteResponse"
+                  "$ref": "#/components/schemas/NotePageResponse"
                 }
               }
             },

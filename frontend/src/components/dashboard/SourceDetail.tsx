@@ -21,7 +21,7 @@ import {
 } from '@/lib/dashboard-data'
 import type { Source } from '@/lib/spaces'
 import type { ChatMessage, SummaryResponse } from '@/lib/sources'
-import type { SourceNote } from '@/lib/notes'
+import type { NotePage } from '@/lib/notes'
 import type { Collaborator } from '@/lib/sharing'
 import ShareManager from './ShareManager'
 
@@ -40,7 +40,8 @@ interface SourceDetailProps {
   spaceName: string
   initialSummary: SummaryResponse | null
   initialMessages: ChatMessage[]
-  initialNote: SourceNote
+  initialNotes: NotePage[]
+  notesLoadError?: boolean
   initialCollaborators?: Collaborator[]
   readOnly?: boolean
 }
@@ -50,7 +51,8 @@ export default function SourceDetail({
   spaceName,
   initialSummary,
   initialMessages,
-  initialNote,
+  initialNotes,
+  notesLoadError = false,
   initialCollaborators = [],
   readOnly = false,
 }: SourceDetailProps) {
@@ -201,7 +203,13 @@ export default function SourceDetail({
           </div>
         )}
 
-        <SourceNotes sourceId={source.id} initialNote={initialNote} editable={!readOnly} />
+        <SourceNotes
+          key={source.id}
+          sourceId={source.id}
+          initialNotes={initialNotes}
+          loadError={notesLoadError}
+          editable={!readOnly}
+        />
       </div>
 
       {readOnly ? null : (

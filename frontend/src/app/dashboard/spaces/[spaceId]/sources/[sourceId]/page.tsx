@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { atlasFontVars } from '@/lib/fonts'
 import { listSpaceSources, listSpaces } from '@/lib/spaces'
 import { getSourceSummary, listSourceMessages } from '@/lib/sources'
-import { getSourceNote } from '@/lib/notes'
+import { listSourceNotes } from '@/lib/notes'
 import { listCollaborators } from '@/lib/sharing'
 import styles from '@/components/dashboard/dashboard.module.css'
 import ContourBg from '@/components/dashboard/ContourBg'
@@ -32,10 +32,10 @@ export default async function SourcePage({ params }: SourcePageProps) {
   const activeSource = sourcesInSpace.find(s => s.id === sourceId)
   if (!activeSpace || !activeSource) notFound()
 
-  const [summary, messages, note, collaborators] = await Promise.all([
+  const [summary, messages, notesResult, collaborators] = await Promise.all([
     getSourceSummary(token, sourceId),
     listSourceMessages(token, sourceId),
-    getSourceNote(token, sourceId),
+    listSourceNotes(token, sourceId),
     listCollaborators(token, sourceId),
   ])
 
@@ -50,7 +50,8 @@ export default async function SourcePage({ params }: SourcePageProps) {
             spaceName={activeSpace.name}
             initialSummary={summary}
             initialMessages={messages}
-            initialNote={note}
+            initialNotes={notesResult.items}
+            notesLoadError={notesResult.error}
             initialCollaborators={collaborators}
           />
         </div>
