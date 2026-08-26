@@ -1,6 +1,6 @@
 """Read-only capture sharing: grant/revoke/list collaborators.
 
-Account-based, not a public link: the recipient must be a real Atlas user
+Account-based, not a public link: the recipient must be a real exomemri user
 (resolved by username), so access is per-person and revocable, and captured
 content never sits behind an unauthenticated route. A collaborator's access
 is read-only and scoped to that one source — see
@@ -35,7 +35,7 @@ class SharingService:
         profile = self._profiles.get_by_username(username.strip().lower())
         if not profile:
             raise NotFoundError(
-                "No Atlas user with that username.", detail={"username": username}
+                "No exomemri user with that username.", detail={"username": username}
             )
         if profile["id"] == str(owner.id):
             raise ValidationError("You already own this capture.")

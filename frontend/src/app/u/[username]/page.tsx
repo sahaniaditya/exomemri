@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: PublicProfilePageProps): Prom
   const { username } = await params
   return {
     title: `${username} · exomemri`,
-    description: 'A public Atlas learning profile.',
+    description: 'A public exomemri learning profile.',
   }
 }
 

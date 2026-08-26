@@ -15,7 +15,7 @@ import TopBar from '@/components/dashboard/TopBar'
 
 export const metadata: Metadata = {
   title: 'Profile · exomemri',
-  description: 'Your Atlas account and public profile.',
+  description: 'Your exomemri account and public profile.',
 }
 
 async function loadProfile(token: string): Promise<Profile | null> {

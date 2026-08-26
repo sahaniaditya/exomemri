@@ -63,5 +63,5 @@ def list_shared_with_me(
     user: User = Depends(get_authenticated_app_user),
     svc: SharingService = Depends(get_sharing_service),
 ) -> SharedSourceListResponse:
-    """Captures another Atlas user has shared read-only access to with me."""
+    """Captures another exomemri user has shared read-only access to with me."""
     return SharedSourceListResponse(sources=svc.list_shared_with_me(user))

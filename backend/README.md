@@ -1,4 +1,4 @@
-# Atlas Backend (Phase 0)
+# exomemri Backend (Phase 0)
 
 Thin FastAPI capture endpoint. Phase 0 scope: accept a source capture and
 write its raw artifact to Supabase Storage. No Postgres, no queue, no LLM.

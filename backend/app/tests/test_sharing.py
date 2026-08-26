@@ -39,12 +39,12 @@ OTHER_USER_ID = "00000000-0000-0000-0000-0000000000ff"
 
 @pytest.fixture
 def dev_user() -> User:
-    return User(id=DEV_USER_ID, email="dev@atlas.ai")  # type: ignore[arg-type]
+    return User(id=DEV_USER_ID, email="dev@exomemri.com")  # type: ignore[arg-type]
 
 
 @pytest.fixture
 def other_user() -> User:
-    return User(id=OTHER_USER_ID, email="other@atlas.ai")  # type: ignore[arg-type]
+    return User(id=OTHER_USER_ID, email="other@exomemri.com")  # type: ignore[arg-type]
 
 
 def _seed_source(space_repo: FakeSpaceRepo, *, space_id: str, user_id: str) -> dict:

@@ -20,7 +20,7 @@ DEV_USER_ID = "00000000-0000-0000-0000-0000000000a1"
 
 @pytest.fixture
 def dev_user() -> User:
-    return User(id=DEV_USER_ID, email="dev@atlas.ai")  # type: ignore[arg-type]
+    return User(id=DEV_USER_ID, email="dev@exomemri.com")  # type: ignore[arg-type]
 
 
 def _seed_concept(concept_repo: FakeConceptRepo, *, label: str, space_id: str = SEEDED_SPACE_ID):

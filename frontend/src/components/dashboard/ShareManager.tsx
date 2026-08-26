@@ -19,7 +19,7 @@ interface ShareManagerProps {
 function inviteErrorMessage(status: number, data: unknown): string {
   const envelope = data as { error?: { message?: string }; detail?: string }
   if (status === 401) return 'Your session has expired. Please log in again.'
-  if (status === 404) return 'No Atlas user with that username.'
+  if (status === 404) return 'No exomemri user with that username.'
   if (status === 409) return 'This capture is already shared with them.'
   return envelope.error?.message ?? envelope.detail ?? 'Could not share this capture.'
 }
@@ -117,7 +117,7 @@ export default function ShareManager({
         </p>
 
         <label className={styles.dialogLabel} htmlFor="share-username">
-          Atlas username
+          exomemri username
         </label>
         <input
           id="share-username"
