@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     # --- Test/dev identity (the active space now lives in Postgres) ---
     dev_user_id: UUID = _DEV_USER_ID
-    dev_user_email: str = "aditya@atlas.ai"
+    dev_user_email: str = "aditya@exomemri.com"
 
     # --- CORS ---
     # The unpacked extension origin (chrome-extension://<id>). Populate for a

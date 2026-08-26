@@ -41,7 +41,7 @@ export default function ProfileDetails({
     { label: 'Email', value: fieldValue(profile.email) },
     { label: 'Role', value: fieldValue(profile.primary_role) },
     { label: 'Domain of focus', value: fieldValue(profile.domain_of_focus) },
-    { label: 'How you found Atlas', value: fieldValue(profile.referral_source) },
+    { label: 'How you found exomemri', value: fieldValue(profile.referral_source) },
     { label: 'Profile updated', value: formatProfileDate(profile.updated_at) ?? '—' },
   ]
 

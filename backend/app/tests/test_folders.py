@@ -149,6 +149,6 @@ def test_other_user_cannot_create_a_folder(
     space_repo: FakeSpaceRepo, collaborator_repo: FakeCollaboratorRepo
 ) -> None:
     svc = SpaceService(space_repo, collaborator_repo)  # type: ignore[arg-type]
-    other = User(id=UUID(OTHER_USER_ID), email="other@atlas.ai")
+    other = User(id=UUID(OTHER_USER_ID), email="other@exomemri.com")
     with pytest.raises(NotFoundError):
         svc.create_folder(other, UUID(SEEDED_SPACE_ID), "Sneaky")

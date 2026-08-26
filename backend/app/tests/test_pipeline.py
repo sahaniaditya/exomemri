@@ -57,7 +57,7 @@ def _seed_source(space_repo: FakeSpaceRepo, storage: FakeStorage, *, extract_tex
 
 @pytest.fixture
 def dev_user() -> User:
-    return User(id=DEV_USER_ID, email="dev@atlas.ai")  # type: ignore[arg-type]
+    return User(id=DEV_USER_ID, email="dev@exomemri.com")  # type: ignore[arg-type]
 
 
 def _build_pipeline_service(

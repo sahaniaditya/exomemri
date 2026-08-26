@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { apiFetch } from '@/lib/api'
 
-/** Captures another Atlas user has shared read-only access to with the caller. */
+/** Captures another exomemri user has shared read-only access to with the caller. */
 export async function GET() {
   const cookieStore = await cookies()
   const token = cookieStore.get('atlas_token')?.value

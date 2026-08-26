@@ -47,8 +47,6 @@ export default defineConfig({
       "https://localhost/*",
       "https://127.0.0.1/*",
       "https://atlas-ai-puce-xi.vercel.app/*",
-      "https://atlas.ai/*",
-      "https://*.atlas.ai/*",
       // YouTube transcript capture (youtube.content.ts + youtube-main.content.ts).
       // No extra install warning: the <all_urls> content script already asks for
       // the broadest possible access.

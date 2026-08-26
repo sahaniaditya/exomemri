@@ -89,7 +89,7 @@ hold storage credentials).
 ### Repository layout
 
 ```
-atlas.ai/
+exomemri/
 ├── backend/      FastAPI capture + auth API  ·  deployed on Render
 │   └── app/      routers · services · repositories · schemas · tests
 ├── frontend/     Next.js 16 web app  ·  deployed on Vercel

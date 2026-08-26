@@ -19,8 +19,6 @@ export const WEB_APP_MATCH_PATTERNS = [
   "https://localhost/*",
   "https://127.0.0.1/*",
   "https://atlas-ai-puce-xi.vercel.app/*",
-  "https://atlas.ai/*",
-  "https://*.atlas.ai/*",
 ] as const
 
 const TRUSTED_WEB_ORIGINS = new Set(["https://atlas-ai-puce-xi.vercel.app"])
@@ -44,7 +42,7 @@ export function isTrustedWebOrigin(raw: string): boolean {
     return true
   }
 
-  return url.hostname === "atlas.ai" || url.hostname.endsWith(".atlas.ai")
+  return false
 }
 
 export function isTrustedSender(sender: {

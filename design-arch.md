@@ -7,7 +7,7 @@
 │                 ▘▘ ▝▝                │ Added Claude Opus 5 (`claude-opus-5`… │
 │                                      │ Added `sandbox.network.strictAllowli… │
 │   Opus 5 · Claude Team · Kimaru AI   │ /release-notes for more               │
-│          ~\Desktop\atlas.ai          │                                       │
+│          ~\Desktop\exomemri          │                                       │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 
    Tackle your toughest work with Opus 5. Switch anytime with /model.
@@ -33,7 +33,7 @@
   ⎿  Loaded frontend\CLAUDE.md
   ⎿  Loaded frontend\AGENTS.md
 
-● Architecture Review — atlas.ai
+● Architecture Review — exomemri
 
   Reviewed: backend/ (FastAPI), frontend/ (Next.js App Router), extension/
   (MV3/WXT), supabase/, CI. I read the source, not just the README.
@@ -149,7 +149,7 @@
   Concretely: the access cookie has maxAge: 3600. At T+1h the user is
   hard-bounced to /login by dashboard/layout.tsx:17 despite holding a valid
   7-day refresh token. The extension is worse — it silently fails capture with
-  "Session expired — reopen atlas.ai to refresh" (background/capture.ts:19),
+  "Session expired — reopen exomemri to refresh" (background/capture.ts:19),
   which is a UX workaround standing in for the missing refresh. The expires_at
   field is computed and stored (extension-session.ts:53) but never read by
   anything.
@@ -220,8 +220,8 @@
   hazard.
   - TRUSTED_WEB_ORIGINS (background/index.ts:16) is hardcoded and must stay in
   sync with the bridge content script's matches and with CORS_WEB_ORIGINS on
-  Render — three places, comment-enforced. The *.atlas.ai suffix rule at line 33
-  makes any subdomain takeover a session-injection path.
+  Render — three places, comment-enforced. Trusted production origins must
+  stay an explicit allowlist (no wildcard product suffix).
   - CORS_ALLOW_ANY_EXTENSION defaults to true (config.py:43). Correctly set to
   false in render.yaml, but an insecure-by-default that relies on remembering
   the override.

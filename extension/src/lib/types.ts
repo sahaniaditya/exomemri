@@ -207,7 +207,7 @@ export interface paths {
         };
         /**
          * List Shared With Me
-         * @description Captures another Atlas user has shared read-only access to with me.
+         * @description Captures another exomemri user has shared read-only access to with me.
          */
         get: operations["list_shared_with_me_v1_shared_with_me_get"];
         put?: never;

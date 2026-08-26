@@ -47,7 +47,10 @@ export default function ProfileVisibilityToggle({
       </button>
       {isPublic && (
         <p className={styles.planrationale}>
-          Your profile: <a href={`/u/${username}`}>{`atlas.ai/u/${username}`}</a>
+          Your profile:{' '}
+          <a href={`/u/${username}`}>
+            {`${typeof window === 'undefined' ? '' : window.location.host}/u/${username}`}
+          </a>
         </p>
       )}
     </div>
