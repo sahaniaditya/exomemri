@@ -14,21 +14,19 @@ export function Proof() {
         </div>
         <div className="proof-grid">
           {TESTIMONIALS.map((quote) => (
-            <div key={quote} className="card [padding:40px_42px]">
+            <div key={quote} className="card proof-card">
               <p className="quote">&quot;{quote}&quot;</p>
-              <div className="flex items-center [gap:12px] [margin-top:26px]">
-                <div className="mono dim flex items-center justify-center [width:42px] [height:42px] [border-radius:50%] [background:#E0DCCF]">
-                  ?
-                </div>
+              <div className="proof-attribution">
+                <div className="mono dim proof-avatar">?</div>
                 <div>
-                  <div className="font-semibold [font-size:15px]">[Name]</div>
-                  <div className="mono [font-size:12px] [color:#9AA69C]">[role]</div>
+                  <div className="proof-name">[Name]</div>
+                  <div className="mono proof-role">[role]</div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        <p className="mono [font-size:12px] [color:#9AA69C] [margin-top:20px] text-center">
+        <p className="mono proof-note">
           Placeholder testimonials — swap in real quotes as you gather them.
         </p>
       </div>

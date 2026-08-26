@@ -1,5 +1,4 @@
 'use client'
-
 /**
  * Capture workspace: full-width details; "Ask this capture" opens a
  * right overlay drawer (does not reserve a permanent layout column).
@@ -13,6 +12,7 @@ import SourceChatPanel from './SourceChatPanel'
 import OriginalLink from './OriginalLink'
 import SourceIcon from './SourceIcon'
 import DeleteCaptureButton from './DeleteCaptureButton'
+import ThemeToggle from './ThemeToggle'
 import {
   SOURCE_KIND,
   captureStatus,
@@ -86,7 +86,6 @@ export default function SourceDetail({
           <div className={styles.captureHeroMark} aria-hidden="true">
             <SourceIcon kind={kind} size={28} />
           </div>
-
           <div className={styles.captureHeroCopy}>
             <div className={styles.captureHeroTop}>
               <div className={styles.captureKind}>
@@ -103,9 +102,7 @@ export default function SourceDetail({
                 <span className={`${styles.status} ${styles.done}`}>Ready</span>
               )}
             </div>
-
             <h1 className={styles.captureTitle}>{source.title}</h1>
-
             <ul className={styles.captureMetaChips}>
               <li>
                 <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" aria-hidden="true">
@@ -132,10 +129,12 @@ export default function SourceDetail({
                   Captured {relativeTime(source.captured_at)}
                 </li>
               ) : null}
+              <ThemeToggle />
             </ul>
+             
           </div>
-
           <div className={styles.captureActions}>
+           
             {source.url ? <OriginalLink url={source.url} /> : null}
             {readOnly ? null : (
               <>
@@ -175,7 +174,6 @@ export default function SourceDetail({
             )}
           </div>
         </header>
-
         {initialSummary ? (
           <SourceSummary sections={initialSummary.sections} />
         ) : (
@@ -202,7 +200,6 @@ export default function SourceDetail({
             </p>
           </div>
         )}
-
         <SourceNotes
           key={source.id}
           sourceId={source.id}
@@ -211,7 +208,6 @@ export default function SourceDetail({
           editable={!readOnly}
         />
       </div>
-
       {readOnly ? null : (
         <ShareManager
           key={source.id}
@@ -221,7 +217,6 @@ export default function SourceDetail({
           onClose={() => setShareOpen(false)}
         />
       )}
-
       {!readOnly && chatOpen ? (
         <SourceChatPanel
           sourceId={source.id}

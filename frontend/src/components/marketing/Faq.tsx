@@ -9,7 +9,7 @@ export function Faq() {
           <span className="label">FAQ</span>
           <span className="plateline" />
         </div>
-        <h2 className="serif [font-size:46px] [margin-bottom:40px]">Questions people will ask.</h2>
+        <h2 className="serif faq-title">Questions people will ask.</h2>
         <div className="faq">
           {FAQS.map((f, i) => (
             <details key={f.q} open={f.open} className={i === FAQS.length - 1 ? 'faq-last' : undefined}>

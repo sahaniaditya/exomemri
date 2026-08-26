@@ -7,6 +7,7 @@ import ContourBg from '@/components/dashboard/ContourBg'
 import Plate from '@/components/dashboard/Plate'
 import CoverageRing from '@/components/dashboard/CoverageRing'
 import styles from './public-profile.module.css'
+import Sidebar from '@/components/dashboard/Sidebar'
 
 interface PublicProfilePageProps {
   params: Promise<{ username: string }>

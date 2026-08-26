@@ -1,5 +1,4 @@
 'use client'
-
 /**
  * Overview account chrome + greeting. Greeting/date are clock-local (see
  * useSyncExternalStore below); counts come from the server page.
@@ -7,6 +6,7 @@
 import { useSyncExternalStore } from 'react'
 import { useLogout } from '@/lib/use-logout'
 import { initial, type Profile } from '@/lib/profile'
+import ThemeToggle from './ThemeToggle'
 import styles from './dashboard.module.css'
 
 interface TopBarProps {
@@ -43,6 +43,7 @@ function getClientClock(): Clock {
   }
   return clientClock
 }
+
 const subscribe = () => () => {}
 
 export default function TopBar({
@@ -55,9 +56,8 @@ export default function TopBar({
   const { logout, loggingOut } = useLogout()
   const clock = useSyncExternalStore<Clock | null>(subscribe, getClientClock, () => null)
   const name = profile?.full_name?.split(' ')[0] ?? 'there'
-
-
   const empty = totalSources === 0
+
   const account = (
     <div className={styles.me}>
       <div className={styles.avatar}>{initial(profile)}</div>
@@ -108,6 +108,7 @@ export default function TopBar({
         </div>
         <div className={styles.topRight}>
           {streak}
+          <ThemeToggle />
           {account}
         </div>
       </div>
@@ -130,10 +131,10 @@ export default function TopBar({
         </div>
         <div className={styles.topRight}>
           {streak}
+          <ThemeToggle />
           {account}
         </div>
       </div>
-
       <div className={styles.pulse} aria-label="Library at a glance">
         <div className={styles.pulseCard}>
           <div className={styles.pulseVal}>{spaceCount}</div>

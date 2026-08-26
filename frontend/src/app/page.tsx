@@ -15,10 +15,12 @@ import { Problem } from '@/components/marketing/Problem';
 import { Proof } from '@/components/marketing/Proof';
 import { Solution } from '@/components/marketing/Solution';
 import { WhyDifferent } from '@/components/marketing/WhyDifferent';
+import { ThemeProvider } from "next-themes";
 
 export default function Home() {
   return (
     <>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <MarketingStyles />
       <Nav />
       <Hero />
@@ -32,6 +34,8 @@ export default function Home() {
       <Faq />
       <FinalCta />
       <Footer />
+      </ThemeProvider>
+     
     </>
   );
 }

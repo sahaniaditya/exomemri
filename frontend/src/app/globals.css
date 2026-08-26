@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #F4F1E9;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #666666;
+  --color-border: #e0ddd3;
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+}
+
+.dark {
+  --color-bg: #121212;
+  --color-text: #f0f0f0;
+  --color-text-secondary: #a3a3a3;
+  --color-border: #2e2e2e;
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
 }
 
 @theme inline {
@@ -12,11 +25,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--background);
 }
 
 body {
@@ -25,9 +35,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Tailwind preflight zeroes margin on every element. Native <dialog>
-   relies on margin: auto (plus inset: 0) to sit in the viewport center,
-   so without this they pin to the top-left. */
 dialog:modal {
   position: fixed;
   inset: auto;

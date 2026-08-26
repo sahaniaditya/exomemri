@@ -9,13 +9,13 @@ export function Audience() {
           <span className="label">Who it&apos;s for</span>
           <span className="plateline" />
         </div>
-        <h2 className="serif [font-size:46px] [margin-bottom:44px]">Built for people who learn online.</h2>
+        <h2 className="serif audience-title">Built for people who learn online.</h2>
         <div className="audience-grid">
           {AUDIENCE.map((a) => (
             <div key={a.title} className="acard">
-              <div className="ficon [font-size:26px]">{a.icon}</div>
-              <h3 className="serif [font-size:22px] [margin-bottom:10px]">{a.title}</h3>
-              <p className="dim [font-size:15px]">{a.body}</p>
+              <div className="ficon">{a.icon}</div>
+              <h3 className="serif">{a.title}</h3>
+              <p className="dim">{a.body}</p>
             </div>
           ))}
         </div>

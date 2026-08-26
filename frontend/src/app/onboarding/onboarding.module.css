@@ -1,0 +1,91 @@
+/* onboarding.module.css */
+
+/* --- Light Theme Defaults --- */
+.container {
+  --bg-color: #F4F1E9;
+  --card-bg: #FBFAF6;
+  --text-primary: #1B1A16;
+  --text-secondary: #5B5A52;
+  --text-muted: #7C8A7E;
+  --text-subtle: #9AA69C;
+  --accent-color: #2C5D4F;
+  --accent-hover: #234c40;
+  --accent-subtle-bg: rgba(44, 93, 79, 0.07);
+  --accent-badge-bg: rgba(44, 93, 79, 0.12);
+  --accent-border: rgba(44, 93, 79, 0.45);
+  --border-color: rgba(27, 26, 22, 0.13);
+  --border-subtle: rgba(27, 26, 22, 0.1);
+  --input-bg: #F4F1E9;
+  --contour-opacity: 0.09;
+  --error-bg: rgba(181, 98, 60, 0.07);
+  --error-border: rgba(181, 98, 60, 0.25);
+  --error-text: #B5623C;
+
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-color);
+  padding: 48px 20px;
+  overflow: hidden;
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- Dark Theme Overrides --- */
+/* 1. Respect system setting automatically */
+@media (prefers-color-scheme: dark) {
+  .container {
+    --bg-color: #121413;
+    --card-bg: #1A1D1B;
+    --text-primary: #E8E6DF;
+    --text-secondary: #A8A7A0;
+    --text-muted: #8E9B90;
+    --text-subtle: #68736A;
+    --accent-color: #3D7D6B;
+    --accent-hover: #48937E;
+    --accent-subtle-bg: rgba(61, 125, 107, 0.15);
+    --accent-badge-bg: rgba(61, 125, 107, 0.22);
+    --accent-border: rgba(61, 125, 107, 0.55);
+    --border-color: rgba(232, 230, 223, 0.12);
+    --border-subtle: rgba(232, 230, 223, 0.08);
+    --input-bg: #151716;
+    --contour-opacity: 0.18;
+    --error-bg: rgba(217, 119, 86, 0.15);
+    --error-border: rgba(217, 119, 86, 0.35);
+    --error-text: #E07A5F;
+  }
+}
+
+/* 2. Optional: If your app uses html[data-theme='dark'] or .dark class higher up in the tree */
+:global(html[data-theme='dark']) .container,
+:global(body.dark) .container {
+  --bg-color: #121413;
+  --card-bg: #1A1D1B;
+  --text-primary: #E8E6DF;
+  --text-secondary: #A8A7A0;
+  --text-muted: #8E9B90;
+  --text-subtle: #68736A;
+  --accent-color: #3D7D6B;
+  --accent-hover: #48937E;
+  --accent-subtle-bg: rgba(61, 125, 107, 0.15);
+  --accent-badge-bg: rgba(61, 125, 107, 0.22);
+  --accent-border: rgba(61, 125, 107, 0.55);
+  --border-color: rgba(232, 230, 223, 0.12);
+  --border-subtle: rgba(232, 230, 223, 0.08);
+  --input-bg: #151716;
+  --contour-opacity: 0.18;
+  --error-bg: rgba(217, 119, 86, 0.15);
+  --error-border: rgba(217, 119, 86, 0.35);
+  --error-text: #E07A5F;
+}
+
+/* Input Autofill fix for dark/light */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+}

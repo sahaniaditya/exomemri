@@ -1,7 +1,7 @@
 import Link from 'next/link';
-
 import { Lockup } from '@/components/brand/Lockup';
 import { NAV_LINKS } from './data';
+import ThemeToggle from '../dashboard/ThemeToggle';
 
 export function Nav() {
   return (
@@ -17,7 +17,8 @@ export function Nav() {
             </a>
           ))}
         </nav>
-        <div className="flex items-center [gap:10px]">
+        <div className="nav-actions">
+          <ThemeToggle/>
           <a href="/login" className="btn btn-g btn-sm">
             Log in
           </a>

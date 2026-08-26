@@ -1,10 +1,8 @@
 'use client'
-
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
-
+import { useTheme } from 'next-themes'
 import { clearExtensionSession } from '@/lib/extension-session'
-
 /**
  * The one sign-out path, shared by every control that offers one.
  *
@@ -20,8 +18,8 @@ import { clearExtensionSession } from '@/lib/extension-session'
  */
 export function useLogout(): { logout: () => Promise<void>; loggingOut: boolean } {
   const router = useRouter()
+  const { setTheme } = useTheme()
   const [loggingOut, setLoggingOut] = useState(false)
-
   const logout = useCallback(async () => {
     setLoggingOut(true)
     try {
@@ -30,10 +28,11 @@ export function useLogout(): { logout: () => Promise<void>; loggingOut: boolean 
       console.error('Logout failed:', error)
     } finally {
       clearExtensionSession()
+      router.refresh()
       router.push('/login')
       setLoggingOut(false)
+      // setTheme('light')
     }
-  }, [router])
-
+  }, [router, setTheme])
   return { logout, loggingOut }
 }

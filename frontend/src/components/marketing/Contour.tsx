@@ -1,6 +1,4 @@
-export function Contour({ style, dark = false }: { style?: React.CSSProperties; dark?: boolean }) {
-  const stroke = dark ? '#7FA88C' : '#2C5D4F';
-  const opacity = dark ? 0.22 : 0.16;
+export function Contour({ style, invert = false }: { style?: React.CSSProperties; invert?: boolean }) {
   return (
     <svg
       className="contour"
@@ -9,7 +7,7 @@ export function Contour({ style, dark = false }: { style?: React.CSSProperties; 
       style={style}
       aria-hidden="true"
     >
-      <g fill="none" stroke={stroke} strokeWidth="1" opacity={opacity}>
+      <g className={invert ? 'contour-path contour-invert' : 'contour-path'} fill="none" strokeWidth="1">
         <path d="M-50 420C220 300 360 480 640 380 940 272 1120 470 1520 360" />
         <path d="M-50 470C220 350 360 530 640 430 940 322 1120 520 1520 410" />
         <path d="M-50 520C220 400 360 580 640 480 940 372 1120 570 1520 460" />

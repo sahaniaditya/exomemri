@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import SessionSync from "@/components/SessionSync";
+import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
-
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
@@ -36,20 +36,16 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-       
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `document.documentElement.style.backgroundColor = "#F4F1E9";`,
-          }}
-        />
-      </head>
-      <body 
-        className="min-h-full flex flex-col"
-        style={{ backgroundColor: "#F4F1E9" }}
-      >
-        {children}
-        <SessionSync />
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <SessionSync />
+        </ThemeProvider>
       </body>
     </html>
   );
