@@ -19,17 +19,13 @@ describe("isTrustedWebOrigin", () => {
   it("accepts the production web origins", () => {
     expect(isTrustedWebOrigin("https://atlas-ai-puce-xi.vercel.app")).toBe(true)
     expect(isTrustedWebOrigin("https://atlas-ai-puce-xi.vercel.app/dashboard")).toBe(true)
-    expect(isTrustedWebOrigin("https://atlas.ai")).toBe(true)
-    expect(isTrustedWebOrigin("https://atlas.ai/dashboard")).toBe(true)
-    expect(isTrustedWebOrigin("https://app.atlas.ai")).toBe(true)
-    expect(isTrustedWebOrigin("https://www.atlas.ai/login")).toBe(true)
   })
 
   it("rejects unrelated hosts", () => {
     expect(isTrustedWebOrigin("https://example.com")).toBe(false)
     expect(isTrustedWebOrigin("https://evil.com")).toBe(false)
     expect(isTrustedWebOrigin("https://localhost.evil.com")).toBe(false)
-    expect(isTrustedWebOrigin("https://not-atlas.ai")).toBe(false)
+    expect(isTrustedWebOrigin("https://atlas.ai")).toBe(false)
     expect(isTrustedWebOrigin("chrome-extension://abcdef/popup.html")).toBe(false)
     expect(isTrustedWebOrigin("not a url")).toBe(false)
   })

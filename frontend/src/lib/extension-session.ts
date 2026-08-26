@@ -1,5 +1,5 @@
 /**
- * Bridge to the Atlas browser extension.
+ * Bridge to the exomemri browser extension.
  *
  * The web app stores auth in httpOnly cookies, which the extension cannot read.
  * To let the extension pick up the logged-in session, we mirror a minimal,
@@ -28,12 +28,12 @@ export const EXTENSION_SESSION_KEY = "atlas.session"
 export const EXTENSION_SESSION_EVENT = "atlas:session-updated"
 
 /**
- * Durable marker saying "this page is the Atlas web app", written once on
+ * Durable marker saying "this page is the exomemri web app", written once on
  * mount and never removed — including while signed out.
  *
  * The extension reads tabs directly (it cannot rely on a content script being
  * injected), and in dev every `localhost` port is a trusted origin. Without
- * this marker the extension cannot tell a signed-out Atlas tab from an
+ * this marker the extension cannot tell a signed-out exomemri tab from an
  * unrelated `localhost:8000` tab, and would sign the user out on seeing the
  * latter. Keep in sync with `APP_MARKER_KEY` in
  * `extension/src/lib/session-blob.ts`.
@@ -50,7 +50,7 @@ export const EXTENSION_APP_MARKER_KEY = "atlas.app"
  */
 export const EXTENSION_SESSION_REFRESH_MS = 15 * 60 * 1000
 
-/** Stamp this origin as the Atlas web app (idempotent, no-op on the server). */
+/** Stamp this origin as the exomemri web app (idempotent, no-op on the server). */
 export function markExtensionHost(): void {
   if (typeof window === "undefined") return
   try {

@@ -2339,7 +2339,7 @@
     },
     "/v1/shared-with-me": {
       "get": {
-        "description": "Captures another Atlas user has shared read-only access to with me.",
+        "description": "Captures another exomemri user has shared read-only access to with me.",
         "operationId": "list_shared_with_me_v1_shared_with_me_get",
         "parameters": [
           {
