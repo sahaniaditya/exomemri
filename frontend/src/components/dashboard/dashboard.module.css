@@ -2480,6 +2480,32 @@ button.chip {
   animation-delay: 280ms;
 }
 
+.notesPages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notesEmpty {
+  padding: 22px 18px;
+  border: 1px dashed rgba(27, 26, 22, 0.16);
+  border-radius: 14px;
+  background: rgba(251, 250, 246, 0.6);
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+.notesListError {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #8f3d2c;
+}
+
+.notesPageBody {
+  min-width: 0;
+}
+
 .notesCard {
   border: 1px solid rgba(27, 26, 22, 0.1);
   border-radius: 14px;
@@ -3759,8 +3785,13 @@ button.chip {
   transition: color 0.15s;
 }
 
-.plateAction:hover {
+.plateAction:hover:enabled {
   color: var(--forest);
+}
+
+.plateAction:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .folderStack {

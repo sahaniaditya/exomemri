@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { atlasFontVars } from '@/lib/fonts'
 import { listSharedWithMe } from '@/lib/sharing'
 import { getSourceSummary } from '@/lib/sources'
-import { getSourceNote } from '@/lib/notes'
+import { listSourceNotes } from '@/lib/notes'
 import type { Source } from '@/lib/spaces'
 import styles from '@/components/dashboard/dashboard.module.css'
 import ContourBg from '@/components/dashboard/ContourBg'
@@ -42,9 +42,9 @@ export default async function SharedSourcePage({ params }: SharedSourcePageProps
     folder_id: null,
   }
 
-  const [summary, note] = await Promise.all([
+  const [summary, notesResult] = await Promise.all([
     getSourceSummary(token, sourceId),
-    getSourceNote(token, sourceId),
+    listSourceNotes(token, sourceId),
   ])
 
   const byline = row.owner_username
@@ -66,7 +66,8 @@ export default async function SharedSourcePage({ params }: SharedSourcePageProps
             spaceName={row.space_name}
             initialSummary={summary}
             initialMessages={[]}
-            initialNote={note}
+            initialNotes={notesResult.items}
+            notesLoadError={notesResult.error}
             readOnly
           />
         </div>

@@ -16,10 +16,12 @@ from app.dependencies import (
 )
 from app.schemas.common import User
 from app.schemas.notes import (
+    CreateNotePageRequest,
     NoteImageUploadRequest,
     NoteImageUploadResponse,
-    NoteResponse,
-    UpsertNoteRequest,
+    NotePageListResponse,
+    NotePageResponse,
+    UpdateNotePageRequest,
 )
 from app.schemas.sources import (
     CaptureRequest,
@@ -116,23 +118,50 @@ async def post_message(
     return await svc.send_message(user=user, source_id=source_id, content=body.content)
 
 
-@router.get("/{source_id}/notes", response_model=NoteResponse)
-async def get_note(
+@router.get("/{source_id}/notes", response_model=NotePageListResponse)
+async def list_notes(
     source_id: UUID,
     user: User = Depends(get_authenticated_app_user),
     svc: NoteService = Depends(get_note_service),
-) -> NoteResponse:
-    return await svc.get_note(user=user, source_id=source_id)
+) -> NotePageListResponse:
+    return await svc.list_pages(user=user, source_id=source_id)
 
 
-@router.put("/{source_id}/notes", response_model=NoteResponse)
+@router.post(
+    "/{source_id}/notes",
+    status_code=status.HTTP_201_CREATED,
+    response_model=NotePageResponse,
+)
+async def create_note(
+    source_id: UUID,
+    body: CreateNotePageRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> NotePageResponse:
+    return await svc.create_page(user=user, source_id=source_id, payload=body)
+
+
+@router.put("/{source_id}/notes/{note_id}", response_model=NotePageResponse)
 async def put_note(
     source_id: UUID,
-    body: UpsertNoteRequest,
+    note_id: UUID,
+    body: UpdateNotePageRequest,
     user: User = Depends(get_authenticated_app_user),
     svc: NoteService = Depends(get_note_service),
-) -> NoteResponse:
-    return await svc.upsert_note(user=user, source_id=source_id, payload=body)
+) -> NotePageResponse:
+    return await svc.update_page(
+        user=user, source_id=source_id, note_id=note_id, payload=body
+    )
+
+
+@router.delete("/{source_id}/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_note(
+    source_id: UUID,
+    note_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> None:
+    await svc.delete_page(user=user, source_id=source_id, note_id=note_id)
 
 
 @router.post("/{source_id}/note-images", response_model=NoteImageUploadResponse)

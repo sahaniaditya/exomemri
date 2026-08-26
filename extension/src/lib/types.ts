@@ -384,12 +384,30 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Note */
-        get: operations["get_note_v1_sources__source_id__notes_get"];
-        /** Put Note */
-        put: operations["put_note_v1_sources__source_id__notes_put"];
-        post?: never;
+        /** List Notes */
+        get: operations["list_notes_v1_sources__source_id__notes_get"];
+        put?: never;
+        /** Create Note */
+        post: operations["create_note_v1_sources__source_id__notes_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{source_id}/notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Note */
+        put: operations["put_note_v1_sources__source_id__notes__note_id__put"];
+        post?: never;
+        /** Delete Note */
+        delete: operations["delete_note_v1_sources__source_id__notes__note_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -718,6 +736,17 @@ export interface components {
             name: string;
         };
         /**
+         * CreateNotePageRequest
+         * @description Create a blank page. Title defaults to Untitled.
+         */
+        CreateNotePageRequest: {
+            /**
+             * Title
+             * @default Untitled
+             */
+            title: string;
+        };
+        /**
          * CreateSpaceRequest
          * @description Payload for creating a Learning Space, e.g. ``{"name": "Claude Code"}``.
          */
@@ -825,19 +854,36 @@ export interface components {
             upload_url: string;
         };
         /**
-         * NoteResponse
-         * @description The notebook for one source. Empty content when the user has never saved.
+         * NotePageListResponse
+         * @description All notebook pages on a capture, ordered by ``sort_order``.
          */
-        NoteResponse: {
+        NotePageListResponse: {
+            /** Items */
+            items?: components["schemas"]["NotePageResponse"][];
+        };
+        /**
+         * NotePageResponse
+         * @description One named notebook page on a capture.
+         */
+        NotePageResponse: {
             /** Content */
             content?: {
                 [key: string]: unknown;
             };
             /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Sort Order */
+            sort_order: number;
+            /**
              * Source Id
              * Format: uuid
              */
             source_id: string;
+            /** Title */
+            title: string;
             /** Updated At */
             updated_at?: string | null;
         };
@@ -1230,6 +1276,18 @@ export interface components {
             label: string;
         };
         /**
+         * UpdateNotePageRequest
+         * @description Replace the page title and/or TipTap document. At least one is required.
+         */
+        UpdateNotePageRequest: {
+            /** Content */
+            content?: {
+                [key: string]: unknown;
+            } | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
          * UploadUrlRequest
          * @description Request a pre-signed upload for a large binary source (PDF).
          */
@@ -1269,16 +1327,6 @@ export interface components {
             token: string;
             /** Upload Url */
             upload_url: string;
-        };
-        /**
-         * UpsertNoteRequest
-         * @description Replace the notebook document for a source.
-         */
-        UpsertNoteRequest: {
-            /** Content */
-            content?: {
-                [key: string]: unknown;
-            };
         };
         /**
          * User
@@ -2159,7 +2207,7 @@ export interface operations {
             };
         };
     };
-    get_note_v1_sources__source_id__notes_get: {
+    list_notes_v1_sources__source_id__notes_get: {
         parameters: {
             query?: never;
             header?: {
@@ -2178,7 +2226,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoteResponse"];
+                    "application/json": components["schemas"]["NotePageListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2192,7 +2240,7 @@ export interface operations {
             };
         };
     };
-    put_note_v1_sources__source_id__notes_put: {
+    create_note_v1_sources__source_id__notes_post: {
         parameters: {
             query?: never;
             header?: {
@@ -2205,7 +2253,45 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpsertNoteRequest"];
+                "application/json": components["schemas"]["CreateNotePageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotePageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_note_v1_sources__source_id__notes__note_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotePageRequest"];
             };
         };
         responses: {
@@ -2215,8 +2301,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoteResponse"];
+                    "application/json": components["schemas"]["NotePageResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_note_v1_sources__source_id__notes__note_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

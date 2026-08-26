@@ -1,243 +1,176 @@
 'use client'
 
 /**
- * Per-capture notebook — TipTap doc with emoji, links, and uploaded images.
+ * Per-capture named note pages. Click a page title to toggle its editor.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Link from '@tiptap/extension-link'
-import Image from '@tiptap/extension-image'
-import Placeholder from '@tiptap/extension-placeholder'
-import NoteImageView from './NoteImageView'
+import { useCallback, useState } from 'react'
+import NotePageEditor from './NotePageEditor'
 import styles from './dashboard.module.css'
-import {
-  EMPTY_NOTE_DOC,
-  type NoteImageUpload,
-  type SourceNote,
-} from '@/lib/notes'
-import { relativeTime } from '@/lib/dashboard-data'
-
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024
-
-const EMOJIS = [
-  '✨', '💡', '🔥', '✅', '❓', '📌', '🧠', '📎', '🔗', '📝',
-  '⭐', '🎯', '⚠️', '🚀', '💬', '📖',
-]
-
-const NoteImage = Image.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      key: {
-        default: null,
-        parseHTML: element => element.getAttribute('data-key'),
-        renderHTML: attributes =>
-          attributes.key ? { 'data-key': attributes.key } : {},
-      },
-    }
-  },
-  addNodeView() {
-    return ReactNodeViewRenderer(NoteImageView)
-  },
-})
+import { EMPTY_NOTE_DOC, type NotePage } from '@/lib/notes'
 
 interface SourceNotesProps {
   sourceId: string
-  initialNote: SourceNote
+  initialNotes: NotePage[]
+  loadError?: boolean
   editable?: boolean
 }
 
-async function resolveImageSrc(sourceId: string, key: string): Promise<string | null> {
-  try {
-    const res = await fetch(
-      `/api/sources/${sourceId}/artifact-url?key=${encodeURIComponent(key)}`
-    )
-    if (!res.ok) return null
-    const data = (await res.json()) as { url: string }
-    return data.url
-  } catch {
-    return null
+export default function SourceNotes({
+  sourceId,
+  initialNotes,
+  loadError = false,
+  editable = true,
+}: SourceNotesProps) {
+  const [pages, setPages] = useState<NotePage[]>(initialNotes)
+  const [openIds, setOpenIds] = useState<Set<string>>(
+    () => (initialNotes[0] ? new Set([initialNotes[0].id]) : new Set())
+  )
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [listError, setListError] = useState<string | null>(null)
+  const [drafts, setDrafts] = useState<Record<string, Record<string, unknown>>>({})
+
+  const handleDraft = useCallback((pageId: string, content: Record<string, unknown>) => {
+    setDrafts(prev => ({ ...prev, [pageId]: content }))
+  }, [])
+
+  const handleSaved = useCallback((saved: NotePage) => {
+    setDrafts(prev => ({ ...prev, [saved.id]: saved.content }))
+    setPages(prev => prev.map(item => (item.id === saved.id ? saved : item)))
+  }, [])
+
+  function toggle(id: string) {
+    if (renamingId === id) return
+    setOpenIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
-}
 
-async function hydrateImageUrls(
-  doc: Record<string, unknown>,
-  sourceId: string
-): Promise<Record<string, unknown>> {
-  const clone = structuredClone(doc) as {
-    content?: Array<{ type?: string; attrs?: { key?: string; src?: string }; content?: unknown[] }>
+  function startRename(page: NotePage) {
+    setRenamingId(page.id)
+    setRenameValue(page.title)
+    setRenameError(null)
   }
 
-  async function walk(nodes: typeof clone.content) {
-    if (!nodes) return
-    for (const node of nodes) {
-      if (node.type === 'image' && node.attrs?.key) {
-        const url = await resolveImageSrc(sourceId, node.attrs.key)
-        if (url) node.attrs.src = url
-      }
-      if (Array.isArray(node.content)) {
-        await walk(node.content as typeof clone.content)
-      }
-    }
-  }
-
-  await walk(clone.content)
-  return clone as Record<string, unknown>
-}
-
-export default function SourceNotes({ sourceId, initialNote, editable = true }: SourceNotesProps) {
-  const [dirty, setDirty] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [savedAt, setSavedAt] = useState<string | null>(initialNote.updated_at)
-  const [error, setError] = useState<string | null>(null)
-  const [emojiOpen, setEmojiOpen] = useState(false)
-  const [ready, setReady] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const emojiRef = useRef<HTMLDivElement>(null)
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ heading: false }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
-      }),
-      NoteImage.configure({ inline: false, allowBase64: false }),
-      Placeholder.configure({
-        placeholder: 'Jot what you want to remember from this capture…',
-      }),
-    ],
-    content: EMPTY_NOTE_DOC,
-    immediatelyRender: false,
-    editable,
-    onUpdate: () => {
-      if (editable) setDirty(true)
-    },
-    editorProps: {
-      attributes: {
-        class: styles.notesEditor,
-      },
-    },
-  })
-
-  useEffect(() => {
-    editor?.setEditable(editable)
-  }, [editor, editable])
-
-  useEffect(() => {
-    if (!editor) return
-    let cancelled = false
-    void (async () => {
-      const hydrated = await hydrateImageUrls(
-        (initialNote.content as Record<string, unknown>) || EMPTY_NOTE_DOC,
-        sourceId
-      )
-      if (cancelled) return
-      editor.commands.setContent(hydrated)
-      setDirty(false)
-      setReady(true)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [editor, initialNote.content, sourceId])
-
-  useEffect(() => {
-    if (!emojiOpen) return
-    const onDoc = (event: MouseEvent) => {
-      if (!emojiRef.current?.contains(event.target as Node)) setEmojiOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [emojiOpen])
-
-  const handleSave = useCallback(async () => {
-    if (!editor || saving) return
-    setSaving(true)
-    setError(null)
+  async function createPage() {
+    if (!editable || busyId) return
+    setBusyId('create')
+    setListError(null)
     try {
-      const content = editor.getJSON() as Record<string, unknown>
       const res = await fetch(`/api/sources/${sourceId}/notes`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      })
-      if (!res.ok) throw Error(`status ${res.status}`)
-      const data = (await res.json()) as SourceNote
-      setSavedAt(data.updated_at)
-      setDirty(false)
-    } catch (caught) {
-      console.error('Failed to save note:', caught)
-      setError('Couldn’t save — try again.')
-    } finally {
-      setSaving(false)
-    }
-  }, [editor, saving, sourceId])
-
-  const setLink = () => {
-    if (!editor) return
-    const previous = editor.getAttributes('link').href as string | undefined
-    const url = window.prompt('Link URL', previous ?? 'https://')
-    if (url === null) return
-    if (url.trim() === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run()
-      return
-    }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
-  }
-
-  const uploadImage = async (file: File) => {
-    if (!editor) return
-    if (!file.type.startsWith('image/')) {
-      setError('Only image files are supported.')
-      return
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError('Image must be under 5 MB.')
-      return
-    }
-    setError(null)
-    try {
-      const mint = await fetch(`/api/sources/${sourceId}/note-images`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_type: file.type, filename: file.name }),
+        body: JSON.stringify({}),
       })
-      if (!mint.ok) throw Error(`mint ${mint.status}`)
-      const signed = (await mint.json()) as NoteImageUpload
-      const put = await fetch(signed.upload_url, {
-        method: 'PUT',
-        headers: { 'x-upsert': 'true', 'content-type': file.type },
-        body: file,
-      })
-      if (!put.ok) throw Error(`upload ${put.status}`)
-
-      const display =
-        (await resolveImageSrc(sourceId, signed.key)) ?? URL.createObjectURL(file)
-      editor
-        .chain()
-        .focus()
-        .insertContent({
-          type: 'image',
-          attrs: { src: display, alt: file.name, key: signed.key },
-        })
-        .run()
-      setDirty(true)
-    } catch (caught) {
-      console.error('Note image upload failed:', caught)
-      setError('Image upload failed — try again.')
+      if (res.status === 409) {
+        setListError('This capture already has the maximum number of pages (50).')
+        return
+      }
+      if (res.status === 401) {
+        setListError('Your session has expired. Please log in again.')
+        return
+      }
+      if (!res.ok) {
+        setListError('Could not create a page. Please try again.')
+        return
+      }
+      const page = (await res.json()) as NotePage
+      setDrafts(prev => ({ ...prev, [page.id]: page.content ?? EMPTY_NOTE_DOC }))
+      setPages(prev => [...prev, page])
+      setOpenIds(prev => new Set(prev).add(page.id))
+      startRename(page)
+    } catch {
+      setListError('Could not reach the server. Please try again.')
+    } finally {
+      setBusyId(null)
     }
   }
 
-  const isEmpty =
-    !initialNote.updated_at &&
-    !dirty &&
-    ready &&
-    editor?.isEmpty
+  async function submitRename(pageId: string) {
+    const trimmed = renameValue.trim()
+    if (!trimmed) {
+      setRenameError('Give this page a name.')
+      return
+    }
+    setBusyId(pageId)
+    setRenameError(null)
+    try {
+      const res = await fetch(`/api/sources/${sourceId}/notes/${pageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmed }),
+      })
+      if (res.status === 401) {
+        setRenameError('Your session has expired. Please log in again.')
+        return
+      }
+      if (!res.ok) {
+        setRenameError('Could not rename the page. Please try again.')
+        return
+      }
+      const saved = (await res.json()) as NotePage
+      setPages(prev =>
+        prev.map(page =>
+          page.id === pageId
+            ? { ...page, title: saved.title, updated_at: saved.updated_at }
+            : page
+        )
+      )
+      setRenamingId(null)
+    } catch {
+      setRenameError('Could not reach the server. Please try again.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function removePage(page: NotePage) {
+    const ok = window.confirm(
+      `Delete “${page.title}”? This page is removed permanently.`
+    )
+    if (!ok) return
+    setBusyId(page.id)
+    setListError(null)
+    try {
+      const res = await fetch(`/api/sources/${sourceId}/notes/${page.id}`, {
+        method: 'DELETE',
+      })
+      if (res.status === 401) {
+        setListError('Your session has expired. Please log in again.')
+        return
+      }
+      if (!res.ok && res.status !== 204) {
+        setListError('Could not delete the page. Please try again.')
+        return
+      }
+      setDrafts(prev => {
+        const next = { ...prev }
+        delete next[page.id]
+        return next
+      })
+      setPages(prev => prev.filter(item => item.id !== page.id))
+      setOpenIds(prev => {
+        const next = new Set(prev)
+        next.delete(page.id)
+        return next
+      })
+      if (renamingId === page.id) setRenamingId(null)
+    } catch {
+      setListError('Could not reach the server. Please try again.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const label = editable ? 'Your notes' : "Owner's notes"
 
   return (
-    <section className={styles.notesSection} aria-label={editable ? "Your notes" : "Owner's notes"}>
+    <section className={styles.notesSection} aria-label={label}>
       <div className={styles.capturePlate}>
         <span className={styles.capturePlateIcon} aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7">
@@ -247,118 +180,136 @@ export default function SourceNotes({ sourceId, initialNote, editable = true }: 
         </span>
         <div className={styles.capturePlateCopy}>
           <span className={styles.capturePlateNum}>05</span>
-          <span className={styles.capturePlateTitle}>{editable ? "Your notes" : "Owner's notes"}</span>
+          <span className={styles.capturePlateTitle}>{label}</span>
         </div>
         <span className={styles.capturePlateLine} />
+        {editable ? (
+          <button
+            type="button"
+            className={styles.plateAction}
+            disabled={Boolean(busyId)}
+            onClick={() => void createPage()}
+          >
+            New page
+          </button>
+        ) : null}
       </div>
 
-      <div className={styles.notesCard}>
-        {editable ? <div className={styles.notesToolbar}>
-          <button
-            type="button"
-            className={styles.notesTool}
-            disabled={!editor}
-            onClick={() => editor?.chain().focus().toggleBold().run()}
-            aria-label="Bold"
-            data-active={editor?.isActive('bold') ? 'true' : undefined}
-          >
-            <strong>B</strong>
-          </button>
-          <button
-            type="button"
-            className={styles.notesTool}
-            disabled={!editor}
-            onClick={() => editor?.chain().focus().toggleItalic().run()}
-            aria-label="Italic"
-            data-active={editor?.isActive('italic') ? 'true' : undefined}
-          >
-            <em>I</em>
-          </button>
-          <button
-            type="button"
-            className={styles.notesTool}
-            disabled={!editor}
-            onClick={setLink}
-            aria-label="Add link"
-            data-active={editor?.isActive('link') ? 'true' : undefined}
-          >
-            Link
-          </button>
-          <div className={styles.notesEmojiWrap} ref={emojiRef}>
-            <button
-              type="button"
-              className={styles.notesTool}
-              disabled={!editor}
-              onClick={() => setEmojiOpen(open => !open)}
-              aria-label="Add emoji"
-              aria-expanded={emojiOpen}
-            >
-              Emoji
-            </button>
-            {emojiOpen ? (
-              <div className={styles.notesEmojiPanel} role="listbox" aria-label="Emojis">
-                {EMOJIS.map(emoji => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className={styles.notesEmojiBtn}
-                    onClick={() => {
-                      editor?.chain().focus().insertContent(emoji).run()
-                      setEmojiOpen(false)
-                    }}
-                  >
-                    {emoji}
-                  </button>
-                ))}
+      {listError ? <p className={styles.notesListError}>{listError}</p> : null}
+
+      {pages.length === 0 ? (
+        <div className={styles.notesEmpty}>
+          {loadError
+            ? 'Couldn’t load notes. Refresh the page to try again.'
+            : editable
+              ? 'No pages yet — add one to jot what you want to remember from this capture.'
+              : 'No notes on this capture.'}
+        </div>
+      ) : (
+        <div className={styles.notesPages}>
+          {pages.map(page => {
+            const open = openIds.has(page.id)
+            const editing = renamingId === page.id
+            return (
+              <div key={page.id} className={styles.folderGroup}>
+                <div className={styles.folderHead}>
+                  {editing ? (
+                    <>
+                      <span className={styles.folderChevron} aria-hidden="true">
+                        {open ? '▾' : '▸'}
+                      </span>
+                      <span className={styles.folderRename}>
+                        <input
+                          className={styles.folderRenameInput}
+                          value={renameValue}
+                          maxLength={120}
+                          onChange={event => setRenameValue(event.target.value)}
+                          onKeyDown={event => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault()
+                              void submitRename(page.id)
+                            }
+                            if (event.key === 'Escape') setRenamingId(null)
+                          }}
+                          aria-label="Page name"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className={styles.folderAction}
+                          disabled={busyId === page.id}
+                          onClick={() => void submitRename(page.id)}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.folderAction}
+                          onClick={() => setRenamingId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.folderToggle}
+                        aria-expanded={open}
+                        aria-controls={`note-body-${page.id}`}
+                        onClick={() => toggle(page.id)}
+                      >
+                        <span className={styles.folderChevron} aria-hidden="true">
+                          {open ? '▾' : '▸'}
+                        </span>
+                        <span className={styles.folderTitle}>{page.title}</span>
+                      </button>
+                      {editable ? (
+                        <div className={styles.folderActions}>
+                          <button
+                            type="button"
+                            className={styles.folderAction}
+                            disabled={busyId === page.id}
+                            onClick={() => startRename(page)}
+                          >
+                            Rename
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.folderAction}
+                            disabled={busyId === page.id}
+                            onClick={() => void removePage(page)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+                {renameError && editing ? (
+                  <div className={styles.folderError}>{renameError}</div>
+                ) : null}
+                {open ? (
+                  <NotePageEditor
+                    sourceId={sourceId}
+                    pageId={page.id}
+                    initialContent={
+                      drafts[page.id] ?? page.content ?? EMPTY_NOTE_DOC
+                    }
+                    savedContent={page.content ?? EMPTY_NOTE_DOC}
+                    savedAt={page.updated_at}
+                    editable={editable}
+                    onDraft={handleDraft}
+                    onSaved={handleSaved}
+                  />
+                ) : null}
               </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className={styles.notesTool}
-            disabled={!editor}
-            onClick={() => fileRef.current?.click()}
-            aria-label="Upload image"
-          >
-            Image
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className={styles.notesFileInput}
-            onChange={event => {
-              const file = event.target.files?.[0]
-              event.target.value = ''
-              if (file) void uploadImage(file)
-            }}
-          />
-          <div className={styles.notesToolbarSpacer} />
-          <span className={styles.notesSaveMeta}>
-            {error ? (
-              <span className={styles.notesError}>{error}</span>
-            ) : dirty ? (
-              'Unsaved changes'
-            ) : savedAt ? (
-              `Saved · ${relativeTime(savedAt)}`
-            ) : isEmpty ? (
-              'Nothing saved yet'
-            ) : (
-              'Saved'
-            )}
-          </span>
-          <button
-            type="button"
-            className={styles.notesSave}
-            disabled={!editor || !dirty || saving}
-            onClick={() => void handleSave()}
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div> : null}
-
-        <EditorContent editor={editor} />
-      </div>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }

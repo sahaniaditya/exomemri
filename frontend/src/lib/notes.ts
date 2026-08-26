@@ -1,12 +1,15 @@
 /**
- * Per-capture user notebook (TipTap JSON).
+ * Per-capture named note pages (TipTap JSON).
  * Server components load via apiFetch; the client saves through the BFF.
  */
 import { apiFetch } from '@/lib/api'
 
-export interface SourceNote {
+export interface NotePage {
+  id: string
   source_id: string
+  title: string
   content: Record<string, unknown>
+  sort_order: number
   updated_at: string | null
 }
 
@@ -15,19 +18,21 @@ export const EMPTY_NOTE_DOC: Record<string, unknown> = {
   content: [{ type: 'paragraph' }],
 }
 
-export async function getSourceNote(
+export async function listSourceNotes(
   token: string,
   sourceId: string
-): Promise<SourceNote> {
+): Promise<{ items: NotePage[]; error: boolean }> {
   try {
     const res = await apiFetch(`/v1/sources/${sourceId}/notes`, {}, token)
     if (!res.ok) {
-      return { source_id: sourceId, content: EMPTY_NOTE_DOC, updated_at: null }
+      console.error('Failed to load source notes:', res.status)
+      return { items: [], error: true }
     }
-    return (await res.json()) as SourceNote
+    const data = (await res.json()) as { items?: NotePage[] }
+    return { items: data.items ?? [], error: false }
   } catch (error) {
-    console.error('Failed to load source note:', error)
-    return { source_id: sourceId, content: EMPTY_NOTE_DOC, updated_at: null }
+    console.error('Failed to load source notes:', error)
+    return { items: [], error: true }
   }
 }
 

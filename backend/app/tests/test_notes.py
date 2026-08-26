@@ -1,4 +1,4 @@
-"""Per-capture user notebook tests."""
+"""Per-capture named note page tests."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from app.schemas.notes import MAX_PAGES_PER_SOURCE
 from app.tests.conftest import SEEDED_SPACE_ID, FakeSpaceRepo, FakeStorage
 
 DEV_USER = "00000000-0000-0000-0000-0000000000a1"
@@ -35,22 +36,25 @@ def _seed_article(space_repo: FakeSpaceRepo) -> str:
     return source_id
 
 
-def test_get_note_returns_empty_doc(
-    client: TestClient, space_repo: FakeSpaceRepo
-) -> None:
+def test_list_notes_returns_empty(client: TestClient, space_repo: FakeSpaceRepo) -> None:
     source_id = _seed_article(space_repo)
     resp = client.get(f"/v1/sources/{source_id}/notes")
     assert resp.status_code == 200
-    body = resp.json()
-    assert body["source_id"] == source_id
-    assert body["updated_at"] is None
-    assert body["content"]["type"] == "doc"
+    assert resp.json() == {"items": []}
 
 
-def test_upsert_note_persists_content(
+def test_create_and_update_note_page(
     client: TestClient, space_repo: FakeSpaceRepo
 ) -> None:
     source_id = _seed_article(space_repo)
+    created = client.post(f"/v1/sources/{source_id}/notes", json={})
+    assert created.status_code == 201
+    page = created.json()
+    assert page["title"] == "Untitled"
+    assert page["sort_order"] == 0
+    assert page["content"]["type"] == "doc"
+    note_id = page["id"]
+
     doc = {
         "type": "doc",
         "content": [
@@ -60,14 +64,78 @@ def test_upsert_note_persists_content(
             }
         ],
     }
-    put = client.put(f"/v1/sources/{source_id}/notes", json={"content": doc})
+    put = client.put(
+        f"/v1/sources/{source_id}/notes/{note_id}",
+        json={"content": doc},
+    )
     assert put.status_code == 200
     assert put.json()["content"] == doc
     assert put.json()["updated_at"] is not None
 
-    got = client.get(f"/v1/sources/{source_id}/notes")
-    assert got.status_code == 200
-    assert got.json()["content"] == doc
+    renamed = client.put(
+        f"/v1/sources/{source_id}/notes/{note_id}",
+        json={"title": "  Key formulas  "},
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["title"] == "Key formulas"
+    assert renamed.json()["content"] == doc
+
+    listed = client.get(f"/v1/sources/{source_id}/notes")
+    assert listed.status_code == 200
+    items = listed.json()["items"]
+    assert len(items) == 1
+    assert items[0]["id"] == note_id
+    assert items[0]["title"] == "Key formulas"
+    assert items[0]["content"] == doc
+
+
+def test_create_second_page_appends_sort_order(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    source_id = _seed_article(space_repo)
+    first = client.post(
+        f"/v1/sources/{source_id}/notes", json={"title": "Interview prep"}
+    )
+    second = client.post(
+        f"/v1/sources/{source_id}/notes", json={"title": "Follow-ups"}
+    )
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert first.json()["sort_order"] == 0
+    assert second.json()["sort_order"] == 1
+    listed = client.get(f"/v1/sources/{source_id}/notes").json()["items"]
+    titles = [item["title"] for item in listed]
+    assert titles == ["Interview prep", "Follow-ups"]
+
+
+def test_delete_note_page(client: TestClient, space_repo: FakeSpaceRepo) -> None:
+    source_id = _seed_article(space_repo)
+    created = client.post(f"/v1/sources/{source_id}/notes", json={"title": "Scratch"})
+    note_id = created.json()["id"]
+    deleted = client.delete(f"/v1/sources/{source_id}/notes/{note_id}")
+    assert deleted.status_code == 204
+    assert client.get(f"/v1/sources/{source_id}/notes").json()["items"] == []
+    assert client.delete(f"/v1/sources/{source_id}/notes/{note_id}").status_code == 404
+
+
+def test_update_requires_title_or_content(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    source_id = _seed_article(space_repo)
+    note_id = client.post(f"/v1/sources/{source_id}/notes", json={}).json()["id"]
+    resp = client.put(f"/v1/sources/{source_id}/notes/{note_id}", json={})
+    assert resp.status_code == 422
+
+
+def test_note_page_cap(client: TestClient, space_repo: FakeSpaceRepo) -> None:
+    source_id = _seed_article(space_repo)
+    for index in range(MAX_PAGES_PER_SOURCE):
+        resp = client.post(
+            f"/v1/sources/{source_id}/notes", json={"title": f"Page {index}"}
+        )
+        assert resp.status_code == 201
+    overflow = client.post(f"/v1/sources/{source_id}/notes", json={"title": "Too many"})
+    assert overflow.status_code == 409
 
 
 def test_note_image_upload_rejects_non_image(

@@ -88,36 +88,79 @@ class FakeStorage:
 
 
 class FakeNoteRepo:
-    """In-memory ``source_notes`` table."""
+    """In-memory ``source_notes`` table, keyed by note id."""
 
     def __init__(self) -> None:
         self.notes: dict[str, dict] = {}
 
-    def get_by_source(self, *, source_id: str, user_id: str) -> dict | None:
-        row = self.notes.get(source_id)
-        if not row or row["user_id"] != user_id:
+    def list_by_source(self, *, source_id: str, user_id: str) -> list[dict]:
+        rows = [
+            row
+            for row in self.notes.values()
+            if row["source_id"] == source_id and row["user_id"] == user_id
+        ]
+        return sorted(
+            rows, key=lambda row: (row["sort_order"], row.get("created_at") or "")
+        )
+
+    def get(self, *, source_id: str, note_id: str, user_id: str) -> dict | None:
+        row = self.notes.get(note_id)
+        if not row or row["source_id"] != source_id or row["user_id"] != user_id:
             return None
         return row
 
-    def upsert(
+    def insert(
         self,
         *,
+        note_id: str,
         source_id: str,
         user_id: str,
         space_id: str,
+        title: str,
         content: dict,
+        sort_order: int,
     ) -> dict:
-        from datetime import UTC, datetime
-
+        now = datetime.now(UTC).isoformat()
         row = {
+            "id": note_id,
             "source_id": source_id,
             "user_id": user_id,
             "space_id": space_id,
+            "title": title,
             "content": content,
-            "updated_at": datetime.now(UTC).isoformat(),
+            "sort_order": sort_order,
+            "created_at": now,
+            "updated_at": now,
         }
-        self.notes[source_id] = row
+        self.notes[note_id] = row
         return row
+
+    def update(
+        self,
+        *,
+        source_id: str,
+        note_id: str,
+        user_id: str,
+        title: str | None = None,
+        content: dict | None = None,
+    ) -> dict | None:
+        row = self.get(source_id=source_id, note_id=note_id, user_id=user_id)
+        if not row:
+            return None
+        if title is not None:
+            row["title"] = title
+        if content is not None:
+            row["content"] = content
+        row["updated_at"] = datetime.now(UTC).isoformat()
+        return row
+
+    def delete(self, *, source_id: str, note_id: str, user_id: str) -> bool:
+        row = self.get(source_id=source_id, note_id=note_id, user_id=user_id)
+        if not row:
+            return False
+        del self.notes[note_id]
+        return True
+
 
 class FakeSpaceRepo:
     """In-memory stand-in for the ``spaces``/``sources`` tables.
