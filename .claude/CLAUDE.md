@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Atlas is an AI learning-memory product: a browser extension captures what you learn
+exomemri is an AI learning-memory product: a browser extension captures what you learn
 (YouTube, articles, AI chats, PDFs) into a **Learning Space**, a FastAPI backend persists
 the raw artifact, and a Next.js web app is the dashboard. Currently **Phase 0 (capture)** —
 see `docs/IMPLEMENTATION_PLAN.md` for the engineering contract and phase roadmap.
@@ -54,7 +54,8 @@ Any change to a backend router/schema requires, in the same commit:
 
 ## Env vars
 
-- `backend/.env` — `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`. Prod also needs
+- `backend/.env` — `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `ANTHROPIC_API_KEY` (summarize/chat),
+  `HF_TOKEN` (Hugging Face Inference API; chunk/query embeddings for RAG chat). Prod also needs
   `CORS_EXTENSION_ORIGINS`, `CORS_WEB_ORIGINS`, `CORS_ALLOW_ANY_EXTENSION=false`, `ENV=production`.
   CORS origins are scheme + host only — no trailing slash or path.
 - `frontend/.env.local` — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_BACKEND_URL`.
@@ -107,7 +108,7 @@ the authoritative hash, and it is the capture idempotency key (unique on `(space
 The web app keeps auth in httpOnly cookies, which the extension cannot read. So the web app
 mirrors a minimal session blob into `localStorage` under `atlas.session`
 (`frontend/src/lib/extension-session.ts`) and dispatches an `atlas:session-updated` window
-event; the extension's `atlas-bridge.content.ts` runs only on the Atlas origin, re-reads
+event; the extension's `atlas-bridge.content.ts` runs only on the exomemri origin, re-reads
 localStorage, revalidates via `parseStoredSession`, and relays it to the background worker
 (`extension/src/lib/session-blob.ts`).
 

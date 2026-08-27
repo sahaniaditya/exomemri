@@ -5,12 +5,15 @@
  * captures the active tab's page; the popup just reflects status.
  *
  * Styling mirrors the web app's design system (see ./theme.ts) so the
- * extension reads as the same product as atlas.ai.
+ * extension reads as the same product as exomemri.
  */
 import { useEffect, useState } from "react"
+import { browser } from "wxt/browser"
 
 import type { SessionResponse, SpaceSummary } from "../lib/contracts"
 import { sendMessage } from "../lib/messaging"
+import { readTabSession } from "../lib/read-tab-session"
+import { parseStoredSession, STORED_SESSION_KEY } from "../lib/session-blob"
 import { ContourBg, Glyph, Wordmark } from "./Glyph"
 import { color, font } from "./theme"
 
@@ -19,6 +22,7 @@ type SaveStatus = "idle" | "saving" | "saved" | "error"
 export function Popup() {
   const [session, setSession] = useState<SessionResponse | null>(null)
   const [spaces, setSpaces] = useState<SpaceSummary[] | null>(null)
+  const [spacesError, setSpacesError] = useState("")
   const [error, setError] = useState("")
   const [spaceSaved, setSpaceSaved] = useState(false)
   const [switching, setSwitching] = useState(false)
@@ -26,29 +30,81 @@ export function Popup() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const [saveError, setSaveError] = useState("")
 
-  async function refresh() {
+  function wipeUi() {
+    setSession(null)
+    setSpaces(null)
+    setSpacesError("")
+    setError("Signed out — open exomemri to sign in.")
+    setSpaceSaved(false)
+    setSwitching(false)
+    setSaveStatus("idle")
+    setSaveError("")
+  }
+
+  async function refresh(): Promise<boolean> {
     try {
       const s = await sendMessage("getSession", undefined)
       setSession(s)
       setError("")
+      return true
     } catch {
-      setError("Signed out — open atlas.ai to sign in.")
+      wipeUi()
+      return false
     }
   }
 
   async function refreshSpaces() {
     try {
       setSpaces(await sendMessage("listSpaces", undefined))
+      setSpacesError("")
     } catch {
-      // Leave the picker in its loading state; the session error (if any)
-      // already explains a signed-out popup.
       setSpaces(null)
+      setSpacesError("Couldn't load spaces.")
     }
   }
 
   useEffect(() => {
-    void refresh()
-    void refreshSpaces()
+    // Opening the popup grants `activeTab`, so the tab the user is looking at
+    // can always be read — even if its content script was never injected or was
+    // orphaned by an extension reload. This is the path that makes a fresh
+    // login show up without the user refreshing the page.
+    async function pullFromActiveTab(): Promise<void> {
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
+      const url = tab?.url ?? tab?.pendingUrl
+      if (!tab?.id || !url) return
+
+      const read = await readTabSession(tab.id)
+      if (!read) return // Not scriptable — the background sweep is the fallback.
+
+      await sendMessage("ingestPageSession", { ...read, url }).catch(() => undefined)
+    }
+
+    async function boot() {
+      await pullFromActiveTab()
+      await sendMessage("resyncSession", undefined).catch(() => undefined)
+      const signedIn = await refresh()
+      if (signedIn) await refreshSpaces()
+    }
+    void boot()
+
+    const onStorageChanged: Parameters<typeof browser.storage.onChanged.addListener>[0] = (
+      changes,
+      area,
+    ) => {
+      if (area !== "local" || !(STORED_SESSION_KEY in changes)) return
+      const next = parseStoredSession(changes[STORED_SESSION_KEY]?.newValue)
+      if (!next) {
+        wipeUi()
+        return
+      }
+      setSpaces(null)
+      setSpacesError("")
+      void refresh().then((ok) => {
+        if (ok) void refreshSpaces()
+      })
+    }
+    browser.storage.onChanged.addListener(onStorageChanged)
+    return () => browser.storage.onChanged.removeListener(onStorageChanged)
   }, [])
 
   async function selectSpace(spaceId: string) {
@@ -61,7 +117,7 @@ export function Popup() {
       setSpaceSaved(true)
       setTimeout(() => setSpaceSaved(false), 1500)
     } catch {
-      setError("Couldn't switch space — reopen atlas.ai to refresh your session.")
+      setError("Couldn't switch space — reopen exomemri to refresh your session.")
     } finally {
       setSwitching(false)
     }
@@ -101,13 +157,23 @@ export function Popup() {
             />
             {session ? "Connected" : "Signed out"}
           </span>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => window.close()}
+            style={styles.close}
+            onMouseOver={(e) => (e.currentTarget.style.color = color.ink)}
+            onMouseOut={(e) => (e.currentTarget.style.color = color.sage)}
+          >
+            ×
+          </button>
         </header>
 
         {error && <div style={styles.error}>{error}</div>}
 
         {session && (
           <>
-            {/* Plate label — the numbered mono eyebrow used across atlas.ai. */}
+            {/* Plate label — the numbered mono eyebrow used across exomemri. */}
             <div style={styles.plate}>
               <span style={styles.plateNum}>01</span>
               <span style={styles.plateLabel}>Capture</span>
@@ -141,7 +207,7 @@ export function Popup() {
                   if (!saveDisabled && saveStatus !== "saved")
                     e.currentTarget.style.background = color.green
                 }}
-                data-testid="atlas-save"
+                data-testid="exomemri-save"
               >
                 {saveStatus === "idle" && (
                   <>
@@ -154,7 +220,7 @@ export function Popup() {
               </button>
 
               {saveStatus === "error" && (
-                <div style={styles.error} data-testid="atlas-error">
+                <div style={styles.error} data-testid="exomemri-error">
                   {saveError}
                 </div>
               )}
@@ -171,11 +237,15 @@ export function Popup() {
                 {spaceSaved ? "Switched ✓" : "Capturing into"}
               </label>
 
-              {spaces === null && <div style={styles.hint}>Loading spaces…</div>}
+              {spaces === null && !spacesError && (
+                <div style={styles.hint}>Loading spaces…</div>
+              )}
+
+              {spacesError && <div style={styles.hint}>{spacesError}</div>}
 
               {spaces !== null && spaces.length === 0 && (
                 <div style={styles.hint}>
-                  No spaces yet — create one on atlas.ai to start capturing.
+                  No spaces yet — create one on exomemri to start capturing.
                 </div>
               )}
 
@@ -186,7 +256,7 @@ export function Popup() {
                   disabled={switching}
                   onChange={(e) => void selectSpace(e.target.value)}
                   style={styles.input}
-                  data-testid="atlas-space-picker"
+                  data-testid="exomemri-space-picker"
                   onFocus={(e) => (e.target.style.borderColor = color.green)}
                   onBlur={(e) => (e.target.style.borderColor = "rgba(27,26,22,.16)")}
                 >
@@ -235,6 +305,22 @@ const styles: Record<string, React.CSSProperties> = {
     color: color.sage,
   },
   dot: { width: 6, height: 6, borderRadius: "50%", display: "inline-block" },
+  close: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 22,
+    height: 22,
+    marginLeft: 2,
+    padding: 0,
+    border: "none",
+    borderRadius: 4,
+    background: "transparent",
+    color: color.sage,
+    fontSize: 18,
+    lineHeight: 1,
+    cursor: "pointer",
+  },
 
   plate: { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 },
   plateNum: { fontFamily: font.mono, fontSize: 11, fontWeight: 500, color: color.green },

@@ -11,7 +11,8 @@ import logging
 from functools import lru_cache
 
 import anyio
-from supabase import Client, create_client
+import httpx
+from supabase import Client, ClientOptions, create_client
 
 from app.config import Settings, get_settings
 from app.errors import StorageError
@@ -21,7 +22,15 @@ logger = logging.getLogger(__name__)
 
 @lru_cache
 def _client(url: str, key: str) -> Client:
-    return create_client(url, key)
+    # Mirror supabase_client: PostgREST defaults to http2=True, which dies
+    # under concurrent threadpool load (ConnectionTerminated).
+    return create_client(
+        url,
+        key,
+        options=ClientOptions(
+            httpx_client=httpx.Client(http2=False, follow_redirects=True),
+        ),
+    )
 
 
 class StorageRepo:
@@ -94,6 +103,78 @@ class StorageRepo:
         signed_url = result.get("signed_url") or result.get("signedUrl") or ""
         token = result.get("token", "")
         return {"signed_url": signed_url, "token": token, "path": result.get("path", path)}
+
+    async def download_text(self, path: str) -> str:
+        """Read a text artifact directly using the service-role client."""
+        
+        def _download() -> bytes:
+            # self._bucket already handles: client.storage.from_(self._bucket_name)
+            return self._bucket.download(path)
+
+        try:
+            raw = await anyio.to_thread.run_sync(_download)
+        except Exception as exc:  # noqa: BLE001 - normalize SDK errors
+            logger.error("storage_download_failed", extra={"path": path})
+            raise StorageError("Failed to read artifact from storage") from exc
+
+        try:
+            return raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            logger.error("storage_decode_failed", extra={"path": path})
+            raise StorageError("Downloaded artifact is not valid UTF-8 text") from exc
+
+    async def delete_prefix(self, prefix: str) -> None:
+        """Remove every object under ``prefix`` (a source's storage folder)."""
+        clean = prefix.strip().strip("/")
+        if not clean or ".." in clean or "/sources/" not in f"/{clean}/":
+            raise StorageError("Refusing to delete an invalid storage prefix")
+
+        paths = await anyio.to_thread.run_sync(self._list_under, clean)
+        if not paths:
+            return
+
+        def _remove() -> None:
+            # The SDK accepts a batch; chunk so a capture with many note images
+            # cannot blow a single request.
+            for i in range(0, len(paths), 100):
+                self._bucket.remove(paths[i : i + 100])
+
+        try:
+            await anyio.to_thread.run_sync(_remove)
+        except Exception as exc:  # noqa: BLE001 - normalize SDK errors
+            logger.error("storage_prefix_delete_failed", extra={"prefix": clean})
+            raise StorageError("Failed to delete artifacts from storage") from exc
+
+    def _list_under(self, prefix: str) -> list[str]:
+        """Recursively list object keys hanging off ``prefix``."""
+        found: list[str] = []
+        self._walk_folder(prefix, found)
+        return found
+
+    def _walk_folder(self, folder: str, found: list[str]) -> None:
+        offset = 0
+        page_size = 1000
+        while True:
+            try:
+                items = self._bucket.list(folder, {"limit": page_size, "offset": offset})
+            except Exception as exc:  # noqa: BLE001 - normalize SDK errors
+                logger.error("storage_list_failed", extra={"folder": folder})
+                raise StorageError("Failed to list artifacts in storage") from exc
+            if not items:
+                break
+            for item in items:
+                name = item.get("name")
+                if not name:
+                    continue
+                child = f"{folder}/{name}"
+                is_folder = item.get("id") in (None, "") and not item.get("metadata")
+                if is_folder:
+                    self._walk_folder(child, found)
+                else:
+                    found.append(child)
+            if len(items) < page_size:
+                break
+            offset += page_size
 
 
 @lru_cache

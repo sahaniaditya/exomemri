@@ -7,6 +7,8 @@ which is in turn the source of truth for the extension's generated TS types
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -66,3 +68,35 @@ class UploadUrlResponse(BaseModel):
     upload_url: str
     token: str
     path: str
+
+class StructuredSummary(BaseModel):
+    """The 4-part per-source summary, as a structured-output envelope."""
+
+    tldr: list[str] = Field(min_length=5, max_length=5)
+    key_concepts: list[str] = Field(min_length=1, max_length=8)
+    examples: list[str] = Field(min_length=1, max_length=6)
+    interview_points: list[str] = Field(min_length=1, max_length=6)
+
+
+class SummaryResponse(BaseModel):
+    summary: str
+    sections: StructuredSummary
+    generated: bool          # True if generated this call, False if cached
+    model: str | None
+    summarized_at: datetime | None
+
+class ChatMessage(BaseModel):
+    id: UUID
+    role: Literal["user", "assistant"]
+    content: str
+    created_at: datetime
+
+class MessageListResponse(BaseModel):
+    messages: list[ChatMessage]
+
+class SendMessageRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=8000)
+
+class SendMessageResponse(BaseModel):
+    user_message: ChatMessage
+    assistant_message: ChatMessage

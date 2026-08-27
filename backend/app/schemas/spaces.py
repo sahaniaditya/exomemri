@@ -43,10 +43,41 @@ class SpaceSummary(BaseModel):
     created_at: datetime | None = None
     last_captured_at: datetime | None = None
     source_counts: SourceCounts = SourceCounts()
+    # Cached from the last coverage computation; None until one has run for
+    # this space. Never computed inline here — see CoverageService.
+    coverage_pct: int | None = None
 
 
 class SpaceListResponse(BaseModel):
     spaces: list[SpaceSummary]
+
+
+class CreateFolderRequest(BaseModel):
+    """Payload for creating a folder inside a space."""
+
+    name: str = Field(min_length=2, max_length=200)
+
+
+class RenameFolderRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+
+
+class FolderSummary(BaseModel):
+    id: UUID
+    space_id: UUID
+    name: str
+    created_at: datetime | None = None
+    source_count: int = 0
+
+
+class FolderListResponse(BaseModel):
+    folders: list[FolderSummary]
+
+
+class SetSourceFolderRequest(BaseModel):
+    """Assign a capture to a folder, or ``null`` to ungroup it."""
+
+    folder_id: UUID | None = None
 
 
 class SourceSummary(BaseModel):
@@ -62,6 +93,7 @@ class SourceSummary(BaseModel):
     author: str | None = None
     captured_at: datetime | None = None
     processing_status: ProcessingStatus
+    folder_id: UUID | None = None
 
 
 class SourceListResponse(BaseModel):

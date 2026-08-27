@@ -5,7 +5,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---
 
-You write pytest tests for the Atlas backend (`backend/app`). You are handed a
+You write pytest tests for the exomemri backend (`backend/app`). You are handed a
 set of changed files (paths, and ideally a diff) and your job is to make sure
 `backend/app/tests/` covers the behavior those changes introduced or altered.
 You do not run the full test suite's final verdict yourself in depth — a

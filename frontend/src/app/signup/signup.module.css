@@ -1,0 +1,386 @@
+/* ==========================================================================
+   1. COLOR TOKENS & BASE STYLES (Default / Light Mode)
+   ========================================================================== */
+.pageWrapper {
+  --bg-color: #F4F1E9;
+  --card-bg: #FBFAF6;
+  --border-color: rgba(27, 26, 22, 0.13);
+  --input-border: rgba(27, 26, 22, 0.16);
+  --input-bg: #F4F1E9;
+  --text-primary: #1B1A16;
+  --text-secondary: #5B5A52;
+  --text-muted: #9AA69C;
+  --label-color: #7C8A7E;
+  --accent-color: #2C5D4F;
+  --accent-hover: #234c40;
+  --accent-disabled: #7FA88C;
+  --error-color: #B5623C;
+  --btn-google-bg: #FFFFFF;
+  --btn-google-border: rgba(27, 26, 22, 0.18);
+  --btn-google-border-hover: rgba(27, 26, 22, 0.38);
+  --divider: rgba(27, 26, 22, 0.14);
+  --contour-opacity: 0.10;
+
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background-color: var(--bg-color);
+  padding: 2.5rem 1rem;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.pageWrapper *,
+.pageWrapper *::before,
+.pageWrapper *::after {
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   2. DARK MODE OVERRIDES
+   ========================================================================== */
+
+/* Explicit Class or Attribute Overrides (e.g., next-themes or html class) */
+:global(html.dark) .pageWrapper,
+:global(.dark) .pageWrapper {
+  --bg-color: #09090B;
+  --card-bg: #18181B;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --input-border: rgba(255, 255, 255, 0.14);
+  --input-bg: #111113;
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --label-color: #A1A1AA;
+  --accent-color: #8FBFAD;
+  --accent-hover: #6FAE9B;
+  --accent-disabled: #3F5C54;
+  --error-color: #E09A6E;
+  --btn-google-bg: #1F1F23;
+  --btn-google-border: rgba(255, 255, 255, 0.14);
+  --btn-google-border-hover: rgba(255, 255, 255, 0.32);
+  --divider: rgba(255, 255, 255, 0.1);
+  --contour-opacity: 0.2;
+}
+
+/* ==========================================================================
+   3. COMPONENT LAYOUT & ELEMENTS
+   ========================================================================== */
+.contourPath {
+  stroke: var(--accent-color);
+  opacity: var(--contour-opacity);
+  transition: stroke 0.2s ease, opacity 0.2s ease;
+}
+
+.brandLink {
+  position: absolute;
+  left: 2rem;
+  top: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 19px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.themeToggleWrap {
+  position: absolute;
+  right: 2rem;
+  top: 1.75rem;
+  z-index: 20;
+}
+
+.container {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 440px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.plateLabel {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.plateNumber {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+.plateTitle {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--label-color);
+}
+
+.plateLine {
+  height: 1px;
+  flex: 1;
+  background-color: var(--divider);
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 24px 56px -28px rgba(0, 0, 0, 0.45);
+  padding: 40px 40px 36px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.heading {
+  font-family: 'Newsreader', serif;
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+}
+
+.subheading {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0 0 28px;
+}
+
+/* ==========================================================================
+   4. BUTTONS & INPUTS
+   ========================================================================== */
+.googleBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--btn-google-bg);
+  border: 1px solid var(--btn-google-border);
+  border-radius: 4px;
+  padding: 11px 18px;
+  font-size: 15px;
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.2s ease;
+  margin-bottom: 22px;
+}
+
+.googleBtn:hover:not(:disabled) {
+  border-color: var(--btn-google-border-hover);
+}
+
+.dividerContainer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background-color: var(--divider);
+}
+
+.dividerText {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--label-color);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 13px;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  font-size: 15px;
+  color: var(--text-primary);
+  outline: none;
+  font-family: 'Instrument Sans', sans-serif;
+  transition: border-color 0.15s, background-color 0.2s;
+}
+
+.input:focus {
+  border-color: var(--accent-color) !important;
+}
+
+.inputError {
+  border-color: var(--error-color) !important;
+}
+
+.errorText {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--error-color);
+  margin-top: 5px;
+  display: block;
+}
+
+.submitBtn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 12px 18px;
+  background-color: var(--accent-color);
+  color: var(--bg-color);
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+.submitBtn:disabled {
+  background-color: var(--accent-disabled);
+  cursor: not-allowed;
+}
+
+.message {
+  font-size: 13.5px;
+  margin: 0;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.messageError {
+  color: var(--error-color);
+}
+
+.messageSuccess {
+  color: var(--accent-color);
+}
+
+.finePrint {
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.copyright {
+  margin-top: 20px;
+  text-align: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.finePrintLink {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.footerText {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.loginLink {
+  color: var(--accent-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   5. BROWSER UTILITIES
+   ========================================================================== */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+}
+
+@media (max-width: 640px) {
+  .pageWrapper {
+    align-items: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100svh;
+    padding: 4.75rem 1rem 2rem;
+  }
+
+  .brandLink {
+    left: 1rem;
+    top: 1rem;
+  }
+
+  .themeToggleWrap {
+    right: 1rem;
+    top: 1rem;
+  }
+
+  .card {
+    padding: 24px 20px 22px;
+  }
+
+  .heading {
+    font-size: 28px;
+  }
+
+  .subheading {
+    font-size: 14.5px;
+    margin-bottom: 22px;
+  }
+
+  .input,
+  .googleBtn,
+  .submitBtn {
+    font-size: 16px;
+  }
+
+  .plateLabel {
+    margin-bottom: 1.1rem;
+  }
+}

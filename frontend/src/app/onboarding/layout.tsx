@@ -2,7 +2,6 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { apiFetch } from '@/lib/api'
-import SessionSync from '@/components/SessionSync'
 
 export default async function OnboardingLayout({
   children,
@@ -52,11 +51,5 @@ export default async function OnboardingLayout({
   }
 
   // 5. If they have a valid token but NO profile yet, safely render the onboarding steps
-  return (
-    <>
-      {children}
-      {/* Mirror the session into localStorage for the browser extension. */}
-      <SessionSync />
-    </>
-  )
+  return <>{children}</>
 }

@@ -24,7 +24,7 @@ def test_get_session_returns_user_and_persisted_active_space(client: TestClient)
     resp = client.get("/v1/session")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["user"]["email"] == "aditya@kimaru.ai"
+    assert body["user"]["email"] == "aditya@exomemri.com"
     assert body["active_space"]["id"] == SEEDED_SPACE_ID
     assert body["active_space"]["name"] == SEEDED_SPACE_NAME
     assert body["active_space"]["slug"] == "system-design"

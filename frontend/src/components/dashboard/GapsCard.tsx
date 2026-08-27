@@ -6,7 +6,7 @@ export default function GapsCard({ gaps }: { gaps: StudyGap[] }) {
     <div className={styles.rcard}>
       <h4>What to study next</h4>
       <p className={styles.cap}>
-        Gaps Atlas found across what you’ve saved but haven’t learned yet.
+        Gaps exomemri found across what you’ve saved but haven’t learned yet.
       </p>
       <div className={styles.nextlist}>
         {gaps.map(gap => (

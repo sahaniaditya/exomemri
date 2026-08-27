@@ -1,28 +1,73 @@
 'use client'
 
 import { useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 
-import { refreshExtensionSession } from '@/lib/extension-session'
+import {
+  EXTENSION_SESSION_KEY,
+  EXTENSION_SESSION_REFRESH_MS,
+  markExtensionHost,
+  refreshExtensionSession,
+} from '@/lib/extension-session'
 
 /**
- * Invisible bridge for the browser extension. On mount (i.e. whenever a
- * logged-in user lands on an authenticated page, after ANY sign-in flow —
- * email/password, Google OAuth, or email link — and on every refresh), it
- * fetches the session from /api/auth/bridge-session and mirrors it into
- * localStorage for the extension's content script to read. On 401 it clears
- * the cached blob.
+ * Invisible bridge for the browser extension. It mirrors the httpOnly session
+ * into localStorage (via /api/auth/bridge-session) so the extension can pick
+ * the signed-in user up without the user refreshing anything, and clears that
+ * mirror the moment the server says we are no longer authenticated.
  *
- * This one mechanism covers all flows uniformly, including the OAuth callback
- * (a pure server redirect that never hands the token to client JS).
+ * Mounted once in the root layout — deliberately including unauthenticated
+ * routes, because /login is exactly where a stale mirror has to be cleared.
+ * That layout does not remount on SPA navigations, so the pathname dependency
+ * is what re-runs the mirror on login → dashboard and logout → /login.
  *
- * This runs on mount only. Anything that changes the session mid-visit — such
- * as creating a Learning Space — must call `refreshExtensionSession()` itself,
- * since `router.refresh()` re-renders server components without remounting.
+ * Mid-visit changes that do not change the path — such as creating a Learning
+ * Space — must still call `refreshExtensionSession()` themselves.
  */
 export default function SessionSync() {
+  const pathname = usePathname()
+
   useEffect(() => {
-    void refreshExtensionSession()
-  }, [])
+    let cancelled = false
+
+    // Tell the extension this origin is the web app, signed in or not, so it
+    // can distinguish "signed out here" from "some other localhost tab".
+    markExtensionHost()
+
+    async function run() {
+      await refreshExtensionSession()
+      const authed =
+        pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')
+      if (
+        authed &&
+        typeof window !== 'undefined' &&
+        !window.localStorage.getItem(EXTENSION_SESSION_KEY) &&
+        !cancelled
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 250))
+        if (!cancelled) await refreshExtensionSession()
+      }
+    }
+
+    void run()
+
+    function onVisible() {
+      if (document.visibilityState === 'visible') void refreshExtensionSession()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    // A tab left open outliving its 1-hour access token would otherwise leave
+    // the extension holding an expired mirror it must treat as signed out.
+    const timer = window.setInterval(() => {
+      void refreshExtensionSession()
+    }, EXTENSION_SESSION_REFRESH_MS)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [pathname])
 
   return null
 }

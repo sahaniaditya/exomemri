@@ -11,11 +11,19 @@ CI diffs the result against the committed file to catch drift.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
 # Allow running as a script (python scripts/dump_openapi.py) from backend/.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+# Settings() is constructed at import time. The dump only needs the schema, so
+# stub required env vars when they are absent (CI, a machine without .env).
+os.environ.setdefault("SUPABASE_URL", "https://ci.example.supabase.co")
+os.environ.setdefault("SUPABASE_SERVICE_KEY", "ci-placeholder-key")
+os.environ.setdefault("ANTHROPIC_API_KEY", "ci-placeholder-key")
+os.environ.setdefault("HF_TOKEN", "ci-placeholder-key")
 
 from app.main import app  # noqa: E402
 

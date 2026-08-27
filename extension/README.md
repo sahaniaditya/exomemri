@@ -1,7 +1,7 @@
-# Atlas Extension (Phase 0)
+# exomemri Extension (Phase 0)
 
 MV3 browser extension (WXT + React + TypeScript) that captures the current page
-and writes its raw artifact to storage via the Atlas capture backend. See
+and writes its raw artifact to storage via the exomemri capture backend. See
 [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md).
 
 ## Flow

@@ -1,10 +1,10 @@
 <div align="center">
 
-# atlas<span>.</span>ai
+# exomemri
 
 ### **Never lose anything you learn online again.**
 
-Atlas captures every video, article, and AI chat you learn from, understands it,
+exomemri captures every video, article, and AI chat you learn from, understands it,
 and remembers it for you — so you can recall or connect anything, instantly.
 
 <sub>Works right inside your browser · Save with one click · No copy-paste, ever.</sub>
@@ -39,7 +39,7 @@ Then AI works across all of it at once.
 | | | |
 | --- | --- | --- |
 | **1 · Capture** | See something worth learning? Click once. | Videos, articles, AI chats, and PDFs saved into the right topic. |
-| **2 · Understand** | Atlas summarizes each source instantly. | Key concepts pulled out and merged across sources into one picture. |
+| **2 · Understand** | exomemri summarizes each source instantly. | Key concepts pulled out and merged across sources into one picture. |
 | **3 · Recall** | Ask your memory anything. | Answers from your own material, with citations back to the exact moment. |
 
 ### Core features
@@ -89,7 +89,7 @@ hold storage credentials).
 ### Repository layout
 
 ```
-atlas.ai/
+exomemri/
 ├── backend/      FastAPI capture + auth API  ·  deployed on Render
 │   └── app/      routers · services · repositories · schemas · tests
 ├── frontend/     Next.js 16 web app  ·  deployed on Vercel
@@ -273,5 +273,5 @@ PRs need green CI and one review. Every schema change ships a migration —
 no manual database edits.
 
 <div align="center">
-<sub>© 2026 Atlas.ai · Your AI learning memory</sub>
+<sub>© 2026 exomemri · Your AI learning memory</sub>
 </div>

@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.errors import ConflictError, NotFoundError
+from app.repositories.collaborator_repo import CollaboratorRepo
 from app.repositories.space_repo import SpaceRepo
 from app.schemas.common import User
-from app.schemas.spaces import SourceCounts, SourceSummary, SpaceSummary
+from app.schemas.spaces import FolderSummary, SourceCounts, SourceSummary, SpaceSummary
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +45,9 @@ def _is_unique_violation(exc: Exception) -> bool:
 
 
 class SpaceService:
-    def __init__(self, spaces: SpaceRepo) -> None:
+    def __init__(self, spaces: SpaceRepo, collaborators: CollaboratorRepo) -> None:
         self._spaces = spaces
+        self._collaborators = collaborators
 
     # --- spaces ---
 
@@ -111,6 +114,7 @@ class SpaceService:
                 created_at=row.get("created_at"),
                 last_captured_at=row.get("last_captured_at"),
                 source_counts=SourceCounts(**(row.get("source_counts") or {})),
+                coverage_pct=row.get("coverage_pct"),
             )
             for row in rows
         ]
@@ -128,6 +132,23 @@ class SpaceService:
             )
         return space
 
+    def require_viewable_source(self, user: User, source_id: UUID) -> dict:
+        """The source row if the caller owns it OR has a per-source grant.
+
+        Still 404, not 403, on failure — source ids stay unenumerable.
+        Space membership never implies source access: the collaborator check
+        is on ``source_id``, not ``space_id``.
+        """
+        source = self._spaces.get_source(user_id=str(user.id), source_id=str(source_id))
+        if source:
+            return source
+        source = self._spaces.get_source_any(source_id=str(source_id))
+        if source and self._collaborators.is_collaborator(
+            source_id=str(source_id), user_id=str(user.id)
+        ):
+            return source
+        raise NotFoundError("Source not found.", detail={"source_id": str(source_id)})
+
     # --- sources ---
 
     def list_sources(
@@ -135,11 +156,11 @@ class SpaceService:
     ) -> list[SourceSummary]:
         if space_id is not None:
             self.require_owned_space(user, space_id)
-        rows = self._spaces.list_sources(
-            user_id=str(user.id),
-            space_id=str(space_id) if space_id else None,
-            limit=limit,
-        )
+            rows = self._spaces.list_sources(
+                user_id=str(user.id), space_id=str(space_id), limit=limit
+            )
+        else:
+            rows = self._spaces.list_sources(user_id=str(user.id), limit=limit)
         return [self._to_source_summary(row) for row in rows]
 
     def existing_source_id(self, *, space_id: UUID, content_hash: str) -> UUID | None:
@@ -197,6 +218,16 @@ class SpaceService:
             )
         return source
 
+    def delete_source(self, user: User, source_id: UUID) -> dict:
+        """Owner-only: drop the source row. Storage cleanup is the caller's job."""
+        source = self.require_owned_source(user, source_id)
+        self._spaces.delete_source(source_id=str(source_id))
+        logger.info(
+            "source_deleted",
+            extra={"source_id": str(source_id), "space_id": source["space_id"]},
+        )
+        return source
+
     @staticmethod
     def _to_source_summary(row: dict) -> SourceSummary:
         # `select("*, spaces(name, slug)")` nests the joined space; it is absent
@@ -212,4 +243,129 @@ class SpaceService:
             author=row.get("author"),
             captured_at=row.get("captured_at"),
             processing_status=row["processing_status"],
+            folder_id=UUID(row["folder_id"]) if row.get("folder_id") else None,
         )
+
+    def update_processing_status(self, *, source_id: UUID, status: str) -> None:
+        self._spaces.update_processing_status(source_id=str(source_id), status=status)
+
+    def save_summary(
+        self, *, source_id: UUID, summary: str, sections: dict, model: str
+    ) -> None:
+        self._spaces.update_source_summary(
+            source_id=str(source_id),
+            summary_text=summary,
+            summary_sections=sections,
+            summary_model=model,
+            summarized_at=datetime.now(UTC).isoformat(),
+        )
+
+    def list_unextracted_sources(self, *, space_id: UUID, limit: int) -> list[dict]:
+        """Sources in a space whose concepts have never been extracted."""
+        return self._spaces.list_unextracted_sources(space_id=str(space_id), limit=limit)
+
+    def mark_concepts_extracted(self, *, source_id: UUID, model: str) -> None:
+        self._spaces.mark_concepts_extracted(
+            source_id=str(source_id),
+            model=model,
+            extracted_at=datetime.now(UTC).isoformat(),
+        )
+
+    def list_messages(self, source_id: UUID) -> list[dict]:
+        return self._spaces.list_source_messages(source_id=str(source_id))
+
+    def add_message(
+        self, *, user: User, source_id: UUID, space_id: UUID, role: str, content: str
+    ) -> dict:
+        return self._spaces.insert_source_message(
+            source_id=str(source_id),
+            space_id=str(space_id),
+            user_id=str(user.id),
+            role=role,
+            content=content,
+        )
+
+    def _require_folder(self, user: User, space_id: UUID, folder_id: UUID) -> dict:
+        self.require_owned_space(user, space_id)
+        folder = self._spaces.get_folder(space_id=str(space_id), folder_id=str(folder_id))
+        if not folder:
+            raise NotFoundError("Folder not found.", detail={"folder_id": str(folder_id)})
+        return folder
+
+    def _to_folder_summary(self, row: dict) -> FolderSummary:
+        return FolderSummary(
+            id=UUID(row["id"]),
+            space_id=UUID(row["space_id"]),
+            name=row["name"],
+            created_at=row.get("created_at"),
+            source_count=int(row.get("source_count") or 0),
+        )
+
+    def list_folders(self, user: User, space_id: UUID) -> list[FolderSummary]:
+        self.require_owned_space(user, space_id)
+        rows = self._spaces.list_folders(space_id=str(space_id))
+        return [self._to_folder_summary(row) for row in rows]
+
+    def create_folder(self, user: User, space_id: UUID, name: str) -> FolderSummary:
+        self.require_owned_space(user, space_id)
+        clean = name.strip()
+        try:
+            row = self._spaces.create_folder(
+                space_id=str(space_id), user_id=str(user.id), name=clean
+            )
+        except Exception as exc:  # noqa: BLE001 - map the unique index to 409
+            if _is_unique_violation(exc):
+                raise ConflictError(
+                    "You already have a folder with that name in this space.",
+                    detail={"name": clean},
+                ) from exc
+            logger.error("folder_create_failed")
+            raise
+        logger.info("folder_created", extra={"space_id": str(space_id), "folder_id": row["id"]})
+        row.setdefault("source_count", 0)
+        return self._to_folder_summary(row)
+
+    def rename_folder(
+        self, user: User, space_id: UUID, folder_id: UUID, name: str
+    ) -> FolderSummary:
+        folder = self._require_folder(user, space_id, folder_id)
+        clean = name.strip()
+        try:
+            row = self._spaces.rename_folder(folder_id=str(folder_id), name=clean)
+        except Exception as exc:  # noqa: BLE001 - map the unique index to 409
+            if _is_unique_violation(exc):
+                raise ConflictError(
+                    "You already have a folder with that name in this space.",
+                    detail={"name": clean},
+                ) from exc
+            logger.error("folder_rename_failed")
+            raise
+        row["source_count"] = folder.get("source_count", 0)
+        return self._to_folder_summary(row)
+
+    def delete_folder(self, user: User, space_id: UUID, folder_id: UUID) -> None:
+        self._require_folder(user, space_id, folder_id)
+        self._spaces.delete_folder(folder_id=str(folder_id))
+        logger.info(
+            "folder_deleted",
+            extra={"space_id": str(space_id), "folder_id": str(folder_id)},
+        )
+
+    def set_source_folder(
+        self, user: User, source_id: UUID, folder_id: UUID | None
+    ) -> SourceSummary:
+        source = self.require_owned_source(user, source_id)
+        if folder_id is not None:
+            folder = self._spaces.get_folder(
+                space_id=source["space_id"], folder_id=str(folder_id)
+            )
+            if not folder:
+                raise NotFoundError(
+                    "Folder not found.", detail={"folder_id": str(folder_id)}
+                )
+        row = self._spaces.set_source_folder(
+            source_id=str(source_id),
+            folder_id=str(folder_id) if folder_id else None,
+        )
+        merged = {**source, **row}
+        return self._to_source_summary(merged)

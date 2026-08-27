@@ -6,7 +6,7 @@ export default function ResumeCard({ item }: { item: ResumeItem | null }) {
     return (
       <div className={styles.empty}>
         <div className={styles.et}>Nothing in progress</div>
-        <p>Capture a video, PDF or article and Atlas will pick up where you stop.</p>
+        <p>Capture a video, PDF or article and exomemri will pick up where you stop.</p>
       </div>
     )
   }

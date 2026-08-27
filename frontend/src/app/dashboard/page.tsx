@@ -1,32 +1,22 @@
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
-
 import { apiFetch } from '@/lib/api'
-import {
-  getDashboardData,
-  toCapturedSource,
-  toLearningSpace,
-} from '@/lib/dashboard-data'
+import { toCapturedSource, toLearningSpace } from '@/lib/dashboard-data'
 import { atlasFontVars } from '@/lib/fonts'
-import { firstName, type Profile } from '@/lib/profile'
+import { streakDays as getStreakDays, type Profile } from '@/lib/profile'
+import { listSharedWithMe } from '@/lib/sharing'
 import { listRecentSources, listSpaces } from '@/lib/spaces'
-
 import styles from '@/components/dashboard/dashboard.module.css'
-import AskBar from '@/components/dashboard/AskBar'
 import CaptureFeed from '@/components/dashboard/CaptureFeed'
 import ContourBg from '@/components/dashboard/ContourBg'
-import GapsCard from '@/components/dashboard/GapsCard'
 import Plate from '@/components/dashboard/Plate'
-import ResumeCard from '@/components/dashboard/ResumeCard'
-import ReviewCard from '@/components/dashboard/ReviewCard'
 import Sidebar from '@/components/dashboard/Sidebar'
+import SharedWithMeList from '@/components/dashboard/SharedWithMeList'
 import SpacesGrid from '@/components/dashboard/SpacesGrid'
-import StatsRow from '@/components/dashboard/StatsRow'
 import TopBar from '@/components/dashboard/TopBar'
-import WeekTimeline from '@/components/dashboard/WeekTimeline'
 
 export const metadata: Metadata = {
-  title: 'Overview · Atlas',
+  title: 'Overview · exomemri',
   description: 'Your learning memory at a glance.',
 }
 
@@ -42,78 +32,54 @@ async function loadProfile(token: string): Promise<Profile | null> {
 }
 
 export default async function DashboardPage() {
-  // The layout already gated auth/onboarding, so a token is expected here.
   const token = (await cookies()).get('atlas_token')?.value ?? ''
-
-  const [profile, apiSpaces, recentSources] = await Promise.all([
+  const [profile, apiSpaces, recentSources, sharedSpaces] = await Promise.all([
     loadProfile(token),
     listSpaces(token),
     listRecentSources(token),
+    listSharedWithMe(token),
   ])
-
   const spaces = apiSpaces.map(toLearningSpace)
   const captures = recentSources.map(toCapturedSource)
-  const data = getDashboardData({
-    spaceCount: spaces.length,
-    sourceCount: apiSpaces.reduce((sum, space) => sum + space.source_counts.total, 0),
-  })
+  const totalSources = apiSpaces.reduce((sum, space) => sum + space.source_counts.total, 0)
 
   return (
     <div className={`${styles.app} ${atlasFontVars}`}>
-      <Sidebar
-        profile={profile}
-        spaceCount={spaces.length}
-        reviewCount={data.review.total}
-        totalSources={data.totalSources}
-        plan={data.plan}
-        extensionTabs={data.extensionTabs}
-      />
-
+      <Sidebar spaceCount={spaces.length} sourceCount={totalSources} />
       <main className={styles.main}>
         <ContourBg />
-
         <div className={styles.inner}>
           <TopBar
-            name={firstName(profile)}
-            dueCount={data.review.total}
-            newConcepts={3}
-            streakDays={data.streakDays}
+            profile={profile}
+            totalSources={totalSources}
+            spaceCount={spaces.length}
+            streakDays={getStreakDays(profile)}
           />
 
-          <AskBar />
+          <section id="spaces" className={styles.section}>
+            <Plate num="01" title="Your Learning Spaces" />
+            <SpacesGrid spaces={spaces} />
+          </section>
 
-          <Plate num="01" title="Continue where you left off" />
-          <ResumeCard item={data.resume} />
-
-          <StatsRow stats={data.stats} />
-
-          <Plate
-            num="02"
-            title="Your Learning Spaces"
-            link={{ label: 'View all →', href: '/dashboard' }}
-          />
-          <SpacesGrid spaces={spaces} />
-
-          <div className={styles.cols}>
-            <div>
-              <Plate num="03" title="Recently captured" />
-              <CaptureFeed sources={captures} />
-            </div>
-
-            <div className={styles.rail}>
-              <ReviewCard review={data.review} />
-              <GapsCard gaps={data.gaps} />
-            </div>
-          </div>
-
-          <div className={styles.tl}>
+          <section id="captures" className={styles.section}>
             <Plate
-              num="05"
-              title="This week’s learning"
-              link={{ label: 'Full timeline →', href: '/dashboard' }}
+              num="02"
+              title="Recently captured"
+              link={
+                captures.length > 0
+                  ? { label: `${captures.length} latest`, href: '#captures' }
+                  : undefined
+              }
             />
-            <WeekTimeline days={data.week.days} deltaLabel={data.week.deltaLabel} />
-          </div>
+            <CaptureFeed sources={captures} canDelete />
+          </section>
+
+          {sharedSpaces.length > 0 && (
+            <section id="shared" className={styles.section}>
+              <Plate num="03" title="Shared with you" />
+              <SharedWithMeList sources={sharedSpaces} />
+            </section>
+          )}
         </div>
       </main>
     </div>
