@@ -1,48 +1,7 @@
--- Monthly credit quota per user.
---
--- A separate table rather than more columns on `profiles` — that table is
--- already past the 10-column split threshold in backend/CLAUDE.md. Credits are
--- a distinct concern (quota + period + ask tally) that payment will later
--- grant against, so they should not share a row with name/role/streaks.
---
--- Default allowance is 100 credits per rolling month. Unused credits do not
--- roll over: the first read/consume after period_start + 1 month resets
--- balance to monthly_allowance and clears the ask tally.
--- consume_credits is an RPC so two concurrent captures cannot both pass a
--- read-then-decrement check.
+-- RETURNS TABLE column names become PL/pgSQL variables. Unqualified
+-- user_id / balance in INSERT/UPDATE then raise 42702 ambiguous reference.
+-- Prefer table columns so the RPC contract (same OUT names) stays unchanged.
 
-CREATE TABLE public.user_credits (
-  user_id           UUID PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
-  balance           INTEGER NOT NULL DEFAULT 100
-                      CHECK (balance >= 0),
-  monthly_allowance INTEGER NOT NULL DEFAULT 100
-                      CHECK (monthly_allowance > 0),
-  period_start      TIMESTAMP WITH TIME ZONE NOT NULL
-                      DEFAULT TIMEZONE('utc'::text, NOW()),
-  ask_units         INTEGER NOT NULL DEFAULT 0
-                      CHECK (ask_units >= 0 AND ask_units <= 2),
-  updated_at        TIMESTAMP WITH TIME ZONE NOT NULL
-                      DEFAULT TIMEZONE('utc'::text, NOW())
-);
-
-ALTER TABLE public.user_credits ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow individual credits insertion"
-ON public.user_credits FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Allow individual credits reading"
-ON public.user_credits FOR SELECT
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Allow individual credits update"
-ON public.user_credits FOR UPDATE
-USING (auth.uid() = user_id);
-
-
--- Insert defaults if missing; if the period has elapsed, reset balance to the
--- monthly allowance (leftovers vanish) and clear the ask tally. Locks the row
--- so a nested consume/grant in the same transaction serializes against it.
 CREATE OR REPLACE FUNCTION public.ensure_user_credits(p_user UUID)
 RETURNS TABLE (
   user_id           UUID,
