@@ -320,7 +320,7 @@
       }
       @media (max-width: 900px) {
         .h1 { font-size: 48px; }
-        .hero { min-height: 0; padding-top: 48px; padding-bottom: 64px; }
+        .hero { min-height: 0; justify-content: flex-start; padding-top: 32px; padding-bottom: 48px; }
         .navlinks { display: none; }
         .sec { padding: 76px 0; }
         .fgrid { grid-template-columns: 1fr; }
@@ -352,12 +352,15 @@
         .audienceGrid { grid-template-columns: 1fr; }
         .faq .ans { padding: 0 0 24px 0; }
         .faq summary { font-size: 19px; padding: 20px 0; }
-        .nav { height: auto; }
-        .navin { height: auto; padding-top: 12px; padding-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+        .nav { height: var(--marketing-nav-height); }
+        .navin { flex-wrap: nowrap; gap: 8px; height: 100%; padding-top: 0; padding-bottom: 0; }
+        .navActions { gap: 6px; flex-shrink: 0; }
+        .nav .btnSm { padding: 8px 12px; font-size: 13px; }
+        .brand { flex-shrink: 0; }
+        .hero { min-height: 0; justify-content: flex-start; padding-top: 28px; padding-bottom: 40px; }
         .winBar .mono { display: none; }
         .footerRow { flex-direction: column; align-items: flex-start; gap: 16px; padding: 32px 18px; }
-        .btn { font-size: 14px; padding: 12px 18px; }
-        .heroCtas .btn, .finalCtas .btn { width: 100%; justify-content: center; }
+        .heroCtas .btn, .finalCtas .btn { width: 100%; justify-content: center; font-size: 14px; padding: 12px 18px; }
       }
 
 /* --- Knowledge map + notes showcases --- */
@@ -558,6 +561,10 @@
   .notesLine {
     font-size: 14.5px;
   }
+}
+
+@media (max-width: 380px) {
+  .nav .btnG { display: none; }
 }
 .problemCopyFlush { margin: 0; }
 .srcGrow { flex: 1; min-width: 0; }

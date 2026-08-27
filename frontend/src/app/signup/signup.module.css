@@ -26,7 +26,8 @@
   min-height: 100vh;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background-color: var(--bg-color);
   padding: 2.5rem 1rem;
   font-family: 'Instrument Sans', system-ui, sans-serif;
@@ -325,4 +326,47 @@
 .input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
   -webkit-text-fill-color: var(--text-primary) !important;
+}
+
+@media (max-width: 640px) {
+  .pageWrapper {
+    align-items: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100svh;
+    padding: 4.75rem 1rem 2rem;
+  }
+
+  .brandLink {
+    left: 1rem;
+    top: 1rem;
+  }
+
+  .themeToggleWrap {
+    right: 1rem;
+    top: 1rem;
+  }
+
+  .card {
+    padding: 24px 20px 22px;
+  }
+
+  .heading {
+    font-size: 28px;
+  }
+
+  .subheading {
+    font-size: 14.5px;
+    margin-bottom: 22px;
+  }
+
+  .input,
+  .googleBtn,
+  .submitBtn {
+    font-size: 16px;
+  }
+
+  .plateLabel {
+    margin-bottom: 1.1rem;
+  }
 }

@@ -80,7 +80,7 @@ export default function LoginPage() {
       <ContourBg />
 
       {/* Header Bar */}
-      <div className="absolute left-8 top-7 right-8 flex justify-between items-center z-20">
+      <div className={styles.headerBar}>
         <Link href="/" className={styles.brandLink}>
           <Lockup size={24} />
         </Link>
