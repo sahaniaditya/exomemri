@@ -8,7 +8,7 @@ import { getProfileVisibility } from '@/lib/public-profile'
 import { listSpaces } from '@/lib/spaces'
 import styles from '@/components/dashboard/dashboard.module.css'
 import ContourBg from '@/components/dashboard/ContourBg'
-import { GiveReviewButton } from '@/components/dashboard/GiveReviewDialog'
+import { GiveReviewCard } from '@/components/dashboard/GiveReviewDialog'
 import Plate from '@/components/dashboard/Plate'
 import ProfileDetails from '@/components/dashboard/ProfileDetails'
 import ProfileVisibilityToggle from '@/components/dashboard/ProfileVisibilityToggle'
@@ -65,7 +65,7 @@ export default async function ProfilePage() {
           />
 
           <section id="account" className={styles.section}>
-            <Plate num="01" title="Account" action={<GiveReviewButton />} />
+            <Plate num="01" title="Account" />
             <ProfileDetails
               profile={profile}
               spaceCount={spaces.length}
@@ -73,8 +73,13 @@ export default async function ProfilePage() {
             />
           </section>
 
+          <section id="feedback" className={styles.section}>
+            <Plate num="02" title="Feedback" />
+            <GiveReviewCard />
+          </section>
+
           <section id="sharing" className={styles.section}>
-            <Plate num="02" title="Sharing" />
+            <Plate num="03" title="Sharing" />
             <ProfileVisibilityToggle
               username={profile?.username ?? ''}
               initialPublic={isPublic}

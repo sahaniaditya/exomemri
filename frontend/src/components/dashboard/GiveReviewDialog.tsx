@@ -185,7 +185,8 @@ export default function GiveReviewDialog({
   )
 }
 
-export function GiveReviewButton() {
+/** Prominent Account/Feedback card — opens the review dialog. */
+export function GiveReviewCard() {
   const [open, setOpen] = useState(false)
   const [existing, setExisting] = useState<Review | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -202,7 +203,7 @@ export function GiveReviewButton() {
           setExisting((await res.json()) as Review)
         }
       } catch {
-        // Button still works; dialog starts blank if load fails.
+        // Card still works; dialog starts blank if load fails.
       } finally {
         if (!cancelled) setLoaded(true)
       }
@@ -213,15 +214,56 @@ export function GiveReviewButton() {
     }
   }, [])
 
+  const hasReview = loaded && existing
+
   return (
     <>
-      <button
-        type="button"
-        className={styles.plateAction}
-        onClick={() => setOpen(true)}
-      >
-        {loaded && existing ? 'Edit review' : 'Give review'}
-      </button>
+      <div className={styles.rcard}>
+        <div className={styles.reviewInvite}>
+          <div className={styles.reviewInviteCopy}>
+            <div className={styles.covlabel}>
+              {hasReview ? 'Your review' : 'Share your experience'}
+            </div>
+            {hasReview ? (
+              <>
+                <div
+                  className={styles.reviewInviteStars}
+                  aria-label={`${existing.rating} out of 5 stars`}
+                >
+                  {[1, 2, 3, 4, 5].map(value => (
+                    <span
+                      key={value}
+                      className={
+                        value <= existing.rating
+                          ? styles.reviewInviteStarOn
+                          : styles.reviewInviteStarOff
+                      }
+                      aria-hidden="true"
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <p className={styles.reviewInviteQuote}>
+                  &ldquo;{existing.body}&rdquo;
+                </p>
+              </>
+            ) : (
+              <p className={styles.covempty}>
+                Rate exomemri out of 5 and leave a short note. Your feedback
+                helps us improve the product.
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            className={styles.reviewInviteBtn}
+            onClick={() => setOpen(true)}
+          >
+            {hasReview ? 'Edit review' : 'Give a review'}
+          </button>
+        </div>
+      </div>
       <GiveReviewDialog
         open={open}
         onClose={() => setOpen(false)}
