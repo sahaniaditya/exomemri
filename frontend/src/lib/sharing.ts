@@ -1,9 +1,8 @@
 /**
  * Read-only capture sharing, as returned by the backend.
  *
- * Shapes mirror `CollaboratorResponse` / `SharedSourceSummary` in
- * `backend/app/schemas/sharing.py`. Hand-written per feature, following
- * `lib/spaces.ts` — there is no generated database types file.
+ * Shapes mirror `CollaboratorResponse` / `SharedSourceSummary` /
+ * `ShareLinkStatusResponse` in `backend/app/schemas/sharing.py`.
  */
 import { apiFetch } from '@/lib/api'
 import type { ProcessingStatus, SourceType } from '@/lib/spaces'
@@ -29,6 +28,30 @@ export interface SharedSourceSummary {
   shared_at: string | null
 }
 
+export interface ShareLinkStatus {
+  enabled: boolean
+  token: string | null
+  path: string | null
+  created_at: string | null
+}
+
+export interface ShareLink {
+  token: string
+  path: string
+  created_at: string
+}
+
+export interface RedeemShareLinkResult extends SharedSourceSummary {
+  is_owner: boolean
+}
+
+/** Allowlisted post-login return path for share links only. */
+export const SHARE_LINK_NEXT_RE = /^\/s\/[A-Za-z0-9_-]+$/
+
+export function isAllowedShareReturnPath(path: string | null | undefined): path is string {
+  return typeof path === 'string' && SHARE_LINK_NEXT_RE.test(path)
+}
+
 export async function listCollaborators(
   token: string,
   sourceId: string
@@ -51,5 +74,19 @@ export async function listSharedWithMe(token: string): Promise<SharedSourceSumma
   } catch (error) {
     console.error('Failed to load captures shared with you:', error)
     return []
+  }
+}
+
+export async function getShareLinkStatus(
+  token: string,
+  sourceId: string
+): Promise<ShareLinkStatus> {
+  try {
+    const res = await apiFetch(`/v1/sources/${sourceId}/share-link`, {}, token)
+    if (!res.ok) return { enabled: false, token: null, path: null, created_at: null }
+    return (await res.json()) as ShareLinkStatus
+  } catch (error) {
+    console.error('Failed to load share link status:', error)
+    return { enabled: false, token: null, path: null, created_at: null }
   }
 }

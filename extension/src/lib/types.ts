@@ -126,6 +126,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Credits */
+        get: operations["get_credits_v1_credits_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/profile/visibility": {
         parameters: {
             query?: never;
@@ -192,6 +209,26 @@ export interface paths {
         put?: never;
         /** Set Active Space */
         post: operations["set_active_space_v1_session_active_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/share-links/{token}/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem Share Link
+         * @description Claim read-only access via a shareable link (any logged-in user).
+         */
+        post: operations["redeem_share_link_v1_share_links__token__redeem_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -408,6 +445,25 @@ export interface paths {
         post?: never;
         /** Delete Note */
         delete: operations["delete_note_v1_sources__source_id__notes__note_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{source_id}/share-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Share Link */
+        get: operations["get_share_link_v1_sources__source_id__share_link_get"];
+        /** Create Or Get Share Link */
+        put: operations["create_or_get_share_link_v1_sources__source_id__share_link_put"];
+        post?: never;
+        /** Revoke Share Link */
+        delete: operations["revoke_share_link_v1_sources__source_id__share_link_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -756,6 +812,23 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * CreditsBalance
+         * @description Remaining quota for the authenticated user.
+         */
+        CreditsBalance: {
+            /** Ask Units */
+            ask_units: number;
+            /** Balance */
+            balance: number;
+            /** Monthly Allowance */
+            monthly_allowance: number;
+            /**
+             * Period End
+             * Format: date-time
+             */
+            period_end: string;
+        };
         /** FolderListResponse */
         FolderListResponse: {
             /** Folders */
@@ -986,6 +1059,43 @@ export interface components {
             /** Processed */
             processed: number;
         };
+        /**
+         * RedeemShareLinkResponse
+         * @description Result of redeeming a share link; ``is_owner`` steers the post-redeem redirect.
+         */
+        RedeemShareLinkResponse: {
+            /** Author */
+            author?: string | null;
+            /** Captured At */
+            captured_at?: string | null;
+            /**
+             * Is Owner
+             * @default false
+             */
+            is_owner: boolean;
+            /** Owner Username */
+            owner_username?: string | null;
+            processing_status: components["schemas"]["ProcessingStatus"];
+            /** Shared At */
+            shared_at?: string | null;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /**
+             * Space Id
+             * Format: uuid
+             */
+            space_id: string;
+            /** Space Name */
+            space_name: string;
+            /** Title */
+            title: string;
+            type: components["schemas"]["SourceType"];
+            /** Url */
+            url?: string | null;
+        };
         /** RenameFolderRequest */
         RenameFolderRequest: {
             /** Name */
@@ -1024,6 +1134,35 @@ export interface components {
         SetSourceFolderRequest: {
             /** Folder Id */
             folder_id?: string | null;
+        };
+        /**
+         * ShareLinkResponse
+         * @description Active shareable link for a capture (owner-facing).
+         */
+        ShareLinkResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Path */
+            path: string;
+            /** Token */
+            token: string;
+        };
+        /**
+         * ShareLinkStatusResponse
+         * @description Whether an active share link exists; includes token for re-copy when enabled.
+         */
+        ShareLinkStatusResponse: {
+            /** Created At */
+            created_at?: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Path */
+            path?: string | null;
+            /** Token */
+            token?: string | null;
         };
         /** SharedSourceListResponse */
         SharedSourceListResponse: {
@@ -1600,6 +1739,37 @@ export interface operations {
             };
         };
     };
+    get_credits_v1_credits_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditsBalance"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_profile_visibility_v1_profile_visibility_get: {
         parameters: {
             query?: never;
@@ -1749,6 +1919,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    redeem_share_link_v1_share_links__token__redeem_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedeemShareLinkResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -2324,6 +2527,103 @@ export interface operations {
             path: {
                 source_id: string;
                 note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_share_link_v1_sources__source_id__share_link_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareLinkStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_or_get_share_link_v1_sources__source_id__share_link_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_share_link_v1_sources__source_id__share_link_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                source_id: string;
             };
             cookie?: never;
         };

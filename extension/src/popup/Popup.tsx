@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react"
 import { browser } from "wxt/browser"
 
-import type { SessionResponse, SpaceSummary } from "../lib/contracts"
+import type { CreditsBalance, SessionResponse, SpaceSummary } from "../lib/contracts"
 import { sendMessage } from "../lib/messaging"
 import { readTabSession } from "../lib/read-tab-session"
 import { parseStoredSession, STORED_SESSION_KEY } from "../lib/session-blob"
@@ -29,6 +29,7 @@ export function Popup() {
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const [saveError, setSaveError] = useState("")
+  const [credits, setCredits] = useState<CreditsBalance | null>(null)
 
   function wipeUi() {
     setSession(null)
@@ -39,6 +40,7 @@ export function Popup() {
     setSwitching(false)
     setSaveStatus("idle")
     setSaveError("")
+    setCredits(null)
   }
 
   async function refresh(): Promise<boolean> {
@@ -50,6 +52,14 @@ export function Popup() {
     } catch {
       wipeUi()
       return false
+    }
+  }
+
+  async function refreshCredits() {
+    try {
+      setCredits(await sendMessage("getCredits", undefined))
+    } catch {
+      setCredits(null)
     }
   }
 
@@ -83,7 +93,10 @@ export function Popup() {
       await pullFromActiveTab()
       await sendMessage("resyncSession", undefined).catch(() => undefined)
       const signedIn = await refresh()
-      if (signedIn) await refreshSpaces()
+      if (signedIn) {
+        await refreshSpaces()
+        await refreshCredits()
+      }
     }
     void boot()
 
@@ -100,7 +113,10 @@ export function Popup() {
       setSpaces(null)
       setSpacesError("")
       void refresh().then((ok) => {
-        if (ok) void refreshSpaces()
+        if (ok) {
+          void refreshSpaces()
+          void refreshCredits()
+        }
       })
     }
     browser.storage.onChanged.addListener(onStorageChanged)
@@ -129,14 +145,17 @@ export function Popup() {
     const result = await sendMessage("captureActiveTab", undefined)
     if (result.ok) {
       setSaveStatus("saved")
+      void refreshCredits()
       setTimeout(() => setSaveStatus("idle"), 2000)
     } else {
       setSaveError(result.error)
       setSaveStatus("error")
+      void refreshCredits()
     }
   }
 
-  const saveDisabled = saveStatus === "saving" || !session?.active_space
+  const outOfCredits = credits != null && credits.balance <= 0
+  const saveDisabled = saveStatus === "saving" || !session?.active_space || outOfCredits
 
   return (
     <div style={styles.root}>
@@ -184,6 +203,12 @@ export function Popup() {
               <h1 style={styles.h1}>Save this page.</h1>
               <p style={styles.sub}>
                 Into <strong style={styles.strong}>{session.active_space?.name ?? "no space"}</strong>
+                {credits != null && (
+                  <>
+                    {" · "}
+                    {credits.balance} credit{credits.balance === 1 ? "" : "s"} left
+                  </>
+                )}
               </p>
 
               {/* Primary action: save the current tab into the active space. */}
@@ -209,11 +234,14 @@ export function Popup() {
                 }}
                 data-testid="exomemri-save"
               >
-                {saveStatus === "idle" && (
-                  <>
-                    Save this page <span aria-hidden="true">→</span>
-                  </>
-                )}
+                {saveStatus === "idle" &&
+                  (outOfCredits ? (
+                    "Out of credits"
+                  ) : (
+                    <>
+                      Save this page <span aria-hidden="true">→</span>
+                    </>
+                  ))}
                 {saveStatus === "saving" && "Saving…"}
                 {saveStatus === "saved" && "Saved ✓"}
                 {saveStatus === "error" && "Retry"}

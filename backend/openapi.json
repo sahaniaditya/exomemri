@@ -381,6 +381,40 @@
         "title": "CreateSpaceRequest",
         "type": "object"
       },
+      "CreditsBalance": {
+        "description": "Remaining quota for the authenticated user.",
+        "properties": {
+          "ask_units": {
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Ask Units",
+            "type": "integer"
+          },
+          "balance": {
+            "minimum": 0.0,
+            "title": "Balance",
+            "type": "integer"
+          },
+          "monthly_allowance": {
+            "exclusiveMinimum": 0.0,
+            "title": "Monthly Allowance",
+            "type": "integer"
+          },
+          "period_end": {
+            "format": "date-time",
+            "title": "Period End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "balance",
+          "monthly_allowance",
+          "ask_units",
+          "period_end"
+        ],
+        "title": "CreditsBalance",
+        "type": "object"
+      },
       "FolderListResponse": {
         "properties": {
           "folders": {
@@ -865,6 +899,107 @@
         "title": "RebuildResponse",
         "type": "object"
       },
+      "RedeemShareLinkResponse": {
+        "description": "Result of redeeming a share link; ``is_owner`` steers the post-redeem redirect.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "is_owner": {
+            "default": false,
+            "title": "Is Owner",
+            "type": "boolean"
+          },
+          "owner_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Username"
+          },
+          "processing_status": {
+            "$ref": "#/components/schemas/ProcessingStatus"
+          },
+          "shared_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared At"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          },
+          "space_name": {
+            "title": "Space Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "source_id",
+          "title",
+          "type",
+          "processing_status",
+          "space_id",
+          "space_name"
+        ],
+        "title": "RedeemShareLinkResponse",
+        "type": "object"
+      },
       "RenameFolderRequest": {
         "properties": {
           "name": {
@@ -965,6 +1100,79 @@
           }
         },
         "title": "SetSourceFolderRequest",
+        "type": "object"
+      },
+      "ShareLinkResponse": {
+        "description": "Active shareable link for a capture (owner-facing).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "path",
+          "created_at"
+        ],
+        "title": "ShareLinkResponse",
+        "type": "object"
+      },
+      "ShareLinkStatusResponse": {
+        "description": "Whether an active share link exists; includes token for re-copy when enabled.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "ShareLinkStatusResponse",
         "type": "object"
       },
       "SharedSourceListResponse": {
@@ -2115,6 +2323,48 @@
         ]
       }
     },
+    "/v1/credits": {
+      "get": {
+        "operationId": "get_credits_v1_credits_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditsBalance"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Credits",
+        "tags": [
+          "credits"
+        ]
+      }
+    },
     "/v1/profile/visibility": {
       "get": {
         "operationId": "get_profile_visibility_v1_profile_visibility_get",
@@ -2334,6 +2584,58 @@
         "summary": "Set Active Space",
         "tags": [
           "session"
+        ]
+      }
+    },
+    "/v1/share-links/{token}/redeem": {
+      "post": {
+        "description": "Claim read-only access via a shareable link (any logged-in user).",
+        "operationId": "redeem_share_link_v1_share_links__token__redeem_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeemShareLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Redeem Share Link",
+        "tags": [
+          "sharing"
         ]
       }
     },
@@ -3281,6 +3583,151 @@
         "summary": "Put Note",
         "tags": [
           "sources"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/share-link": {
+      "delete": {
+        "operationId": "revoke_share_link_v1_sources__source_id__share_link_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Share Link",
+        "tags": [
+          "sharing"
+        ]
+      },
+      "get": {
+        "operationId": "get_share_link_v1_sources__source_id__share_link_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Share Link",
+        "tags": [
+          "sharing"
+        ]
+      },
+      "put": {
+        "operationId": "create_or_get_share_link_v1_sources__source_id__share_link_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Or Get Share Link",
+        "tags": [
+          "sharing"
         ]
       }
     },

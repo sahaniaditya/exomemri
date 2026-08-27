@@ -149,6 +149,14 @@ class SpaceService:
             return source
         raise NotFoundError("Source not found.", detail={"source_id": str(source_id)})
 
+    def get_source_any(self, source_id: UUID) -> dict | None:
+        """Source row with no owner filter — for share-link redeem after token auth."""
+        return self._spaces.get_source_any(source_id=str(source_id))
+
+    def get_space_any(self, space_id: UUID) -> dict | None:
+        """Space row with no owner filter — labels for share-link redeem."""
+        return self._spaces.get_space_any(space_id=str(space_id))
+
     # --- sources ---
 
     def list_sources(

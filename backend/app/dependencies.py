@@ -12,9 +12,11 @@ from app.repositories.chunk_repo import ChunkRepo
 from app.repositories.collaborator_repo import CollaboratorRepo
 from app.repositories.concept_repo import ConceptRepo
 from app.repositories.coverage_repo import CoverageRepo
+from app.repositories.credits_repo import CreditsRepo
 from app.repositories.note_repo import NoteRepo
 from app.repositories.profile_repo import ProfileRepo
 from app.repositories.profile_settings_repo import ProfileSettingsRepo
+from app.repositories.share_link_repo import ShareLinkRepo
 from app.repositories.space_repo import SpaceRepo
 from app.repositories.storage_repo import StorageRepo, get_storage_repo
 from app.repositories.supabase_client import get_auth_client, get_service_client
@@ -24,6 +26,7 @@ from app.services.auth_service import AuthService
 from app.services.capture_service import CaptureService
 from app.services.concept_service import ConceptService
 from app.services.coverage_service import CoverageService
+from app.services.credits_service import CreditsService
 from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
@@ -44,6 +47,10 @@ def get_space_repo() -> SpaceRepo:
 
 def get_collaborator_repo() -> CollaboratorRepo:
     return CollaboratorRepo(get_service_client())
+
+
+def get_share_link_repo() -> ShareLinkRepo:
+    return ShareLinkRepo(get_service_client())
 
 
 def get_space_service(
@@ -86,8 +93,9 @@ def get_sharing_service(
     collaborators: CollaboratorRepo = Depends(get_collaborator_repo),
     space_service: SpaceService = Depends(get_space_service),
     profiles: ProfileRepo = Depends(get_profile_repo),
+    share_links: ShareLinkRepo = Depends(get_share_link_repo),
 ) -> SharingService:
-    return SharingService(collaborators, space_service, profiles)
+    return SharingService(collaborators, space_service, profiles, share_links)
 
 
 def get_note_repo() -> NoteRepo:
@@ -103,13 +111,24 @@ def get_note_service(
     return NoteService(notes, space_service, storage, settings)
 
 
+def get_credits_repo() -> CreditsRepo:
+    return CreditsRepo(get_service_client())
+
+
+def get_credits_service(
+    credits: CreditsRepo = Depends(get_credits_repo),
+) -> CreditsService:
+    return CreditsService(credits)
+
+
 # --- Auth (real Supabase JWT) ---
 
 
 def get_auth_service(
     profiles: ProfileRepo = Depends(get_profile_repo),
+    credits: CreditsService = Depends(get_credits_service),
 ) -> AuthService:
-    return AuthService(profiles, get_service_client())
+    return AuthService(profiles, get_service_client(), credits)
 
 
 def get_bearer_token(authorization: str = Header(None)) -> str:
@@ -164,8 +183,9 @@ def get_source_chat_service(
     llm: LLMService = Depends(get_llm_service),
     embeddings: EmbeddingService = Depends(get_embedding_service),
     chunks: ChunkRepo = Depends(get_chunk_repo),
+    credits: CreditsService = Depends(get_credits_service),
 ) -> SourceChatService:
-    return SourceChatService(spaces, extracts, llm, embeddings, chunks)
+    return SourceChatService(spaces, extracts, llm, embeddings, chunks, credits)
 
 def get_concept_repo() -> ConceptRepo:
     return ConceptRepo(get_service_client())
@@ -185,8 +205,9 @@ def get_capture_service(
     space_service: SpaceService = Depends(get_space_service),
     streaks: StreakService = Depends(get_streak_service),
     concepts: ConceptService = Depends(get_concept_service),
+    credits: CreditsService = Depends(get_credits_service),
 ) -> CaptureService:
-    return CaptureService(settings, storage, space_service, streaks, concepts)
+    return CaptureService(settings, storage, space_service, streaks, concepts, credits)
 
 
 def get_coverage_repo() -> CoverageRepo:

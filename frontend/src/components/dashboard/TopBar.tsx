@@ -4,9 +4,9 @@
  * useSyncExternalStore below); counts come from the server page.
  */
 import { useSyncExternalStore } from 'react'
-import { useLogout } from '@/lib/use-logout'
-import { initial, type Profile } from '@/lib/profile'
-import ThemeToggle from './ThemeToggle'
+import { type CreditsBalance } from '@/lib/credits'
+import { type Profile } from '@/lib/profile'
+import AccountChrome from './AccountChrome'
 import styles from './dashboard.module.css'
 
 interface TopBarProps {
@@ -15,6 +15,7 @@ interface TopBarProps {
   spaceCount: number
   /** Days of consecutive study activity (a capture, UTC days). */
   streakDays?: number
+  credits?: CreditsBalance | null
   /** Full hero + pulse on overview; compact greeting elsewhere. */
   variant?: 'hero' | 'compact'
 }
@@ -51,42 +52,16 @@ export default function TopBar({
   totalSources,
   spaceCount,
   streakDays = 0,
+  credits = null,
   variant = 'hero',
 }: TopBarProps) {
-  const { logout, loggingOut } = useLogout()
   const clock = useSyncExternalStore<Clock | null>(subscribe, getClientClock, () => null)
   const name = profile?.full_name?.split(' ')[0] ?? 'there'
   const empty = totalSources === 0
 
   const account = (
-    <div className={styles.me}>
-      <div className={styles.avatar}>{initial(profile)}</div>
-      <div>
-        <div className={styles.nm}>{profile?.full_name ?? 'Your account'}</div>
-        <div className={styles.pl}>SIGNED IN</div>
-      </div>
-      <button
-        type="button"
-        className={styles.signout}
-        onClick={() => void logout()}
-        disabled={loggingOut}
-        title="Sign out"
-        aria-label="Sign out"
-      >
-        <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-          <path d="M16 17l5-5-5-5M21 12H9" />
-        </svg>
-      </button>
-    </div>
-  )
-
-  const streak = streakDays > 0 && (
-    <div className={styles.streak}>
-      <span className={styles.flame} aria-hidden="true">
-        🔥
-      </span>
-      {streakDays} day{streakDays === 1 ? '' : 's'}
+    <div className={styles.topRight}>
+      <AccountChrome profile={profile} streakDays={streakDays} credits={credits} />
     </div>
   )
 
@@ -106,11 +81,7 @@ export default function TopBar({
                 }`}
           </p>
         </div>
-        <div className={styles.topRight}>
-          {streak}
-          <ThemeToggle />
-          {account}
-        </div>
+        {account}
       </div>
     )
   }
@@ -129,11 +100,7 @@ export default function TopBar({
               : 'Pick up a Learning Space, or scan what you captured most recently.'}
           </p>
         </div>
-        <div className={styles.topRight}>
-          {streak}
-          <ThemeToggle />
-          {account}
-        </div>
+        {account}
       </div>
       <div className={styles.pulse} aria-label="Library at a glance">
         <div className={styles.pulseCard}>

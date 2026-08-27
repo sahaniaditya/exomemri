@@ -8,7 +8,7 @@
  * `GET /v1/session` on the hot path — initialization is local and instant.
  */
 import { api, ApiError } from "../lib/api"
-import type { SessionResponse, SpaceSummary } from "../lib/contracts"
+import type { CreditsBalance, SessionResponse, SpaceSummary } from "../lib/contracts"
 import { clearSession, readSession, writeSession } from "../lib/session-store"
 
 const SIGNED_OUT = "Signed out"
@@ -101,6 +101,10 @@ export async function requireActiveSpaceId(): Promise<string> {
 export async function listSpaces(): Promise<SpaceSummary[]> {
   const resp = await withSessionInvalidation(() => api.listSpaces())
   return resp.spaces
+}
+
+export async function fetchCredits(): Promise<CreditsBalance> {
+  return withSessionInvalidation(() => api.getCredits())
 }
 
 /**

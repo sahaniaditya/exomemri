@@ -13,11 +13,12 @@ import { clearSession, writeSession } from "../lib/session-store"
 import { isTrustedSender, isTrustedWebOrigin } from "../lib/trusted-origin"
 import { captureActiveTab } from "./capture"
 import { resyncFromTab, resyncFromWebApp } from "./resync"
-import { fetchSession, listSpaces, setActiveSpace } from "./session"
+import { fetchCredits, fetchSession, listSpaces, setActiveSpace } from "./session"
 
 export function bootBackground(): void {
   onMessage("getSession", () => fetchSession())
   onMessage("listSpaces", () => listSpaces())
+  onMessage("getCredits", () => fetchCredits())
   onMessage("setActiveSpace", async ({ data }) => {
     await setActiveSpace(data)
     return { ok: true }

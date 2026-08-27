@@ -8,6 +8,7 @@
 import type {
   CaptureRequest,
   CaptureResponse,
+  CreditsBalance,
   SessionResponse,
   SpaceListResponse,
   UploadUrlRequest,
@@ -57,6 +58,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getSession: () => request<SessionResponse>("/v1/session"),
+
+  getCredits: () => request<CreditsBalance>("/v1/credits"),
 
   listSpaces: () => request<SpaceListResponse>("/v1/spaces"),
 

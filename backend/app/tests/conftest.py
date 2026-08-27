@@ -627,6 +627,78 @@ class FakeProfileSettingsRepo:
         self.settings[user_id] = {"user_id": user_id, "profile_public": profile_public}
 
 
+class FakeCreditsRepo:
+    """In-memory stand-in for ``user_credits`` + the ensure/consume/grant RPCs.
+
+    Auto-inserts the default monthly grant so existing capture/chat tests stay
+    green without seeding a row.
+    """
+
+    def __init__(self) -> None:
+        self.rows: dict[str, dict] = {}
+
+    def _now(self) -> datetime:
+        return datetime.now(UTC)
+
+    def ensure(self, *, user_id: str) -> dict:
+        from app.schemas.credits import DEFAULT_MONTHLY_ALLOWANCE
+        from app.services.credits_service import add_calendar_month
+
+        now = self._now()
+        row = self.rows.get(user_id)
+        if row is None:
+            row = {
+                "user_id": user_id,
+                "balance": DEFAULT_MONTHLY_ALLOWANCE,
+                "monthly_allowance": DEFAULT_MONTHLY_ALLOWANCE,
+                "period_start": now.isoformat(),
+                "ask_units": 0,
+                "updated_at": now.isoformat(),
+            }
+            self.rows[user_id] = row
+            return dict(row)
+
+        start = datetime.fromisoformat(str(row["period_start"]).replace("Z", "+00:00"))
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=UTC)
+        if add_calendar_month(start) <= now:
+            while add_calendar_month(start) <= now:
+                start = add_calendar_month(start)
+            row["period_start"] = start.isoformat()
+            row["balance"] = row["monthly_allowance"]
+            row["ask_units"] = 0
+            row["updated_at"] = now.isoformat()
+        return dict(row)
+
+    def consume(self, *, user_id: str, amount: int) -> dict:
+        row = self.ensure(user_id=user_id)
+        if row["balance"] < amount:
+            return {"ok": False, **row}
+        self.rows[user_id]["balance"] = row["balance"] - amount
+        self.rows[user_id]["updated_at"] = self._now().isoformat()
+        return {"ok": True, **dict(self.rows[user_id])}
+
+    def grant(self, *, user_id: str, amount: int) -> dict:
+        row = self.ensure(user_id=user_id)
+        self.rows[user_id]["balance"] = row["balance"] + amount
+        self.rows[user_id]["updated_at"] = self._now().isoformat()
+        return dict(self.rows[user_id])
+
+    def set_ask_units(self, *, user_id: str, ask_units: int) -> None:
+        self.ensure(user_id=user_id)
+        self.rows[user_id]["ask_units"] = ask_units
+
+    def set_allowance(
+        self, *, user_id: str, monthly_allowance: int, refill: bool
+    ) -> dict:
+        self.ensure(user_id=user_id)
+        self.rows[user_id]["monthly_allowance"] = monthly_allowance
+        if refill:
+            self.rows[user_id]["balance"] = monthly_allowance
+            self.rows[user_id]["ask_units"] = 0
+        return dict(self.rows[user_id])
+
+
 class FakeCollaboratorRepo:
     """In-memory stand-in for ``source_collaborators``."""
 
@@ -689,6 +761,50 @@ class FakeCollaboratorRepo:
                 nested_source["spaces"] = {"id": space["id"], "name": space["name"]}
             out.append({**row, "sources": nested_source, "spaces": space})
         return out
+
+
+class FakeShareLinkRepo:
+    """In-memory stand-in for ``source_share_links``."""
+
+    def __init__(self) -> None:
+        self.links: list[dict] = []
+
+    def get_active_for_source(self, *, source_id: str) -> dict | None:
+        for row in self.links:
+            if row["source_id"] == source_id and row.get("revoked_at") is None:
+                return dict(row)
+        return None
+
+    def get_active_by_token(self, *, token: str) -> dict | None:
+        for row in self.links:
+            if row["token"] == token and row.get("revoked_at") is None:
+                return dict(row)
+        return None
+
+    def create(
+        self, *, source_id: str, space_id: str, token: str, created_by: str
+    ) -> dict:
+        if self.get_active_for_source(source_id=source_id):
+            raise RuntimeError("duplicate key value violates unique constraint (23505)")
+        if any(r["token"] == token for r in self.links):
+            raise RuntimeError("duplicate key value violates unique constraint (23505)")
+        row = {
+            "id": str(uuid4()),
+            "source_id": source_id,
+            "space_id": space_id,
+            "token": token,
+            "created_by": created_by,
+            "created_at": datetime.now(UTC).isoformat(),
+            "revoked_at": None,
+        }
+        self.links.append(row)
+        return dict(row)
+
+    def revoke(self, *, source_id: str) -> None:
+        now = datetime.now(UTC).isoformat()
+        for row in self.links:
+            if row["source_id"] == source_id and row.get("revoked_at") is None:
+                row["revoked_at"] = now
 
 
 class FakeEmbeddingService:
@@ -811,6 +927,11 @@ def profile_settings_repo() -> FakeProfileSettingsRepo:
 
 
 @pytest.fixture
+def credits_repo() -> FakeCreditsRepo:
+    return FakeCreditsRepo()
+
+
+@pytest.fixture
 def collaborator_repo(
     space_repo: FakeSpaceRepo, profile_repo: FakeProfileRepo
 ) -> FakeCollaboratorRepo:
@@ -818,6 +939,11 @@ def collaborator_repo(
     repo._space_repo = space_repo
     repo._profile_repo = profile_repo
     return repo
+
+
+@pytest.fixture
+def share_link_repo() -> FakeShareLinkRepo:
+    return FakeShareLinkRepo()
 
 
 @pytest.fixture
@@ -864,7 +990,9 @@ def client(
     profile_repo: FakeProfileRepo,
     profile_settings_repo: FakeProfileSettingsRepo,
     collaborator_repo: FakeCollaboratorRepo,
+    share_link_repo: FakeShareLinkRepo,
     note_repo: FakeNoteRepo,
+    credits_repo: FakeCreditsRepo,
     embedding_service: FakeEmbeddingService,
     llm_service: FakeLLMService,
     pipeline_service: FakePipelineService,
@@ -874,6 +1002,7 @@ def client(
         get_chunk_repo,
         get_concept_service,
         get_coverage_service,
+        get_credits_service,
         get_embedding_service,
         get_llm_service,
         get_note_service,
@@ -885,6 +1014,7 @@ def client(
         get_source_chat_service,
     )
     from app.services.coverage_service import CoverageService
+    from app.services.credits_service import CreditsService
     from app.services.extract_service import ExtractService
     from app.services.note_service import NoteService
     from app.services.plan_service import PlanService
@@ -903,18 +1033,19 @@ def client(
     concept_svc = ConceptService(
         concept_repo, space_svc, extract_svc, llm_service  # type: ignore[arg-type]
     )
+    credits_svc = CreditsService(credits_repo)  # type: ignore[arg-type]
     capture_svc = CaptureService(
-        settings, storage, space_svc, streak_svc, concept_svc  # type: ignore[arg-type]
+        settings, storage, space_svc, streak_svc, concept_svc, credits_svc  # type: ignore[arg-type]
     )
     coverage_svc = CoverageService(
         coverage_repo, concept_repo, space_svc, llm_service  # type: ignore[arg-type]
     )
     plan_svc = PlanService(coverage_svc, space_svc)  # type: ignore[arg-type]
     sharing_svc = SharingService(
-        collaborator_repo, space_svc, profile_repo  # type: ignore[arg-type]
+        collaborator_repo, space_svc, profile_repo, share_link_repo  # type: ignore[arg-type]
     )
     chat_svc = SourceChatService(
-        space_svc, extract_svc, llm_service, embedding_service, chunk_repo  # type: ignore[arg-type]
+        space_svc, extract_svc, llm_service, embedding_service, chunk_repo, credits_svc  # type: ignore[arg-type]
     )
     note_svc = NoteService(note_repo, space_svc, storage, settings)  # type: ignore[arg-type]
     profile_svc = ProfileService(
@@ -941,6 +1072,7 @@ def client(
     app.dependency_overrides[get_llm_service] = lambda: llm_service
     app.dependency_overrides[get_source_chat_service] = lambda: chat_svc
     app.dependency_overrides[get_note_service] = lambda: note_svc
+    app.dependency_overrides[get_credits_service] = lambda: credits_svc
     # The real pipeline calls Anthropic/Hugging Face over the network — never run it
     # from the capture path in tests; dedicated pipeline tests exercise the
     # real graph directly against fakes instead.

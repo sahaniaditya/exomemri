@@ -66,7 +66,9 @@ export default function DeleteCaptureButton({
         <path d="M9 7V5h6v2" />
         <path d="M8 7l1 13h6l1-13" />
       </svg>
-      {variant === 'hero' ? (busy ? 'Deleting…' : 'Delete') : null}
+      {variant === 'hero' ? (
+        <span className={styles.captureActionLabel}>{busy ? 'Deleting…' : 'Delete'}</span>
+      ) : null}
     </button>
   )
 }

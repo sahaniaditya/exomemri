@@ -147,6 +147,7 @@
     justify-content: flex-start;
     min-height: 100svh;
     padding: 4.75rem 1rem 2rem;
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
   }
 
   .headerBar {
@@ -155,8 +156,13 @@
     top: 1rem;
   }
 
+  .headerActions {
+    gap: 10px;
+  }
+
   .card {
     padding: 24px 20px 22px;
+    width: 100%;
   }
 
   .heading {
@@ -177,6 +183,13 @@
   }
 
   .navRow button {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .body input,
+  .body textarea,
+  .body select {
     font-size: 16px;
   }
 }

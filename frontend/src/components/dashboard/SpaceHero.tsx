@@ -5,11 +5,10 @@
  * stack a second greeting under the overview TopBar.
  */
 import Link from 'next/link'
-import { useLogout } from '@/lib/use-logout'
-import { initial, type Profile } from '@/lib/profile'
+import { type Profile } from '@/lib/profile'
 import { relativeTime } from '@/lib/dashboard-data'
 import type { Space } from '@/lib/spaces'
-import ThemeToggle from './ThemeToggle'
+import AccountChrome from './AccountChrome'
 import styles from './dashboard.module.css'
 
 interface SpaceHeroProps {
@@ -27,7 +26,6 @@ const MIX: { key: keyof Space['source_counts']; label: string }[] = [
 ]
 
 export default function SpaceHero({ space, profile, sourceCount }: SpaceHeroProps) {
-  const { logout, loggingOut } = useLogout()
   const empty = sourceCount === 0
   const activeMix = MIX.filter(item => space.source_counts[item.key] > 0)
 
@@ -64,27 +62,7 @@ export default function SpaceHero({ space, profile, sourceCount }: SpaceHeroProp
           </div>
         </div>
         <div className={styles.topRight}>
-          <ThemeToggle />
-          <div className={styles.me}>
-            <div className={styles.avatar}>{initial(profile)}</div>
-            <div>
-              <div className={styles.nm}>{profile?.full_name ?? 'Your account'}</div>
-              <div className={styles.pl}>SIGNED IN</div>
-            </div>
-            <button
-              type="button"
-              className={styles.signout}
-              onClick={() => void logout()}
-              disabled={loggingOut}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <svg viewBox="0 0 24 24" strokeWidth="1.8" strokeLinecap="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <path d="M16 17l5-5-5-5M21 12H9" />
-              </svg>
-            </button>
-          </div>
+          <AccountChrome profile={profile} showStreak={false} />
         </div>
       </div>
       <div className={styles.spacePulse} aria-label="Sources in this space">

@@ -48,3 +48,26 @@ class SharedSourceSummary(BaseModel):
 
 class SharedSourceListResponse(BaseModel):
     sources: list[SharedSourceSummary]
+
+
+class ShareLinkResponse(BaseModel):
+    """Active shareable link for a capture (owner-facing)."""
+
+    token: str
+    path: str
+    created_at: datetime
+
+
+class ShareLinkStatusResponse(BaseModel):
+    """Whether an active share link exists; includes token for re-copy when enabled."""
+
+    enabled: bool
+    token: str | None = None
+    path: str | None = None
+    created_at: datetime | None = None
+
+
+class RedeemShareLinkResponse(SharedSourceSummary):
+    """Result of redeeming a share link; ``is_owner`` steers the post-redeem redirect."""
+
+    is_owner: bool = False

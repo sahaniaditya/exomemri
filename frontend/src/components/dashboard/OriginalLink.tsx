@@ -26,7 +26,7 @@ export default function OriginalLink({ url, compact = false, className }: Origin
         <path d="M10 14 19 5" />
         <path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
       </svg>
-      {compact ? null : <span>Original</span>}
+      {compact ? null : <span className={styles.captureActionLabel}>Original</span>}
     </a>
   )
 }

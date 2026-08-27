@@ -29,6 +29,7 @@ from app.schemas.sources import (
 )
 from app.schemas.spaces import ArtifactUrlResponse
 from app.services.concept_service import ConceptService
+from app.services.credits_service import CreditsService
 from app.services.space_service import SpaceService
 from app.services.streak_service import StreakService
 
@@ -102,12 +103,14 @@ class CaptureService:
         spaces: SpaceService,
         streaks: StreakService,
         concepts: ConceptService,
+        credits: CreditsService,
     ) -> None:
         self._settings = settings
         self._storage = storage
         self._spaces = spaces
         self._streaks = streaks
         self._concepts = concepts
+        self._credits = credits
 
     async def _write_meta(
         self,
@@ -162,38 +165,45 @@ class CaptureService:
 
         # Re-capturing the same page into the same space reuses the original id,
         # so the row and its storage prefix keep pointing at each other.
-        source_id = await self._existing_source_id(payload.space_id, content_hash) or uuid4()
+        existing_id = await self._existing_source_id(payload.space_id, content_hash)
+        is_new = existing_id is None
+        source_id = existing_id or uuid4()
         prefix = build_source_prefix(user.id, payload.space_id, source_id)
         captured_at = datetime.now(UTC).isoformat()
 
-        await self._write_meta(
-            prefix,
-            user=user,
-            source_id=source_id,
-            space_id=payload.space_id,
-            source_type=payload.type,
-            title=payload.title,
-            url=url_str,
-            author=payload.author,
-            content_hash=content_hash,
-            captured_at=captured_at,
-        )
-        await self._write_artifacts(prefix, payload)
+        await self._charge_new_source(user, is_new)
+        try:
+            await self._write_meta(
+                prefix,
+                user=user,
+                source_id=source_id,
+                space_id=payload.space_id,
+                source_type=payload.type,
+                title=payload.title,
+                url=url_str,
+                author=payload.author,
+                content_hash=content_hash,
+                captured_at=captured_at,
+            )
+            await self._write_artifacts(prefix, payload)
 
-        # Storage first, then the row: a failed upload must not leave a record
-        # pointing at artifacts that aren't there.
-        row = await self._record_source(
-            user=user,
-            source_id=source_id,
-            space_id=payload.space_id,
-            source_type=payload.type,
-            title=payload.title,
-            url=url_str,
-            author=payload.author,
-            prefix=prefix,
-            content_hash=content_hash,
-            captured_at=captured_at,
-        )
+            # Storage first, then the row: a failed upload must not leave a record
+            # pointing at artifacts that aren't there.
+            row = await self._record_source(
+                user=user,
+                source_id=source_id,
+                space_id=payload.space_id,
+                source_type=payload.type,
+                title=payload.title,
+                url=url_str,
+                author=payload.author,
+                prefix=prefix,
+                content_hash=content_hash,
+                captured_at=captured_at,
+            )
+        except Exception:  # noqa: BLE001 - refund the capture credit before propagating
+            await self._refund_new_source(user, is_new)
+            raise
 
         await self._record_activity(user)
 
@@ -239,42 +249,49 @@ class CaptureService:
 
         url_str = str(payload.url) if payload.url else None
         content_hash = payload.content_hash or compute_content_hash(None, url_str)
-        source_id = await self._existing_source_id(payload.space_id, content_hash) or uuid4()
+        existing_id = await self._existing_source_id(payload.space_id, content_hash)
+        is_new = existing_id is None
+        source_id = existing_id or uuid4()
         prefix = build_source_prefix(user.id, payload.space_id, source_id)
         captured_at = datetime.now(UTC).isoformat()
 
-        await self._write_meta(
-            prefix,
-            user=user,
-            source_id=source_id,
-            space_id=payload.space_id,
-            source_type=SourceType.pdf,
-            title=payload.title,
-            url=url_str,
-            author=payload.author,
-            content_hash=content_hash,
-            captured_at=captured_at,
-        )
+        await self._charge_new_source(user, is_new)
+        try:
+            await self._write_meta(
+                prefix,
+                user=user,
+                source_id=source_id,
+                space_id=payload.space_id,
+                source_type=SourceType.pdf,
+                title=payload.title,
+                url=url_str,
+                author=payload.author,
+                content_hash=content_hash,
+                captured_at=captured_at,
+            )
 
-        object_path = f"{prefix}/original.pdf"
-        signed = await self._storage.create_signed_upload_url(object_path)
-        upload_url = self._absolute_upload_url(signed["signed_url"])
+            object_path = f"{prefix}/original.pdf"
+            signed = await self._storage.create_signed_upload_url(object_path)
+            upload_url = self._absolute_upload_url(signed["signed_url"])
 
-        # The row lands now, before the client PUTs the bytes — unlike the text
-        # flow, the upload happens outside this request, so `queued` is the only
-        # honest status and the row is what lets us notice a PUT that never came.
-        row = await self._record_source(
-            user=user,
-            source_id=source_id,
-            space_id=payload.space_id,
-            source_type=SourceType.pdf,
-            title=payload.title,
-            url=url_str,
-            author=payload.author,
-            prefix=prefix,
-            content_hash=content_hash,
-            captured_at=captured_at,
-        )
+            # The row lands now, before the client PUTs the bytes — unlike the text
+            # flow, the upload happens outside this request, so `queued` is the only
+            # honest status and the row is what lets us notice a PUT that never came.
+            row = await self._record_source(
+                user=user,
+                source_id=source_id,
+                space_id=payload.space_id,
+                source_type=SourceType.pdf,
+                title=payload.title,
+                url=url_str,
+                author=payload.author,
+                prefix=prefix,
+                content_hash=content_hash,
+                captured_at=captured_at,
+            )
+        except Exception:  # noqa: BLE001 - refund the capture credit before propagating
+            await self._refund_new_source(user, is_new)
+            raise
 
         await self._record_activity(user)
 
@@ -383,6 +400,16 @@ class CaptureService:
 
     async def _record_activity(self, user: User) -> None:
         await anyio.to_thread.run_sync(partial(self._streaks.record_activity, str(user.id)))
+
+    async def _charge_new_source(self, user: User, is_new: bool) -> None:
+        if not is_new:
+            return
+        await anyio.to_thread.run_sync(partial(self._credits.consume_capture, str(user.id)))
+
+    async def _refund_new_source(self, user: User, is_new: bool) -> None:
+        if not is_new:
+            return
+        await anyio.to_thread.run_sync(partial(self._credits.refund, str(user.id)))
 
     def _absolute_upload_url(self, signed_url: str) -> str:
         base = self._settings.supabase_url.rstrip("/")
