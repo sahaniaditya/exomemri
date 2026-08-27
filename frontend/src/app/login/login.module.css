@@ -11,7 +11,8 @@
   background-color: var(--bg-main);
   padding: 0 1rem;
   color: var(--text-main);
-  
+  box-sizing: border-box;
+
   /* Light Theme Variables */
   --bg-main: #F4F1E9;
   --bg-card: #FBFAF6;
@@ -29,6 +30,12 @@
   --divider: rgba(27, 26, 22, 0.12);
   --autofill-bg: #FBFAF6;
   --contour-opacity: 0.10;
+}
+
+.container *,
+.container *::before,
+.container *::after {
+  box-sizing: border-box;
 }
 
 /* Dark Theme Overrides */
@@ -68,6 +75,8 @@
   z-index: 10;
   width: 100%;
   max-width: 440px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .plateLabel {
@@ -104,6 +113,8 @@
   border-radius: 8px;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 24px 56px -28px rgba(0, 0, 0, 0.35);
   padding: 40px 40px 36px;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .title {
@@ -286,6 +297,8 @@
   font-size: 11px;
   color: var(--text-footer);
   letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 .contourSvg {

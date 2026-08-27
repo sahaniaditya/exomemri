@@ -9,6 +9,7 @@
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   transition: background 0.2s ease, color 0.2s ease;
+  overflow-x: hidden;
 }
 
 .page :global(*),
@@ -324,7 +325,7 @@
         .navlinks { display: none; }
         .sec { padding: 76px 0; }
         .fgrid { grid-template-columns: 1fr; }
-        .wrap { padding: 0 24px; }
+        .wrap { padding-inline: 24px; }
         .heroGrid { grid-template-columns: 1fr; gap: 48px; }
         .problemGrid { grid-template-columns: 1fr; gap: 40px; }
         .solutionGrid { grid-template-columns: 1fr; gap: 40px; }
@@ -344,7 +345,7 @@
       }
       @media (max-width: 640px) {
         .h1 { font-size: 38px; }
-        .wrap { padding: 0 18px; }
+        .wrap { padding-inline: 18px; }
         .sec { padding: 60px 0; }
         h2.serif { font-size: 32px !important; }
         .pull { font-size: 26px; }
@@ -359,8 +360,19 @@
         .brand { flex-shrink: 0; }
         .hero { min-height: 0; justify-content: flex-start; padding-top: 28px; padding-bottom: 40px; }
         .winBar .mono { display: none; }
-        .footerRow { flex-direction: column; align-items: flex-start; gap: 16px; padding: 32px 18px; }
-        .heroCtas .btn, .finalCtas .btn { width: 100%; justify-content: center; font-size: 14px; padding: 12px 18px; }
+        .footerRow { flex-direction: column; align-items: flex-start; gap: 16px; padding: 36px 18px 32px; }
+        .nav .btnG { display: none; }
+        .heroCtas .btn, .finalCtas .btn { width: 100%; justify-content: center; font-size: 14px; padding: 12px 18px; white-space: normal; }
+        .ctabandInner { padding: 44px 18px; }
+        .fcell { padding: 28px 22px; }
+        .ft { font-size: 22px; }
+        .heroNote { overflow-wrap: anywhere; }
+        .heroIntro { overflow-wrap: anywhere; }
+        .heroGrid > *,
+        .floaty,
+        .card { min-width: 0; max-width: 100%; }
+        .srcrow { min-width: 0; }
+        .srcrowTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       }
 
 /* --- Knowledge map + notes showcases --- */
@@ -564,7 +576,13 @@
 }
 
 @media (max-width: 380px) {
-  .nav .btnG { display: none; }
+  .wrap { padding-inline: 14px; }
+  .footerRow { padding: 36px 14px 32px; }
+  .ctabandInner { padding: 40px 16px; }
+  .fcell { padding: 24px 18px; }
+  .h1 { font-size: 32px; }
+  .srcrow .chipSm { display: none; }
+  .nav .btnP.btnSm { padding: 7px 10px; font-size: 12.5px; }
 }
 .problemCopyFlush { margin: 0; }
 .srcGrow { flex: 1; min-width: 0; }

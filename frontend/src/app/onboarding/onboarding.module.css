@@ -22,16 +22,93 @@
   --error-text: #B5623C;
 
   position: relative;
-  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   background-color: var(--bg-color);
   padding: 48px 20px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.headerBar {
+  position: absolute;
+  left: 40px;
+  top: 28px;
+  right: 40px;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stepCount {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text-subtle);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.body {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  min-width: 0;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 24px 56px -28px rgba(0, 0, 0, 0.3);
+  padding: 40px 40px 36px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.heading {
+  font-family: Newsreader, Georgia, serif;
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+}
+
+.lead {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0 0 26px;
+}
+
+.referralGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.navRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.input {
+  font-size: 16px;
 }
 
 /* --- Dark Theme Overrides — next-themes sets `dark` on <html> --- */
@@ -62,4 +139,44 @@
 .input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
   -webkit-text-fill-color: var(--text-primary) !important;
+}
+
+@media (max-width: 640px) {
+  .container {
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-height: 100svh;
+    padding: 4.75rem 1rem 2rem;
+  }
+
+  .headerBar {
+    left: 1rem;
+    right: 1rem;
+    top: 1rem;
+  }
+
+  .card {
+    padding: 24px 20px 22px;
+  }
+
+  .heading {
+    font-size: 26px;
+  }
+
+  .lead {
+    font-size: 14.5px;
+    margin-bottom: 22px;
+  }
+
+  .referralGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .navRow {
+    flex-wrap: wrap;
+  }
+
+  .navRow button {
+    font-size: 16px;
+  }
 }

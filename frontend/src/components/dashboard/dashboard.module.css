@@ -3919,3 +3919,174 @@ button.chip {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ---------- mobile chrome (must sit last so it wins cascade) ---------- */
+@media (max-width: 760px) {
+  .app {
+    overflow-x: hidden;
+  }
+  .main {
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+  .side {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 10px 14px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+    background: var(--paper);
+  }
+  :global(.dark) .side {
+    background: var(--paper);
+  }
+  .brand {
+    padding: 4px 0;
+  }
+  .navsec {
+    flex: 1 1 100%;
+    width: auto;
+    min-width: 0;
+    margin-top: 0;
+  }
+  .nav {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 4px;
+  }
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+  .navitem,
+  .sourceNavRow {
+    flex: none;
+    white-space: nowrap;
+  }
+  .inner {
+    padding: 20px 16px 56px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .topRight {
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .me {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .me .nm {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 18ch;
+  }
+  .ask {
+    padding: 12px 12px;
+    gap: 10px;
+  }
+  .ask input {
+    font-size: 16px;
+  }
+  .sourceHead {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .sourceHeadTitle {
+    font-size: 24px;
+    max-width: none;
+  }
+  .appSource .main,
+  .captureInner,
+  .captureShell {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .captureMain {
+    height: auto;
+    overflow: visible;
+    min-height: 0;
+    padding: 16px 14px 48px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+  .captureActions {
+    min-width: 0;
+    width: 100%;
+  }
+  .mapcanvas,
+  .maploading {
+    height: 320px;
+  }
+  .mapbar {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .memoryOverlay {
+    justify-content: stretch;
+  }
+  .memoryPanel {
+    width: 100% !important;
+    max-width: 100%;
+  }
+  .memoryResize {
+    display: none;
+  }
+  .memoryInput {
+    font-size: 16px;
+  }
+  .dialog {
+    width: min(440px, calc(100vw - 24px));
+    max-height: calc(100svh - 24px);
+  }
+  .dialogForm {
+    padding: 20px 16px;
+  }
+  .dialogInput,
+  .dialogTextarea {
+    font-size: 16px;
+  }
+  .notesEmojiPanel {
+    max-width: calc(100vw - 40px);
+    width: min(240px, calc(100vw - 40px));
+  }
+  .srcActions {
+    padding-right: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hello h1,
+  .spaceTitle {
+    font-size: 26px;
+  }
+  .profileStats,
+  .stats {
+    grid-template-columns: 1fr;
+  }
+  .profileHero {
+    flex-wrap: wrap;
+  }
+  .mapcanvas,
+  .maploading {
+    height: 260px;
+  }
+  .streak {
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+  .platetitle {
+    font-size: 20px;
+  }
+}

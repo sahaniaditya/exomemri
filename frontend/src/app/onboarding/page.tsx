@@ -61,7 +61,7 @@ const inputStyle: React.CSSProperties = {
   background: 'var(--input-bg)',
   border: '1px solid var(--border-color)',
   borderRadius: 4,
-  fontSize: 15,
+  fontSize: 16,
   color: 'var(--text-primary)',
   outline: 'none',
   fontFamily: 'Instrument Sans, system-ui, sans-serif',
@@ -147,7 +147,7 @@ function NavButtons({
 }) {
   const active = !nextDisabled && !loading
   return (
-    <div style={{ display: 'flex', gap: 10, marginTop: 28 }}>
+    <div className={styles.navRow}>
       {onBack && (
         <button
           type="button"
@@ -291,28 +291,17 @@ export default function OnboardingPage() {
       <div className={styles.container}>
         <ContourBg />
 
-        {/* Brand */}
-        <div style={{
-          position: 'absolute', top: 28, left: 40,
-          display: 'flex', alignItems: 'center', gap: 10,
-          fontSize: 19, color: 'var(--text-primary)',
-        }}>
+        <div className={styles.headerBar}>
           <Lockup size={24} />
+          <div className={styles.headerActions}>
+            <ThemeToggle />
+            <span className={styles.stepCount}>
+              {step + 1} / {STEP_LABELS.length}
+            </span>
+          </div>
         </div>
 
-        <div style={{
-          position: 'absolute', top: 24, right: 40,
-          display: 'flex', alignItems: 'center', gap: 16, zIndex: 2,
-        }}>
-          <ThemeToggle />
-          <span style={{
-            fontFamily: 'IBM Plex Mono', fontSize: 12, color: 'var(--text-subtle)', letterSpacing: '0.08em',
-          }}>
-            {step + 1} / {STEP_LABELS.length}
-          </span>
-        </div>
-
-        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 480 }}>
+        <div className={styles.body}>
 
           {/* Plate label */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
@@ -347,23 +336,15 @@ export default function OnboardingPage() {
             ))}
           </div>
 
-          {/* Card */}
-          <div style={{
-            background: 'var(--card-bg)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 8,
-            boxShadow: '0 1px 0 rgba(0,0,0,.04), 0 24px 56px -28px rgba(0,0,0,.3)',
-            padding: '40px 40px 36px',
-            transition: 'background-color .3s ease, border-color .3s ease',
-          }}>
+          <div className={styles.card}>
 
             {/* ── STEP 0: Identity ── */}
             {step === 0 && (
               <>
-                <h1 style={{ fontFamily: 'Newsreader', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+                <h1 className={styles.heading}>
                   Set up your identity.
                 </h1>
-                <p style={{ fontSize: 15, color: 'var(--text-secondary)', margin: '0 0 30px' }}>
+                <p className={styles.lead}>
                   This is how exomemri knows you.
                 </p>
 
@@ -503,10 +484,10 @@ export default function OnboardingPage() {
             {/* ── STEP 1: Role ── */}
             {step === 1 && (
               <>
-                <h1 style={{ fontFamily: 'Newsreader', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+                <h1 className={styles.heading}>
                   How do you learn?
                 </h1>
-                <p style={{ fontSize: 15, color: 'var(--text-secondary)', margin: '0 0 26px' }}>
+                <p className={styles.lead}>
                   exomemri adapts to your context.
                 </p>
 
@@ -534,10 +515,10 @@ export default function OnboardingPage() {
             {/* ── STEP 2: Domain ── */}
             {step === 2 && (
               <>
-                <h1 style={{ fontFamily: 'Newsreader', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+                <h1 className={styles.heading}>
                   What do you study?
                 </h1>
-                <p style={{ fontSize: 15, color: 'var(--text-secondary)', margin: '0 0 26px' }}>
+                <p className={styles.lead}>
                   Your primary domain shapes how exomemri organises your memory.
                 </p>
 
@@ -565,18 +546,14 @@ export default function OnboardingPage() {
             {/* ── STEP 3: Discovery ── */}
             {step === 3 && (
               <form onSubmit={handleSubmit}>
-                <h1 style={{ fontFamily: 'Newsreader', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+                <h1 className={styles.heading}>
                   How did you find us?
                 </h1>
-                <p style={{ fontSize: 15, color: 'var(--text-secondary)', margin: '0 0 26px' }}>
+                <p className={styles.lead}>
                   Helps us understand where our community comes from.
                 </p>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 8,
-                }}>
+                <div className={styles.referralGrid}>
                   {REFERRAL_SOURCES.map(s => (
                     <button
                       key={s.value}
