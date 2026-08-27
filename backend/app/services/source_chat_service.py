@@ -15,6 +15,7 @@ from app.schemas.sources import (
     StructuredSummary,
     SummaryResponse,
 )
+from app.services.credits_service import CreditsService
 from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
@@ -33,12 +34,14 @@ class SourceChatService:
         llm: LLMService,
         embeddings: EmbeddingService,
         chunks: ChunkRepo,
+        credits: CreditsService,
     ) -> None:
         self._spaces = spaces
         self._extracts = extracts
         self._llm = llm
         self._embeddings = embeddings
         self._chunks = chunks
+        self._credits = credits
 
     async def get_or_create_summary(self, *, user: User, source_id: UUID) -> SummaryResponse:
         # A superset of ownership — lets a read-only collaborator see a
@@ -89,6 +92,22 @@ class SourceChatService:
         source = await anyio.to_thread.run_sync(
             partial(self._spaces.require_owned_source, user, source_id)
         )
+        charge = await anyio.to_thread.run_sync(
+            partial(self._credits.consume_ask, str(user.id))
+        )
+        try:
+            return await self._send_message(
+                user=user, source=source, source_id=source_id, content=content
+            )
+        except Exception:  # noqa: BLE001 - roll back ask metering before propagating
+            await anyio.to_thread.run_sync(
+                partial(self._credits.rollback_ask, str(user.id), charge)
+            )
+            raise
+
+    async def _send_message(
+        self, *, user: User, source: dict, source_id: UUID, content: str
+    ) -> SendMessageResponse:
         # Guarantees a summary/extract exist even if this is the very first
         # interaction with the source (no prior "open" call happened).
         summary_resp = await self.get_or_create_summary(user=user, source_id=source_id)

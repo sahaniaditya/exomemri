@@ -11,6 +11,7 @@ from app.tests.conftest import (
     OTHER_USER_SPACE_ID,
     SEEDED_SPACE_ID,
     FakeConceptRepo,
+    FakeCreditsRepo,
     FakeSpaceRepo,
     FakeStorage,
 )
@@ -275,3 +276,23 @@ def test_delete_capture_prunes_orphan_concepts(
     assert source_id not in space_repo.sources
     assert created["id"] not in concept_repo.concepts
     assert concept_repo.edges == []
+
+
+def test_capture_returns_402_when_out_of_credits(
+    client: TestClient, credits_repo: FakeCreditsRepo, storage: FakeStorage
+) -> None:
+    credits_repo.ensure(user_id=DEV_USER)
+    credits_repo.rows[DEV_USER]["balance"] = 0
+    resp = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/blocked",
+            "title": "Blocked",
+            "content": "nope",
+        },
+    )
+    assert resp.status_code == 402
+    assert resp.json()["error"]["code"] == "credits_exhausted"
+    assert storage.uploads == {}

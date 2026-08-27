@@ -9,7 +9,13 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.schemas.sources import StructuredSummary
-from app.tests.conftest import SEEDED_SPACE_ID, FakeChunkRepo, FakeSpaceRepo, FakeStorage
+from app.tests.conftest import (
+    SEEDED_SPACE_ID,
+    FakeChunkRepo,
+    FakeCreditsRepo,
+    FakeSpaceRepo,
+    FakeStorage,
+)
 
 DEV_USER = "00000000-0000-0000-0000-0000000000a1"
 SPACE = SEEDED_SPACE_ID
@@ -122,3 +128,17 @@ def test_get_summary_regenerates_sections_for_pre_migration_row(
     assert resp.status_code == 200
     assert resp.json()["generated"] is True
     assert len(resp.json()["sections"]["tldr"]) == 5
+
+
+def test_ask_returns_402_when_out_of_credits(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    storage: FakeStorage,
+    credits_repo: FakeCreditsRepo,
+) -> None:
+    source_id = _seed_note_source(space_repo, storage, note_text="note body")
+    credits_repo.ensure(user_id=DEV_USER)
+    credits_repo.rows[DEV_USER]["balance"] = 0
+    resp = client.post(f"/v1/sources/{source_id}/messages", json={"content": "hello?"})
+    assert resp.status_code == 402
+    assert resp.json()["error"]["code"] == "credits_exhausted"

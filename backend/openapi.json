@@ -381,6 +381,40 @@
         "title": "CreateSpaceRequest",
         "type": "object"
       },
+      "CreditsBalance": {
+        "description": "Remaining quota for the authenticated user.",
+        "properties": {
+          "ask_units": {
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Ask Units",
+            "type": "integer"
+          },
+          "balance": {
+            "minimum": 0.0,
+            "title": "Balance",
+            "type": "integer"
+          },
+          "monthly_allowance": {
+            "exclusiveMinimum": 0.0,
+            "title": "Monthly Allowance",
+            "type": "integer"
+          },
+          "period_end": {
+            "format": "date-time",
+            "title": "Period End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "balance",
+          "monthly_allowance",
+          "ask_units",
+          "period_end"
+        ],
+        "title": "CreditsBalance",
+        "type": "object"
+      },
       "FolderListResponse": {
         "properties": {
           "folders": {
@@ -2112,6 +2146,48 @@
         "summary": "Profile Status",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/v1/credits": {
+      "get": {
+        "operationId": "get_credits_v1_credits_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditsBalance"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Credits",
+        "tags": [
+          "credits"
         ]
       }
     },

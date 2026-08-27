@@ -5,6 +5,7 @@
  */
 import { useSyncExternalStore } from 'react'
 import { useLogout } from '@/lib/use-logout'
+import { formatCredits, type CreditsBalance } from '@/lib/credits'
 import { initial, type Profile } from '@/lib/profile'
 import ThemeToggle from './ThemeToggle'
 import styles from './dashboard.module.css'
@@ -15,6 +16,7 @@ interface TopBarProps {
   spaceCount: number
   /** Days of consecutive study activity (a capture, UTC days). */
   streakDays?: number
+  credits?: CreditsBalance | null
   /** Full hero + pulse on overview; compact greeting elsewhere. */
   variant?: 'hero' | 'compact'
 }
@@ -51,6 +53,7 @@ export default function TopBar({
   totalSources,
   spaceCount,
   streakDays = 0,
+  credits = null,
   variant = 'hero',
 }: TopBarProps) {
   const { logout, loggingOut } = useLogout()
@@ -63,7 +66,9 @@ export default function TopBar({
       <div className={styles.avatar}>{initial(profile)}</div>
       <div>
         <div className={styles.nm}>{profile?.full_name ?? 'Your account'}</div>
-        <div className={styles.pl}>SIGNED IN</div>
+        <div className={styles.pl}>
+          {credits != null ? formatCredits(credits.balance) : 'SIGNED IN'}
+        </div>
       </div>
       <button
         type="button"

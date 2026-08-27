@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from app.tests.conftest import FakeStorage
+from app.tests.conftest import FakeCreditsRepo, FakeStorage
 
 DEV_USER = "00000000-0000-0000-0000-0000000000a1"
 SPACE = "00000000-0000-0000-0000-0000000000b1"
@@ -36,3 +36,21 @@ def test_upload_url_mints_source_writes_meta_and_returns_absolute_url(
     meta_key = f"users/{DEV_USER}/spaces/{SPACE}/sources/{source_id}/raw/meta.json"
     assert meta_key in storage.uploads
     assert expected_path in storage.signed_urls
+
+
+def test_upload_url_returns_402_when_out_of_credits(
+    client: TestClient, credits_repo: FakeCreditsRepo, storage: FakeStorage
+) -> None:
+    credits_repo.ensure(user_id=DEV_USER)
+    credits_repo.rows[DEV_USER]["balance"] = 0
+    resp = client.post(
+        "/v1/sources/upload-url",
+        json={
+            "space_id": SPACE,
+            "title": "paper.pdf",
+            "url": "https://example.com/paper.pdf",
+        },
+    )
+    assert resp.status_code == 402
+    assert resp.json()["error"]["code"] == "credits_exhausted"
+    assert storage.uploads == {}

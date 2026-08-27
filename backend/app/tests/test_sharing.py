@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from app.errors import ConflictError, NotFoundError
 from app.schemas.common import User
 from app.services.concept_service import ConceptService
+from app.services.credits_service import CreditsService
 from app.services.extract_service import ExtractService
 from app.services.sharing_service import SharingService
 from app.services.source_chat_service import SourceChatService
@@ -26,6 +27,7 @@ from app.tests.conftest import (
     SEEDED_SPACE_ID,
     FakeCollaboratorRepo,
     FakeConceptRepo,
+    FakeCreditsRepo,
     FakeLLMService,
     FakeNoteRepo,
     FakeProfileRepo,
@@ -226,7 +228,12 @@ def test_collaborator_can_read_granted_source_but_not_a_sibling(
 
     extracts = ExtractService(storage)  # type: ignore[arg-type]
     chat_svc = SourceChatService(
-        space_svc, extracts, llm_service, None, None  # type: ignore[arg-type]
+        space_svc,
+        extracts,
+        llm_service,
+        None,
+        None,
+        CreditsService(FakeCreditsRepo()),  # type: ignore[arg-type]
     )
     summary = asyncio.run(
         chat_svc.get_or_create_summary(user=other_user, source_id=UUID(source_a["id"]))

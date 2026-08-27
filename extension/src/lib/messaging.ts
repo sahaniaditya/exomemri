@@ -8,7 +8,7 @@
  */
 import { defineExtensionMessaging } from "@webext-core/messaging"
 
-import type { ExtractedCapture, SessionResponse, SpaceSummary } from "./contracts"
+import type { CreditsBalance, ExtractedCapture, SessionResponse, SpaceSummary } from "./contracts"
 import type { TabSessionRead } from "./read-tab-session"
 import type { StoredSession } from "./session-blob"
 
@@ -30,6 +30,8 @@ export interface ProtocolMap {
   listSpaces(): SpaceSummary[]
   /** Set the active learning space (from the popup). */
   setActiveSpace(spaceId: string): { ok: boolean }
+  /** Remaining monthly credits. */
+  getCredits(): CreditsBalance
   /** Extract the current page — handled by the content script in a tab. */
   extractCurrentPage(): ExtractedCapture | null
   /** Capture the active tab's page — handled by the background worker. */

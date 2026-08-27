@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { apiFetch } from '@/lib/api'
+import { getCredits } from '@/lib/credits'
 import { toCapturedSource, toLearningSpace } from '@/lib/dashboard-data'
 import { atlasFontVars } from '@/lib/fonts'
 import { streakDays as getStreakDays, type Profile } from '@/lib/profile'
@@ -33,11 +34,12 @@ async function loadProfile(token: string): Promise<Profile | null> {
 
 export default async function DashboardPage() {
   const token = (await cookies()).get('atlas_token')?.value ?? ''
-  const [profile, apiSpaces, recentSources, sharedSpaces] = await Promise.all([
+  const [profile, apiSpaces, recentSources, sharedSpaces, credits] = await Promise.all([
     loadProfile(token),
     listSpaces(token),
     listRecentSources(token),
     listSharedWithMe(token),
+    getCredits(token),
   ])
   const spaces = apiSpaces.map(toLearningSpace)
   const captures = recentSources.map(toCapturedSource)
@@ -54,6 +56,7 @@ export default async function DashboardPage() {
             totalSources={totalSources}
             spaceCount={spaces.length}
             streakDays={getStreakDays(profile)}
+            credits={credits}
           />
 
           <section id="spaces" className={styles.section}>

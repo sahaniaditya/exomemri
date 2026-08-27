@@ -54,6 +54,11 @@ class ConflictError(AppError):
     code = "conflict"
 
 
+class CreditsExhaustedError(AppError):
+    http_status = 402
+    code = "credits_exhausted"
+
+
 class RateLimitError(AppError):
     http_status = 429
     code = "rate_limited"

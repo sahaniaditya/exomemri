@@ -82,6 +82,15 @@ export function startMockBackend(port = 8000): Promise<MockBackend> {
         })
         return
       }
+      if (url === "/v1/credits") {
+        json(200, {
+          balance: 100,
+          monthly_allowance: 100,
+          ask_units: 0,
+          period_end: "2026-09-27T00:00:00+00:00",
+        })
+        return
+      }
       if (url === "/v1/sources") {
         json(202, {
           source_id: "11111111-1111-1111-1111-111111111111",

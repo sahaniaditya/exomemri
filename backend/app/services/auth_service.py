@@ -20,14 +20,21 @@ from app.schemas.auth import (
     LoginResponse,
     ProfileUpsertRequest,
 )
+from app.services.credits_service import CreditsService
 
 logger = logging.getLogger(__name__)
 
 
 class AuthService:
-    def __init__(self, profiles: ProfileRepo, service_client: Client) -> None:
+    def __init__(
+        self,
+        profiles: ProfileRepo,
+        service_client: Client,
+        credits: CreditsService,
+    ) -> None:
         self._profiles = profiles
         self._service_client = service_client
+        self._credits = credits
 
     def login(self, email: str, password: str) -> LoginResponse:
         try:
@@ -87,3 +94,7 @@ class AuthService:
                 ) from exc
             logger.error("profile_upsert_failed")
             raise
+        try:
+            self._credits.ensure_for_user(user_id)
+        except Exception:  # noqa: BLE001 - credits must not block onboarding
+            logger.warning("credits_ensure_on_onboarding_failed", extra={"user_id": user_id})

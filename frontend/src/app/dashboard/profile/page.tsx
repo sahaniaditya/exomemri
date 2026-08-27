@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { apiFetch } from '@/lib/api'
+import { getCredits } from '@/lib/credits'
 import { atlasFontVars } from '@/lib/fonts'
 import { streakDays, type Profile } from '@/lib/profile'
 import { getProfileVisibility } from '@/lib/public-profile'
@@ -32,10 +33,11 @@ async function loadProfile(token: string): Promise<Profile | null> {
 export default async function ProfilePage() {
   const token = (await cookies()).get('atlas_token')?.value ?? ''
 
-  const [profile, spaces, isPublic] = await Promise.all([
+  const [profile, spaces, isPublic, credits] = await Promise.all([
     loadProfile(token),
     listSpaces(token),
     getProfileVisibility(token),
+    getCredits(token),
   ])
 
   const totalSources = spaces.reduce((sum, space) => sum + space.source_counts.total, 0)
@@ -52,6 +54,7 @@ export default async function ProfilePage() {
             spaceCount={spaces.length}
             streakDays={streakDays(profile)}
             variant="compact"
+            credits={credits}
           />
 
           <section id="account" className={styles.section}>

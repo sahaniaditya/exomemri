@@ -18,6 +18,9 @@ function captureErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError && err.status === 401) {
     return "Session expired — reopen exomemri to refresh."
   }
+  if (err instanceof ApiError && err.code === "credits_exhausted") {
+    return err.message
+  }
   return err instanceof Error ? err.message : fallback
 }
 

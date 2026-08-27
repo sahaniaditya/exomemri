@@ -126,6 +126,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Credits */
+        get: operations["get_credits_v1_credits_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/profile/visibility": {
         parameters: {
             query?: never;
@@ -755,6 +772,23 @@ export interface components {
             goal_text?: string | null;
             /** Name */
             name: string;
+        };
+        /**
+         * CreditsBalance
+         * @description Remaining quota for the authenticated user.
+         */
+        CreditsBalance: {
+            /** Ask Units */
+            ask_units: number;
+            /** Balance */
+            balance: number;
+            /** Monthly Allowance */
+            monthly_allowance: number;
+            /**
+             * Period End
+             * Format: date-time
+             */
+            period_end: string;
         };
         /** FolderListResponse */
         FolderListResponse: {
@@ -1587,6 +1621,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OnboardingStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_credits_v1_credits_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditsBalance"];
                 };
             };
             /** @description Validation Error */

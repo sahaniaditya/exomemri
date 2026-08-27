@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
+import { getCredits } from '@/lib/credits'
 import { atlasFontVars } from '@/lib/fonts'
 import { getSpaceGraph, rankConcepts } from '@/lib/graph'
 import type { Profile } from '@/lib/profile'
@@ -38,10 +39,11 @@ export default async function SpaceMapPage({ params }: SpaceMapPageProps) {
   const { spaceId } = await params
   const token = (await cookies()).get('atlas_token')?.value ?? ''
 
-  const [profile, spaces, graph] = await Promise.all([
+  const [profile, spaces, graph, credits] = await Promise.all([
     loadProfile(token),
     listSpaces(token),
     getSpaceGraph(token, spaceId),
+    getCredits(token),
   ])
 
   const activeSpace = spaces.find(space => space.id === spaceId)
@@ -62,6 +64,7 @@ export default async function SpaceMapPage({ params }: SpaceMapPageProps) {
             totalSources={totalSources}
             spaceCount={spaces.length}
             variant="compact"
+            credits={credits}
           />
 
           <Plate

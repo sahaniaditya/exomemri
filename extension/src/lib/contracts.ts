@@ -17,6 +17,7 @@ export type SpaceSummary = components["schemas"]["SpaceSummary"]
 export type SpaceListResponse = components["schemas"]["SpaceListResponse"]
 export type User = components["schemas"]["User"]
 export type SourceType = components["schemas"]["SourceType"]
+export type CreditsBalance = components["schemas"]["CreditsBalance"]
 
 /**
  * The normalized output of a pure extractor: the capture fields it can derive

@@ -47,6 +47,7 @@ export default function SourceChatPanel({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState('')
   const [width, setWidth] = useState(() =>
     typeof window === 'undefined' ? DEFAULT_WIDTH : clampWidth(DEFAULT_WIDTH)
   )
@@ -141,6 +142,7 @@ export default function SourceChatPanel({
     if (!content || sending) return
     setInput('')
     setSending(true)
+    setSendError('')
 
     const optimisticId = `pending-${Date.now()}`
     setMessages(prev => [
@@ -154,20 +156,29 @@ export default function SourceChatPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
       })
-      if (!res.ok) throw Error(`status ${res.status}`)
       const data = (await res.json()) as {
-        user_message: ChatMessage
-        assistant_message: ChatMessage
+        user_message?: ChatMessage
+        assistant_message?: ChatMessage
+        error?: { message?: string }
       }
+      if (!res.ok) {
+        throw Error(data.error?.message ?? `Couldn't send that question.`)
+      }
+      if (!data.user_message || !data.assistant_message) {
+        throw Error(`Couldn't send that question.`)
+      }
+      const userMessage = data.user_message
+      const assistantMessage = data.assistant_message
       setMessages(prev => [
         ...prev.filter(m => m.id !== optimisticId),
-        data.user_message,
-        data.assistant_message,
+        userMessage,
+        assistantMessage,
       ])
     } catch (error) {
       console.error('Failed to send message:', error)
       setMessages(prev => prev.filter(m => m.id !== optimisticId))
       setInput(content)
+      setSendError(error instanceof Error ? error.message : `Couldn't send that question.`)
     } finally {
       setSending(false)
     }
@@ -314,6 +325,11 @@ export default function SourceChatPanel({
               <Mark size={18} tone="paper" surface="var(--forest)" />
             </button>
           </div>
+          {sendError ? (
+            <p className={styles.memorySendError} role="alert">
+              {sendError}
+            </p>
+          ) : null}
         </div>
       </aside>
     </div>
