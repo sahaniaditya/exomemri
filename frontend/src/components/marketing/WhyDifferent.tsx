@@ -9,14 +9,17 @@ export function WhyDifferent() {
           <span className={styles.label}>Why it&apos;s different</span>
           <span className={styles.plateline} />
         </div>
-        <h2 className={`${styles.serif} ${styles.whyTitle}`}>
-          Not a note app. <span className={`${styles.it} ${styles.accent}`}>A memory.</span>
-        </h2>
-        <p className={`${styles.dim} ${styles.whyIntro}`}>
-          Other tools help you save information. exomemri helps you remember
-          it — and understand it over time. Your own notes still belong on
-          each capture when you want them.
-        </p>
+        <div className={styles.whyHead}>
+          <h2 className={`${styles.serif} ${styles.whyTitle}`}>
+            Not a note app.
+            <span className={`${styles.it} ${styles.accent}`}>A memory.</span>
+          </h2>
+          <p className={`${styles.dim} ${styles.whyIntro}`}>
+            Other tools help you save information. exomemri helps you remember
+            it — and understand it over time. Your own notes still belong on
+            each capture when you want them.
+          </p>
+        </div>
         <div className={styles.crow}>
           <div className={styles.ccol}>
             <div className={`${styles.label} ${styles.clay} ${styles.ccolLabel}`}>Most tools</div>

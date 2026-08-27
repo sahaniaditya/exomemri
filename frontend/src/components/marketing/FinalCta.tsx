@@ -10,7 +10,9 @@ export function FinalCta() {
           <div className={styles.ctabandContent}>
             <span className={`${styles.label} ${styles.labelInvert}`}>Section 12 · get started</span>
             <h2 className={`${styles.serif} ${styles.ctaTitle}`}>
-              Turn everything you learn <span className={`${styles.it} ${styles.ctaTitleAccent}`}>into memory.</span>
+              Turn everything you learn
+              <br />
+              <span className={`${styles.it} ${styles.ctaTitleAccent}`}>into memory.</span>
             </h2>
             <p className={styles.ctaBody}>
               Stop losing what you study. Start building a learning memory
