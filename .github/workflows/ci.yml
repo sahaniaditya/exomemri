@@ -26,6 +26,7 @@ jobs:
           SUPABASE_SERVICE_KEY: ci-placeholder-key
           ANTHROPIC_API_KEY: ci-placeholder-key
           ANTHROPIC_MODEL_NAME: claude-haiku-4-5
+          HF_TOKEN: ci-placeholder-key
         run: |
           python scripts/dump_openapi.py
           git diff --exit-code openapi.json

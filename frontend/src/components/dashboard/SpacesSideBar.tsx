@@ -21,7 +21,8 @@ export default function SpacesSidebar({ spaces, activeSpaceId }: SpacesSidebarPr
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
             <path d="M15 18l-6-6 6-6" />
           </svg>
-          Back to overview
+          <span className={styles.navitemFull}>Back to overview</span>
+          <span className={styles.navitemShort}>Back</span>
         </Link>
       </div>
 
@@ -70,7 +71,8 @@ export default function SpacesSidebar({ spaces, activeSpaceId }: SpacesSidebarPr
             <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
               <path d="M4 6h16M4 12h16M4 18h10" />
             </svg>
-            Captures
+            <span className={styles.navitemFull}>Captures</span>
+            <span className={styles.navitemShort}>Captures</span>
           </Link>
           <Link
             className={styles.navitem}
@@ -82,7 +84,8 @@ export default function SpacesSidebar({ spaces, activeSpaceId }: SpacesSidebarPr
               <circle cx="12" cy="17" r="2.5" />
               <path d="M8.2 8.2 10.6 15M15.9 7.6 13.4 15M8.4 6.6h7.2" />
             </svg>
-            Knowledge map
+            <span className={styles.navitemFull}>Knowledge map</span>
+            <span className={styles.navitemShort}>Map</span>
           </Link>
         </nav>
       </div>

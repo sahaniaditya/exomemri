@@ -27,11 +27,11 @@ export default function SourceSidebar({ space, sources, activeSourceId }: Source
         <Lockup size={24} />
       </Link>
 
-      <Link href={`/dashboard/spaces/${space.id}`} className={styles.navitem} style={{ marginBottom: 8 }}>
+      <Link href={`/dashboard/spaces/${space.id}`} className={styles.navitem}>
         <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
           <path d="M15 18l-6-6 6-6" />
         </svg>
-        {space.name}
+        <span className={styles.navitemLabel}>{space.name}</span>
       </Link>
 
       <div className={styles.navsec}>

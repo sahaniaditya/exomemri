@@ -605,6 +605,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.navitemShort {
+  display: none;
+}
 @keyframes riseIn {
   from {
     opacity: 0;
@@ -3922,9 +3925,6 @@ button.chip {
 
 /* ---------- mobile chrome (must sit last so it wins cascade) ---------- */
 @media (max-width: 760px) {
-  .app {
-    overflow-x: hidden;
-  }
   .main {
     overflow-x: hidden;
     overflow-y: visible;
@@ -3934,11 +3934,14 @@ button.chip {
     top: 0;
     z-index: 40;
     height: auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 10px;
-    padding: 10px 14px;
+    max-height: none;
+    overflow: visible;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 10px;
+    padding: 16px 14px 12px;
+    padding-top: max(16px, env(safe-area-inset-top));
     padding-left: max(14px, env(safe-area-inset-left));
     padding-right: max(14px, env(safe-area-inset-right));
     background: var(--paper);
@@ -3947,29 +3950,50 @@ button.chip {
     background: var(--paper);
   }
   .brand {
-    padding: 4px 0;
+    width: 100%;
+    padding: 2px 2px 4px;
   }
   .navsec {
-    flex: 1 1 100%;
-    width: auto;
+    flex: none;
+    width: 100%;
     min-width: 0;
     margin-top: 0;
   }
   .nav {
+    display: flex;
     flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    gap: 4px;
+    flex-wrap: wrap;
+    overflow: visible;
+    gap: 6px;
   }
-  .nav::-webkit-scrollbar {
+  .navitemFull {
     display: none;
   }
-  .navitem,
-  .sourceNavRow {
-    flex: none;
+  .navitemShort {
+    display: inline;
+  }
+  .navitem {
+    justify-content: center;
     white-space: nowrap;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .nav .navitem,
+  .sourceNavRow {
+    flex: 1 1 calc(50% - 6px);
+    min-width: calc(50% - 6px);
+    max-width: 100%;
+  }
+  .side > .navitem {
+    flex: none;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .navitem .ct {
+    margin-left: 6px;
+  }
+  .sourceNavLink {
+    min-width: 0;
   }
   .inner {
     padding: 20px 16px 56px;
@@ -3980,16 +4004,20 @@ button.chip {
     flex-wrap: wrap;
     width: 100%;
     justify-content: flex-start;
+    gap: 10px;
   }
   .me {
     min-width: 0;
-    flex: 1 1 auto;
+    flex: 1 1 100%;
   }
   .me .nm {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 18ch;
+  }
+  .me .pl {
+    display: none;
   }
   .ask {
     padding: 12px 12px;
@@ -4061,8 +4089,13 @@ button.chip {
     max-width: calc(100vw - 40px);
     width: min(240px, calc(100vw - 40px));
   }
+  .srcRow {
+    flex-wrap: wrap;
+  }
   .srcActions {
-    padding-right: 8px;
+    width: 100%;
+    justify-content: flex-end;
+    padding: 0 10px 10px 10px;
   }
 }
 

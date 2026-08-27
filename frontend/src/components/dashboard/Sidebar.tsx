@@ -13,6 +13,7 @@ const NAV = [
   {
     href: '/dashboard',
     label: 'Overview',
+    short: 'Overview',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
         <path d="M3 12l9-8 9 8" />
@@ -23,6 +24,7 @@ const NAV = [
   {
     href: '/dashboard#spaces',
     label: 'Learning Spaces',
+    short: 'Spaces',
     key: 'spaces' as const,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
@@ -36,6 +38,7 @@ const NAV = [
   {
     href: '/dashboard#captures',
     label: 'Recent Captures',
+    short: 'Captures',
     key: 'sources' as const,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
@@ -46,6 +49,7 @@ const NAV = [
   {
     href: '/dashboard/profile',
     label: 'Profile',
+    short: 'Profile',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
         <circle cx="12" cy="8" r="3.5" />
@@ -85,7 +89,8 @@ export default function Sidebar({ spaceCount, sourceCount }: SidebarProps) {
                 aria-current={isActive ? 'page' : undefined}
               >
                 {item.icon}
-                {item.label}
+                <span className={styles.navitemFull}>{item.label}</span>
+                <span className={styles.navitemShort}>{item.short}</span>
                 {count !== undefined ? <span className={styles.ct}>{count}</span> : null}
               </Link>
             )
