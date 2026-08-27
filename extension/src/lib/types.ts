@@ -181,6 +181,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reviews/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get My Review */
+        get: operations["get_my_review_v1_reviews_me_get"];
+        /** Upsert My Review */
+        put: operations["upsert_my_review_v1_reviews_me_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/top": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Top Reviews
+         * @description Highest-rated product reviews. No authentication required.
+         */
+        get: operations["list_top_reviews_v1_reviews_top_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/session": {
         parameters: {
             query?: never;
@@ -1036,6 +1074,20 @@ export interface components {
             username: string;
         };
         /**
+         * PublicReview
+         * @description A review shown on the marketing landing page.
+         */
+        PublicReview: {
+            /** Body */
+            body: string;
+            /** Full Name */
+            full_name: string;
+            /** Primary Role */
+            primary_role: string;
+            /** Rating */
+            rating: number;
+        };
+        /**
          * PublicSpaceSummary
          * @description A portfolio tile — counts only, never source titles, URLs, or content.
          */
@@ -1100,6 +1152,25 @@ export interface components {
         RenameFolderRequest: {
             /** Name */
             name: string;
+        };
+        /**
+         * ReviewResponse
+         * @description The authenticated user's own review row.
+         */
+        ReviewResponse: {
+            /** Body */
+            body: string;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Rating */
+            rating: number;
+            /** Updated At */
+            updated_at?: string | null;
         };
         /** SendMessageRequest */
         SendMessageRequest: {
@@ -1415,6 +1486,14 @@ export interface components {
             label: string;
         };
         /**
+         * TopReviewsResponse
+         * @description Top reviews by rating for the public landing page.
+         */
+        TopReviewsResponse: {
+            /** Items */
+            items?: components["schemas"]["PublicReview"][];
+        };
+        /**
          * UpdateNotePageRequest
          * @description Replace the page title and/or TipTap document. At least one is required.
          */
@@ -1466,6 +1545,16 @@ export interface components {
             token: string;
             /** Upload Url */
             upload_url: string;
+        };
+        /**
+         * UpsertReviewRequest
+         * @description Create or replace the caller's single product review.
+         */
+        UpsertReviewRequest: {
+            /** Body */
+            body: string;
+            /** Rating */
+            rating: number;
         };
         /**
          * User
@@ -1863,6 +1952,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_review_v1_reviews_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_my_review_v1_reviews_me_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_top_reviews_v1_reviews_top_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopReviewsResponse"];
                 };
             };
         };

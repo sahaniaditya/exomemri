@@ -807,6 +807,56 @@ class FakeShareLinkRepo:
                 row["revoked_at"] = now
 
 
+class FakeReviewRepo:
+    """In-memory stand-in for ``product_reviews``."""
+
+    def __init__(self) -> None:
+        self.reviews: dict[str, dict] = {}
+        # Wired by the `review_repo` fixture for joined top-N reads.
+        self._profile_repo: FakeProfileRepo | None = None
+
+    def get_by_user(self, *, user_id: str) -> dict | None:
+        return self.reviews.get(user_id)
+
+    def upsert(self, *, user_id: str, rating: int, body: str) -> dict:
+        now = datetime.now(UTC).isoformat()
+        existing = self.reviews.get(user_id)
+        row = {
+            "id": existing["id"] if existing else str(uuid4()),
+            "user_id": user_id,
+            "rating": rating,
+            "body": body,
+            "created_at": existing["created_at"] if existing else now,
+            "updated_at": now,
+        }
+        self.reviews[user_id] = row
+        return dict(row)
+
+    def list_top_by_rating(self, *, limit: int) -> list[dict]:
+        rows = sorted(
+            self.reviews.values(),
+            key=lambda r: (int(r["rating"]), r.get("updated_at") or ""),
+            reverse=True,
+        )
+        out: list[dict] = []
+        for row in rows[:limit]:
+            profile = (
+                self._profile_repo.profiles.get(row["user_id"])
+                if self._profile_repo
+                else None
+            )
+            out.append(
+                {
+                    **row,
+                    "profiles": {
+                        "full_name": profile.get("full_name") if profile else None,
+                        "primary_role": profile.get("primary_role") if profile else None,
+                    },
+                }
+            )
+        return out
+
+
 class FakeEmbeddingService:
     """Deterministic vectors (no network) — same text always embeds the same."""
 
@@ -914,6 +964,7 @@ def profile_repo() -> FakeProfileRepo:
         "id": dev_user_id,
         "username": "dev",
         "full_name": "Dev User",
+        "primary_role": "Professional",
         "current_streak": 0,
         "longest_streak": 0,
         "last_active_date": None,
@@ -929,6 +980,13 @@ def profile_settings_repo() -> FakeProfileSettingsRepo:
 @pytest.fixture
 def credits_repo() -> FakeCreditsRepo:
     return FakeCreditsRepo()
+
+
+@pytest.fixture
+def review_repo(profile_repo: FakeProfileRepo) -> FakeReviewRepo:
+    repo = FakeReviewRepo()
+    repo._profile_repo = profile_repo
+    return repo
 
 
 @pytest.fixture
@@ -993,6 +1051,7 @@ def client(
     share_link_repo: FakeShareLinkRepo,
     note_repo: FakeNoteRepo,
     credits_repo: FakeCreditsRepo,
+    review_repo: FakeReviewRepo,
     embedding_service: FakeEmbeddingService,
     llm_service: FakeLLMService,
     pipeline_service: FakePipelineService,
@@ -1010,6 +1069,7 @@ def client(
         get_plan_service,
         get_profile_repo,
         get_profile_service,
+        get_review_service,
         get_sharing_service,
         get_source_chat_service,
     )
@@ -1019,6 +1079,7 @@ def client(
     from app.services.note_service import NoteService
     from app.services.plan_service import PlanService
     from app.services.profile_service import ProfileService
+    from app.services.review_service import ReviewService
     from app.services.sharing_service import SharingService
     from app.services.source_chat_service import SourceChatService
     from app.services.streak_service import StreakService
@@ -1051,6 +1112,7 @@ def client(
     profile_svc = ProfileService(
         profile_repo, profile_settings_repo, space_repo  # type: ignore[arg-type]
     )
+    review_svc = ReviewService(review_repo)  # type: ignore[arg-type]
 
     # Real routes now require a verified Supabase JWT; inject the fixed dev
     # user so tests stay hermetic (no live token verification).
@@ -1068,6 +1130,7 @@ def client(
     app.dependency_overrides[get_profile_repo] = lambda: profile_repo
     app.dependency_overrides[get_sharing_service] = lambda: sharing_svc
     app.dependency_overrides[get_profile_service] = lambda: profile_svc
+    app.dependency_overrides[get_review_service] = lambda: review_svc
     app.dependency_overrides[get_embedding_service] = lambda: embedding_service
     app.dependency_overrides[get_llm_service] = lambda: llm_service
     app.dependency_overrides[get_source_chat_service] = lambda: chat_svc

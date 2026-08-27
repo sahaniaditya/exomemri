@@ -8,6 +8,7 @@ import { getProfileVisibility } from '@/lib/public-profile'
 import { listSpaces } from '@/lib/spaces'
 import styles from '@/components/dashboard/dashboard.module.css'
 import ContourBg from '@/components/dashboard/ContourBg'
+import { GiveReviewButton } from '@/components/dashboard/GiveReviewDialog'
 import Plate from '@/components/dashboard/Plate'
 import ProfileDetails from '@/components/dashboard/ProfileDetails'
 import ProfileVisibilityToggle from '@/components/dashboard/ProfileVisibilityToggle'
@@ -64,7 +65,7 @@ export default async function ProfilePage() {
           />
 
           <section id="account" className={styles.section}>
-            <Plate num="01" title="Account" />
+            <Plate num="01" title="Account" action={<GiveReviewButton />} />
             <ProfileDetails
               profile={profile}
               spaceCount={spaces.length}
