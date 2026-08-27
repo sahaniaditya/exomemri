@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Lockup } from '@/components/brand/Lockup'
+import ThemeToggle from '@/components/dashboard/ThemeToggle'
 import styles from './onboarding.module.css'
 
 function ContourBg() {
@@ -299,12 +300,16 @@ export default function OnboardingPage() {
           <Lockup size={24} />
         </div>
 
-        {/* Step counter */}
         <div style={{
-          position: 'absolute', top: 34, right: 40,
-          fontFamily: 'IBM Plex Mono', fontSize: 12, color: 'var(--text-subtle)', letterSpacing: '0.08em',
+          position: 'absolute', top: 24, right: 40,
+          display: 'flex', alignItems: 'center', gap: 16, zIndex: 2,
         }}>
-          {step + 1} / {STEP_LABELS.length}
+          <ThemeToggle />
+          <span style={{
+            fontFamily: 'IBM Plex Mono', fontSize: 12, color: 'var(--text-subtle)', letterSpacing: '0.08em',
+          }}>
+            {step + 1} / {STEP_LABELS.length}
+          </span>
         </div>
 
         <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 480 }}>

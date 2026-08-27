@@ -1,13 +1,20 @@
-export function Contour({ style, invert = false }: { style?: React.CSSProperties; invert?: boolean }) {
+import type { CSSProperties } from 'react';
+import styles from './marketing.module.css';
+
+export function Contour({ style, invert = false }: { style?: CSSProperties; invert?: boolean }) {
   return (
     <svg
-      className="contour"
+      className={styles.contour}
       viewBox="0 0 1440 700"
       preserveAspectRatio="xMidYMid slice"
       style={style}
       aria-hidden="true"
     >
-      <g className={invert ? 'contour-path contour-invert' : 'contour-path'} fill="none" strokeWidth="1">
+      <g
+        className={invert ? `${styles.contourPath} ${styles.contourInvert}` : styles.contourPath}
+        fill="none"
+        strokeWidth="1"
+      >
         <path d="M-50 420C220 300 360 480 640 380 940 272 1120 470 1520 360" />
         <path d="M-50 470C220 350 360 530 640 430 940 322 1120 520 1520 410" />
         <path d="M-50 520C220 400 360 580 640 480 940 372 1120 570 1520 460" />

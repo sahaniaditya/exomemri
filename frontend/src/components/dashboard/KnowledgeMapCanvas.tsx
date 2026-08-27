@@ -13,6 +13,7 @@ import {
   type MutableRefObject,
 } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from 'next-themes'
 import ForceGraph2D, {
   type ForceGraphMethods,
   type NodeObject,
@@ -23,15 +24,30 @@ import {
   type MapModel,
 } from '@/lib/graph'
 import type { SourceKind } from '@/lib/dashboard-data'
+import { useIsMounted } from '@/lib/use-is-mounted'
 
 const CONCEPT_BASE_RADIUS = 7
 const SOURCE_RADIUS = 11
-const FOREST = '#2C5D4F'
-const CLAY = '#B5623C'
-const INK = '#1B1A16'
-const CARD = '#FBFAF6'
-const SAGE = '#7C8A7E'
-const PAPER = '#F4F1E9'
+
+const LIGHT = {
+  forest: '#2C5D4F',
+  clay: '#B5623C',
+  ink: '#1B1A16',
+  card: '#FBFAF6',
+  sage: '#7C8A7E',
+  paper: '#F4F1E9',
+  link: '27, 26, 22',
+} as const
+
+const DARK = {
+  forest: '#8FBFAD',
+  clay: '#E09A6E',
+  ink: '#FAFAFA',
+  card: '#18181B',
+  sage: '#A1A1AA',
+  paper: '#09090B',
+  link: '250, 250, 250',
+} as const
 
 const KIND_LABEL: Record<SourceKind, string> = {
   video: 'Video',
@@ -83,6 +99,9 @@ export default function KnowledgeMapCanvas({
   fgRef,
 }: KnowledgeMapCanvasProps) {
   const router = useRouter()
+  const { resolvedTheme } = useTheme()
+  const mounted = useIsMounted()
+  const palette = mounted && resolvedTheme === 'dark' ? DARK : LIGHT
   const fittedKey = useRef('')
   const adjacency = useMemo(() => buildAdjacency(model.links), [model.links])
 
@@ -127,6 +146,7 @@ export default function KnowledgeMapCanvas({
       const y = node.y ?? 0
       const r = nodeRadius(n)
       const dim = isDimmed(n.id)
+      const { forest, clay, ink, card, sage } = palette
 
       ctx.save()
       ctx.globalAlpha = dim ? 0.16 : 1
@@ -134,10 +154,10 @@ export default function KnowledgeMapCanvas({
       if (n.kind === 'concept') {
         ctx.beginPath()
         ctx.arc(x, y, r, 0, 2 * Math.PI)
-        ctx.fillStyle = n.isSpine ? CLAY : FOREST
+        ctx.fillStyle = n.isSpine ? clay : forest
         ctx.fill()
         ctx.lineWidth = 2
-        ctx.strokeStyle = CARD
+        ctx.strokeStyle = card
         ctx.stroke()
 
         if (n.degree >= 2 || focused === n.id) {
@@ -146,23 +166,23 @@ export default function KnowledgeMapCanvas({
           ctx.textAlign = 'center'
           ctx.textBaseline = 'top'
           ctx.lineWidth = 3.5 / globalScale
-          ctx.strokeStyle = CARD
-          ctx.fillStyle = INK
+          ctx.strokeStyle = card
+          ctx.fillStyle = ink
           ctx.strokeText(n.label, x, y + r + 4)
           ctx.fillText(n.label, x, y + r + 4)
         }
       } else {
         ctx.beginPath()
         ctx.arc(x, y, r, 0, 2 * Math.PI)
-        ctx.fillStyle = CARD
+        ctx.fillStyle = card
         ctx.fill()
         ctx.lineWidth = 1.5
-        ctx.strokeStyle = SAGE
+        ctx.strokeStyle = sage
         ctx.stroke()
 
         ctx.beginPath()
         ctx.arc(x, y, 3.5, 0, 2 * Math.PI)
-        ctx.fillStyle = FOREST
+        ctx.fillStyle = forest
         ctx.fill()
 
         if (focused === n.id) {
@@ -172,8 +192,8 @@ export default function KnowledgeMapCanvas({
           ctx.textAlign = 'center'
           ctx.textBaseline = 'top'
           ctx.lineWidth = 3.5 / globalScale
-          ctx.strokeStyle = CARD
-          ctx.fillStyle = SAGE
+          ctx.strokeStyle = card
+          ctx.fillStyle = sage
           ctx.strokeText(title, x, y + r + 5)
           ctx.fillText(title, x, y + r + 5)
         }
@@ -181,7 +201,7 @@ export default function KnowledgeMapCanvas({
 
       ctx.restore()
     },
-    [focused, isDimmed]
+    [focused, isDimmed, palette]
   )
 
   const paintPointerArea = useCallback(
@@ -207,9 +227,9 @@ export default function KnowledgeMapCanvas({
           : String(link.target)
       const dim = isDimmed(sourceId) && isDimmed(targetId)
       const weight = link.weight ?? 0.5
-      return `rgba(27, 26, 22, ${dim ? 0.06 : 0.15 + weight * 0.4})`
+      return `rgba(${palette.link}, ${dim ? 0.06 : 0.15 + weight * 0.4})`
     },
-    [isDimmed]
+    [isDimmed, palette.link]
   )
 
   const onNodeClick = useCallback(
@@ -252,7 +272,7 @@ export default function KnowledgeMapCanvas({
       graphData={graphData}
       width={width}
       height={height}
-      backgroundColor={PAPER}
+      backgroundColor={palette.paper}
       nodeId="id"
       linkSource="source"
       linkTarget="target"

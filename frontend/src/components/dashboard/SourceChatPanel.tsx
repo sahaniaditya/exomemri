@@ -6,6 +6,7 @@
  */
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { Lockup } from '@/components/brand/Lockup'
+import { ThemeMark } from '@/components/brand/ThemeMark'
 import { Mark } from '@/components/brand/Mark'
 import styles from './dashboard.module.css'
 import type { ChatMessage } from '@/lib/sources'
@@ -200,7 +201,7 @@ export default function SourceChatPanel({
         <div className={styles.memoryPanelHead}>
           <div className={styles.memoryPanelBrand}>
             <div className={styles.memoryPanelEyebrow}>Ask your memory</div>
-            <Lockup size={22} surface="#fbfaf6" />
+            <Lockup size={22} />
           </div>
           <button
             type="button"
@@ -226,7 +227,7 @@ export default function SourceChatPanel({
           {messages.length === 0 && !sending ? (
             <div className={styles.memoryEmpty}>
               <div className={styles.memoryEmptyIcon} aria-hidden="true">
-                <Mark size={22} surface="#f4f1e9" />
+                <ThemeMark size={22} />
               </div>
               <p>Ask what this capture taught you.</p>
               <p className={styles.memoryEmptyHint}>
@@ -310,7 +311,7 @@ export default function SourceChatPanel({
               disabled={sending || !input.trim()}
               aria-label="Ask"
             >
-              <Mark size={18} tone="reversed" surface="#2c5d4f" />
+              <Mark size={18} tone="paper" surface="var(--forest)" />
             </button>
           </div>
         </div>

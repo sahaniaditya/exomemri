@@ -1,3 +1,5 @@
+import styles from './marketing.module.css';
+
 const TESTIMONIALS = [
   "I stopped re-watching videos I'd already seen. It just tells me what's new.",
   "It's the first tool that actually remembers what I've learned, not just what I saved.",
@@ -5,28 +7,28 @@ const TESTIMONIALS = [
 
 export function Proof() {
   return (
-    <div className="sec divide" id="proof">
-      <div className="wrap">
-        <div className="plate">
-          <span className="platenum">08</span>
-          <span className="label">In their words</span>
-          <span className="plateline" />
+    <div className={`${styles.sec} ${styles.divide}`} id="proof">
+      <div className={styles.wrap}>
+        <div className={styles.plate}>
+          <span className={styles.platenum}>10</span>
+          <span className={styles.label}>In their words</span>
+          <span className={styles.plateline} />
         </div>
-        <div className="proof-grid">
+        <div className={styles.proofGrid}>
           {TESTIMONIALS.map((quote) => (
-            <div key={quote} className="card proof-card">
-              <p className="quote">&quot;{quote}&quot;</p>
-              <div className="proof-attribution">
-                <div className="mono dim proof-avatar">?</div>
+            <div key={quote} className={`${styles.card} ${styles.proofCard}`}>
+              <p className={styles.quote}>&quot;{quote}&quot;</p>
+              <div className={styles.proofAttribution}>
+                <div className={`${styles.mono} ${styles.dim} ${styles.proofAvatar}`}>?</div>
                 <div>
-                  <div className="proof-name">[Name]</div>
-                  <div className="mono proof-role">[role]</div>
+                  <div className={styles.proofName}>[Name]</div>
+                  <div className={`${styles.mono} ${styles.proofRole}`}>[role]</div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        <p className="mono proof-note">
+        <p className={`${styles.mono} ${styles.proofNote}`}>
           Placeholder testimonials — swap in real quotes as you gather them.
         </p>
       </div>

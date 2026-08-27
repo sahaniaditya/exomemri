@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { Lockup } from '@/components/brand/Lockup'
 import { refreshExtensionSession } from '@/lib/extension-session'
-import ThemeToggle from '@/components/dashboard/ThemeToggle' // Optional: toggle button
+import ThemeToggle from '@/components/dashboard/ThemeToggle'
 import styles from './login.module.css'
 
 function ContourBg() {
@@ -84,7 +84,7 @@ export default function LoginPage() {
         <Link href="/" className={styles.brandLink}>
           <Lockup size={24} />
         </Link>
-       
+        <ThemeToggle />
       </div>
 
       {/* Card */}

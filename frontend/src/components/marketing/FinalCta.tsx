@@ -1,25 +1,26 @@
 import { Contour } from './Contour';
+import styles from './marketing.module.css';
 
 export function FinalCta() {
   return (
-    <div className="sec" id="cta">
-      <div className="wrap">
-        <div className="ctaband ctaband-inner">
+    <div className={styles.sec} id="cta">
+      <div className={styles.wrap}>
+        <div className={`${styles.ctaband} ${styles.ctabandInner}`}>
           <Contour invert />
-          <div className="ctaband-content">
-            <span className="label label-invert">Section 10 · get started</span>
-            <h2 className="serif cta-title">
-              Turn everything you learn <span className="it cta-title-accent">into memory.</span>
+          <div className={styles.ctabandContent}>
+            <span className={`${styles.label} ${styles.labelInvert}`}>Section 12 · get started</span>
+            <h2 className={`${styles.serif} ${styles.ctaTitle}`}>
+              Turn everything you learn <span className={`${styles.it} ${styles.ctaTitleAccent}`}>into memory.</span>
             </h2>
-            <p className="cta-body">
+            <p className={styles.ctaBody}>
               Stop losing what you study. Start building a learning memory
               that grows with you — your first Learning Space in minutes.
             </p>
-            <div className="final-ctas">
-              <a href="/signup" className="btn btn-p btn-p-invert">
-                Get started free <span className="arrow">→</span>
+            <div className={styles.finalCtas}>
+              <a href="/signup" className={`${styles.btn} ${styles.btnP} ${styles.btnPInvert}`}>
+                Get started free <span className={styles.arrow}>→</span>
               </a>
-              <a href="/login" className="btn btn-g btn-g-invert">
+              <a href="/login" className={`${styles.btn} ${styles.btnG} ${styles.btnGInvert}`}>
                 Log in
               </a>
             </div>

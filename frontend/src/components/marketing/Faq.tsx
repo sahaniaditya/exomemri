@@ -1,23 +1,28 @@
 import { FAQS } from './data';
+import styles from './marketing.module.css';
 
 export function Faq() {
   return (
-    <div className="sec divide" id="faq">
-      <div className="wrap wrap-narrow">
-        <div className="plate">
-          <span className="platenum">09</span>
-          <span className="label">FAQ</span>
-          <span className="plateline" />
+    <div className={`${styles.sec} ${styles.divide}`} id="faq">
+      <div className={`${styles.wrap} ${styles.wrapNarrow}`}>
+        <div className={styles.plate}>
+          <span className={styles.platenum}>11</span>
+          <span className={styles.label}>FAQ</span>
+          <span className={styles.plateline} />
         </div>
-        <h2 className="serif faq-title">Questions people will ask.</h2>
-        <div className="faq">
+        <h2 className={`${styles.serif} ${styles.faqTitle}`}>Questions people will ask.</h2>
+        <div className={styles.faq}>
           {FAQS.map((f, i) => (
-            <details key={f.q} open={f.open} className={i === FAQS.length - 1 ? 'faq-last' : undefined}>
+            <details
+              key={f.q}
+              open={f.open}
+              className={i === FAQS.length - 1 ? styles.faqLast : undefined}
+            >
               <summary>
                 {f.q}
-                <span className="plus">+</span>
+                <span className={styles.plus}>+</span>
               </summary>
-              <p className="ans">{f.a}</p>
+              <p className={styles.ans}>{f.a}</p>
             </details>
           ))}
         </div>

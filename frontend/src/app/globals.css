@@ -2,20 +2,72 @@
 
 :root {
   --color-bg: #F4F1E9;
-  --color-text: #1a1a1a;
-  --color-text-secondary: #666666;
+  --color-text: #1B1A16;
+  --color-text-secondary: #5B5A52;
   --color-border: #e0ddd3;
   --background: var(--color-bg);
   --foreground: var(--color-text);
+
+  /* Shared semantic tokens (marketing / shells / auth) */
+  --paper: #F4F1E9;
+  --ink: #1B1A16;
+  --ink-soft: #3D3C36;
+  --card: #FBFAF6;
+  --bubble-bg: #F0EEE4;
+  --forest: #2C5D4F;
+  --forest-deep: #234c40;
+  --clay: #B5623C;
+  --muted: #5B5A52;
+  --sage: #7C8A7E;
+  --sage-light: #9AA69C;
+  --on-accent: #F4F1E9;
+  --tab-accent-bg: #FBF3EE;
+  --cta-bg: #1B1A16;
+  --cta-fg: #F4F1E9;
+  --surface-tint: #F0F3F0;
+  --avatar-bg: rgba(27, 26, 22, 0.08);
+  --media-panel-bg: #EDEAE0;
+  --media-caption: #4A4941;
+  --video-icon: #C53A3A;
+  --ink-rgb: 27, 26, 22;
+  --paper-rgb: 244, 241, 233;
+  --forest-rgb: 44, 93, 79;
+  --clay-rgb: 181, 98, 60;
 }
 
 .dark {
-  --color-bg: #121212;
-  --color-text: #f0f0f0;
-  --color-text-secondary: #a3a3a3;
-  --color-border: #2e2e2e;
+  /* Neutral zinc dark — the familiar SaaS / product-UI look */
+  --color-bg: #09090B;
+  --color-text: #FAFAFA;
+  --color-text-secondary: #A1A1AA;
+  --color-border: #27272A;
   --background: var(--color-bg);
   --foreground: var(--color-text);
+
+  --paper: #09090B;
+  --ink: #FAFAFA;
+  --ink-soft: #E4E4E7;
+  --card: #18181B;
+  --bubble-bg: #1F1F23;
+  --forest: #8FBFAD;
+  --forest-deep: #6FAE9B;
+  --clay: #E09A6E;
+  --muted: #A1A1AA;
+  --sage: #A1A1AA;
+  --sage-light: #71717A;
+  --on-accent: #09090B;
+  --tab-accent-bg: rgba(224, 154, 110, 0.14);
+  --cta-bg: #18181B;
+  --cta-fg: #FAFAFA;
+  --surface-tint: #1A1A1D;
+  --avatar-bg: rgba(250, 250, 250, 0.08);
+  --media-panel-bg: #1F1F23;
+  --media-caption: #D4D4D8;
+  --video-icon: #E07A7A;
+  --ink-rgb: 250, 250, 250;
+  --paper-rgb: 9, 9, 11;
+  --forest-rgb: 143, 191, 173;
+  --clay-rgb: 224, 154, 110;
 }
 
 @theme inline {
@@ -27,6 +79,12 @@
 
 html {
   background: var(--background);
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {

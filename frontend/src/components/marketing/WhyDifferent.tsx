@@ -1,40 +1,43 @@
+import styles from './marketing.module.css';
+
 export function WhyDifferent() {
   return (
-    <div className="sec divide" id="why">
-      <div className="wrap">
-        <div className="plate">
-          <span className="platenum">06</span>
-          <span className="label">Why it&apos;s different</span>
-          <span className="plateline" />
+    <div className={`${styles.sec} ${styles.divide}`} id="why">
+      <div className={styles.wrap}>
+        <div className={styles.plate}>
+          <span className={styles.platenum}>08</span>
+          <span className={styles.label}>Why it&apos;s different</span>
+          <span className={styles.plateline} />
         </div>
-        <h2 className="serif why-title">
-          Not a note app. <span className="it accent">A memory.</span>
+        <h2 className={`${styles.serif} ${styles.whyTitle}`}>
+          Not a note app. <span className={`${styles.it} ${styles.accent}`}>A memory.</span>
         </h2>
-        <p className="dim why-intro">
+        <p className={`${styles.dim} ${styles.whyIntro}`}>
           Other tools help you save information. exomemri helps you remember
-          it — and understand it over time.
+          it — and understand it over time. Your own notes still belong on
+          each capture when you want them.
         </p>
-        <div className="crow">
-          <div className="ccol">
-            <div className="label clay ccol-label">Most tools</div>
-            <h3 className="serif ccol-title">Store &amp; search.</h3>
-            <div className="cli"><span className="dim">○</span><span className="dim">Give you somewhere to put things</span></div>
-            <div className="cli"><span className="dim">○</span><span className="dim">A folder of files you have to organize</span></div>
-            <div className="cli"><span className="dim">○</span><span className="dim">Built around a single document</span></div>
-            <div className="cli"><span className="dim">○</span><span className="dim">Remembers what you saved</span></div>
+        <div className={styles.crow}>
+          <div className={styles.ccol}>
+            <div className={`${styles.label} ${styles.clay} ${styles.ccolLabel}`}>Most tools</div>
+            <h3 className={`${styles.serif} ${styles.ccolTitle}`}>Store &amp; search.</h3>
+            <div className={styles.cli}><span className={styles.dim}>○</span><span className={styles.dim}>Give you somewhere to put things</span></div>
+            <div className={styles.cli}><span className={styles.dim}>○</span><span className={styles.dim}>A folder of files you have to organize</span></div>
+            <div className={styles.cli}><span className={styles.dim}>○</span><span className={styles.dim}>Built around a single document</span></div>
+            <div className={styles.cli}><span className={styles.dim}>○</span><span className={styles.dim}>Remembers what you saved</span></div>
           </div>
-          <div className="ccol ccol-accent">
-            <div className="label accent ccol-label">exomemri</div>
-            <h3 className="serif accent ccol-title">Understand &amp; remember.</h3>
-            <div className="cli cli-accent"><span className="accent">●</span><span>Understands what you&apos;ve learned</span></div>
-            <div className="cli cli-accent"><span className="accent">●</span><span>Connects learning across every source</span></div>
-            <div className="cli cli-accent"><span className="accent">●</span><span>Tracks what you actually know</span></div>
-            <div className="cli cli-accent"><span className="accent">●</span><span>Built for learning over months, not minutes</span></div>
+          <div className={`${styles.ccol} ${styles.ccolAccent}`}>
+            <div className={`${styles.label} ${styles.accent} ${styles.ccolLabel}`}>exomemri</div>
+            <h3 className={`${styles.serif} ${styles.accent} ${styles.ccolTitle}`}>Understand &amp; remember.</h3>
+            <div className={`${styles.cli} ${styles.cliAccent}`}><span className={styles.accent}>●</span><span>Understands what you&apos;ve learned</span></div>
+            <div className={`${styles.cli} ${styles.cliAccent}`}><span className={styles.accent}>●</span><span>Connects learning across every source</span></div>
+            <div className={`${styles.cli} ${styles.cliAccent}`}><span className={styles.accent}>●</span><span>Tracks what you actually know</span></div>
+            <div className={`${styles.cli} ${styles.cliAccent}`}><span className={styles.accent}>●</span><span>Built for learning over months, not minutes</span></div>
           </div>
         </div>
-        <p className="why-closing">
+        <p className={styles.whyClosing}>
           The promise isn&apos;t &quot;take notes while you learn.&quot; It&apos;s:{' '}
-          <span className="it accent">never lose anything you learn online again</span>{' '}
+          <span className={`${styles.it} ${styles.accent}`}>never lose anything you learn online again</span>{' '}
           — and instantly recall or connect it whenever you need.
         </p>
       </div>

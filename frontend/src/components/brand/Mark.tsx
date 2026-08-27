@@ -59,7 +59,7 @@ export function Mark({
       {title ? <title>{title}</title> : null}
       <circle cx="24" cy="24" r="21.2" stroke={stroke} strokeWidth={ring} />
       {medium ? (
-        <g stroke={stroke} strokeWidth={hairline} opacity={tone === 'reversed' ? 0.55 : 0.5}>
+        <g stroke={stroke} strokeWidth={hairline} opacity={tone === 'reversed' || tone === 'dusk' ? 0.55 : 0.5}>
           <ellipse cx="24" cy="24" rx="9.4" ry="21.2" />
           <path d="M2.8 24h42.4" />
           {full ? (

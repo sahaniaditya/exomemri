@@ -34,52 +34,26 @@
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* --- Dark Theme Overrides --- */
-/* 1. Respect system setting automatically */
-@media (prefers-color-scheme: dark) {
-  .container {
-    --bg-color: #121413;
-    --card-bg: #1A1D1B;
-    --text-primary: #E8E6DF;
-    --text-secondary: #A8A7A0;
-    --text-muted: #8E9B90;
-    --text-subtle: #68736A;
-    --accent-color: #3D7D6B;
-    --accent-hover: #48937E;
-    --accent-subtle-bg: rgba(61, 125, 107, 0.15);
-    --accent-badge-bg: rgba(61, 125, 107, 0.22);
-    --accent-border: rgba(61, 125, 107, 0.55);
-    --border-color: rgba(232, 230, 223, 0.12);
-    --border-subtle: rgba(232, 230, 223, 0.08);
-    --input-bg: #151716;
-    --contour-opacity: 0.18;
-    --error-bg: rgba(217, 119, 86, 0.15);
-    --error-border: rgba(217, 119, 86, 0.35);
-    --error-text: #E07A5F;
-  }
-}
-
-/* 2. Optional: If your app uses html[data-theme='dark'] or .dark class higher up in the tree */
-:global(html[data-theme='dark']) .container,
-:global(body.dark) .container {
-  --bg-color: #121413;
-  --card-bg: #1A1D1B;
-  --text-primary: #E8E6DF;
-  --text-secondary: #A8A7A0;
-  --text-muted: #8E9B90;
-  --text-subtle: #68736A;
-  --accent-color: #3D7D6B;
-  --accent-hover: #48937E;
-  --accent-subtle-bg: rgba(61, 125, 107, 0.15);
-  --accent-badge-bg: rgba(61, 125, 107, 0.22);
-  --accent-border: rgba(61, 125, 107, 0.55);
-  --border-color: rgba(232, 230, 223, 0.12);
-  --border-subtle: rgba(232, 230, 223, 0.08);
-  --input-bg: #151716;
-  --contour-opacity: 0.18;
-  --error-bg: rgba(217, 119, 86, 0.15);
-  --error-border: rgba(217, 119, 86, 0.35);
-  --error-text: #E07A5F;
+/* --- Dark Theme Overrides — next-themes sets `dark` on <html> --- */
+:global(.dark) .container {
+  --bg-color: #09090B;
+  --card-bg: #18181B;
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #A1A1AA;
+  --text-subtle: #71717A;
+  --accent-color: #8FBFAD;
+  --accent-hover: #6FAE9B;
+  --accent-subtle-bg: rgba(143, 191, 173, 0.14);
+  --accent-badge-bg: rgba(143, 191, 173, 0.2);
+  --accent-border: rgba(143, 191, 173, 0.5);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --input-bg: #111113;
+  --contour-opacity: 0.2;
+  --error-bg: rgba(224, 154, 110, 0.14);
+  --error-border: rgba(224, 154, 110, 0.35);
+  --error-text: #E09A6E;
 }
 
 /* Input Autofill fix for dark/light */

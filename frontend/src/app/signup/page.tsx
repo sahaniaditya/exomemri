@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { Lockup } from '@/components/brand/Lockup'
+import ThemeToggle from '@/components/dashboard/ThemeToggle'
 import styles from './signup.module.css'
 
 function ContourBg() {
@@ -140,6 +141,9 @@ export default function SignupPage() {
       <Link href="/" className={styles.brandLink}>
         <Lockup size={24} />
       </Link>
+      <div className={styles.themeToggleWrap}>
+        <ThemeToggle />
+      </div>
 
       <div className={styles.container}>
         {/* Plate label */}

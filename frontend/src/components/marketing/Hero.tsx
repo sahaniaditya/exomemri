@@ -2,92 +2,95 @@
 import { Contour } from './Contour';
 import { FULL_ANSWER } from './data';
 import { useTypewriter } from './useTypewriter';
+import styles from './marketing.module.css';
 
 export function Hero() {
   const { typed, done } = useTypewriter(FULL_ANSWER);
   return (
-    <div id="top" className="hero">
+    <div id="top" className={styles.hero}>
       <Contour />
-      <span className="coord coord-top-right">40.7128° N · 74.0060° W</span>
-      <div className="wrap hero-content">
-        <div className="hero-grid">
+      <span className={`${styles.coord} ${styles.coordTopRight}`}>40.7128° N · 74.0060° W</span>
+      <div className={`${styles.wrap} ${styles.heroContent}`}>
+        <div className={styles.heroGrid}>
           <div>
-            <div className="chip chip-hero mono">
-              <span className="dot dot-forest" />
+            <div className={`${styles.chip} ${styles.chipHero} ${styles.mono}`}>
+              <span className={`${styles.dot} ${styles.dotForest}`} />
               Your AI learning memory
             </div>
-            <h1 className="serif h1">
+            <h1 className={`${styles.serif} ${styles.h1}`}>
               Never lose anything
               <br />
-              you learn online <span className="it accent">again.</span>
+              you learn online <span className={`${styles.it} ${styles.accent}`}>again.</span>
             </h1>
-            <p className="dim hero-intro">
+            <p className={`${styles.dim} ${styles.heroIntro}`}>
               exomemri captures every video, article, and AI chat you learn from,
               understands it, and remembers it for you — so you can recall or
               connect anything, instantly.
             </p>
-            <div className="hero-ctas">
-              <a href="/signup" className="btn btn-p">
-                Start building your learning memory — free <span className="arrow">→</span>
+            <div className={styles.heroCtas}>
+              <a href="/signup" className={`${styles.btn} ${styles.btnP}`}>
+                Start building your learning memory — free <span className={styles.arrow}>→</span>
               </a>
-              <a href="/login" className="btn btn-g">
+              <a href="/login" className={`${styles.btn} ${styles.btnG}`}>
                 Log in
               </a>
             </div>
-            <p className="mono hero-note">
+            <p className={`${styles.mono} ${styles.heroNote}`}>
               Works right inside your browser · Save with one click · No copy-paste, ever.
             </p>
           </div>
-          <div className="floaty">
-            <div className="card">
-              <div className="win-bar">
-                <span className="tl tl-amber" />
-                <span className="tl tl-sage" />
-                <span className="tl tl-clay" />
-                <span className="mono">Learning Space · System Design</span>
+          <div className={styles.floaty}>
+            <div className={styles.card}>
+              <div className={styles.winBar}>
+                <span className={`${styles.tl} ${styles.tlAmber}`} />
+                <span className={`${styles.tl} ${styles.tlSage}`} />
+                <span className={`${styles.tl} ${styles.tlClay}`} />
+                <span className={styles.mono}>Learning Space · Biology</span>
               </div>
-              <div className="hero-card-body">
-                <div className="label hero-card-label">3 sources merged</div>
-                <div className="src-list">
-                  <div className="srcrow">
-                    <span className="srcico srcico-sm srcico-video">▶</span>
-                    <div className="flex-1">
-                      <div className="srcrow-title">Consistent Hashing Explained</div>
-                      <div className="mono srcrow-meta">YouTube · 14:22</div>
+              <div className={styles.heroCardBody}>
+                <div className={`${styles.label} ${styles.heroCardLabel}`}>3 sources merged</div>
+                <div className={styles.srcList}>
+                  <div className={styles.srcrow}>
+                    <span className={`${styles.srcico} ${styles.srcicoSm} ${styles.srcicoVideo}`}>▶</span>
+                    <div className={styles.srcGrow}>
+                      <div className={styles.srcrowTitle}>Crash Course · Photosynthesis</div>
+                      <div className={`${styles.mono} ${styles.srcrowMeta}`}>YouTube · 12:48</div>
                     </div>
-                    <span className="chip chip-sm">summarized</span>
+                    <span className={`${styles.chip} ${styles.chipSm}`}>summarized</span>
                   </div>
-                  <div className="srcrow">
-                    <span className="srcico srcico-sm srcico-doc">◆</span>
-                    <div className="flex-1">
-                      <div className="srcrow-title">Designing Data-Intensive Apps</div>
-                      <div className="mono srcrow-meta">PDF · ch. 6</div>
+                  <div className={styles.srcrow}>
+                    <span className={`${styles.srcico} ${styles.srcicoSm} ${styles.srcicoDoc}`}>◆</span>
+                    <div className={styles.srcGrow}>
+                      <div className={styles.srcrowTitle}>Chloroplasts explained</div>
+                      <div className={`${styles.mono} ${styles.srcrowMeta}`}>Article · 8 min</div>
                     </div>
-                    <span className="chip chip-sm">summarized</span>
+                    <span className={`${styles.chip} ${styles.chipSm}`}>summarized</span>
                   </div>
-                  <div className="srcrow">
-                    <span className="srcico srcico-sm srcico-ai">✦</span>
-                    <div className="flex-1">
-                      <div className="srcrow-title">ChatGPT · load balancers</div>
-                      <div className="mono srcrow-meta">AI chat · 22 msgs</div>
+                  <div className={styles.srcrow}>
+                    <span className={`${styles.srcico} ${styles.srcicoSm} ${styles.srcicoAi}`}>✦</span>
+                    <div className={styles.srcGrow}>
+                      <div className={styles.srcrowTitle}>ChatGPT · light vs dark reactions</div>
+                      <div className={`${styles.mono} ${styles.srcrowMeta}`}>AI chat · 18 msgs</div>
                     </div>
-                    <span className="chip chip-sm">summarized</span>
+                    <span className={`${styles.chip} ${styles.chipSm}`}>summarized</span>
                   </div>
                 </div>
-                <div className="chat-stack">
-                  <div className="bubble qbubble">Explain caching based on everything I&apos;ve studied.</div>
-                  <div className="bubble">
+                <div className={styles.chatStack}>
+                  <div className={`${styles.bubble} ${styles.qbubble}`}>
+                    Explain photosynthesis based on everything I&apos;ve studied.
+                  </div>
+                  <div className={styles.bubble}>
                     <span>{typed}</span>
-                    <span className="caret" style={{ display: done ? 'none' : 'inline-block' }} />
-                    <div className="hero-citations" style={{ display: done ? 'flex' : 'none' }}>
-                      <span className="cite">▶ 14:22 in video</span>
-                      <span className="cite">◆ DDIA p.184</span>
+                    <span className={`${styles.caret}${done ? ` ${styles.caretHidden}` : ''}`} />
+                    <div className={`${styles.heroCitations}${done ? '' : ` ${styles.citationsHidden}`}`}>
+                      <span className={styles.cite}>▶ 4:12 in video</span>
+                      <span className={styles.cite}>◆ article · chloroplasts</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            <span className="coord coord-bottom-left">plate 01 · recall</span>
+            <span className={`${styles.coord} ${styles.coordBottomLeft}`}>plate 01 · recall</span>
           </div>
         </div>
       </div>

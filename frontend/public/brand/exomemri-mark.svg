@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="exomemri">
+  <title>exomemri</title>
+  <!-- Light-mode mark: forest ring + clay core on paper -->
+  <circle cx="24" cy="24" r="21.2" stroke="#2c5d4f" stroke-width="1.05"/>
+  <g stroke="#2c5d4f" stroke-width="0.68" opacity="0.5">
+    <ellipse cx="24" cy="24" rx="9.4" ry="21.2"/>
+    <path d="M2.8 24h42.4"/>
+    <path d="M6.4 13.2c10.4 4.6 24.8 4.6 35.2 0"/>
+    <path d="M6.4 34.8c10.4-4.6 24.8-4.6 35.2 0"/>
+  </g>
+  <circle cx="32.6" cy="15.4" r="5.95" fill="#f4f1e9"/>
+  <circle cx="32.6" cy="15.4" r="3.5" fill="#b5623c"/>
+</svg>

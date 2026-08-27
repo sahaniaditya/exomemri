@@ -1,62 +1,64 @@
+import styles from './marketing.module.css';
+
 export function Problem() {
   return (
-    <div className="sec divide" id="problem">
-      <div className="wrap">
-        <div className="plate">
-          <span className="platenum">02</span>
-          <span className="label">The problem</span>
-          <span className="plateline" />
+    <div className={`${styles.sec} ${styles.divide}`} id="problem">
+      <div className={styles.wrap}>
+        <div className={styles.plate}>
+          <span className={styles.platenum}>02</span>
+          <span className={styles.label}>The problem</span>
+          <span className={styles.plateline} />
         </div>
-        <div className="problem-grid">
+        <div className={styles.problemGrid}>
           <div>
-            <h2 className="serif problem-title">
+            <h2 className={`${styles.serif} ${styles.problemTitle}`}>
               The pain every
               <br />
               self-learner knows.
             </h2>
-            <p className="dim problem-copy">
+            <p className={`${styles.dim} ${styles.problemCopy}`}>
               You learn from everywhere now — YouTube, blogs, docs, ChatGPT,
               PDFs. But your learning is scattered across a dozen tabs and
               tools, and three days later it&apos;s gone.
             </p>
-            <p className="dim problem-copy" style={{ margin: 0 }}>
+            <p className={`${styles.dim} ${styles.problemCopy} ${styles.problemCopyFlush}`}>
               You watch five videos, read three articles, have ten AI
               conversations, skim the docs. Then a week later, it&apos;s
               all just… somewhere.
             </p>
-            <p className="problem-lead">
+            <p className={styles.problemLead}>
               It was never about taking notes. It&apos;s about learning
               across fragmented sources and actually remembering it. Note
               apps give you another empty page.{' '}
-              <span className="accent font-semibold">What you need is memory.</span>
+              <span className={`${styles.accent} font-semibold`}>What you need is memory.</span>
             </p>
           </div>
-          <div className="problem-tabs">
-            <div className="tab tab-1">
-              <span className="srcico srcico-sm srcico-video">▶</span>
+          <div className={styles.problemTabs}>
+            <div className={`${styles.tab} ${styles.tab1}`}>
+              <span className={`${styles.srcico} ${styles.srcicoSm} ${styles.srcicoVideo}`}>▶</span>
               17 open tabs
             </div>
-            <div className="tab tab-2">
-              <span className="srcico srcico-sm srcico-doc">◆</span>
+            <div className={`${styles.tab} ${styles.tab2}`}>
+              <span className={`${styles.srcico} ${styles.srcicoSm} ${styles.srcicoDoc}`}>◆</span>
               bookmarks_untitled
             </div>
-            <div className="tab tab-3">
-              <span className="srcico srcico-sm srcico-ai">✦</span>
+            <div className={`${styles.tab} ${styles.tab3}`}>
+              <span className={`${styles.srcico} ${styles.srcicoSm} ${styles.srcicoAi}`}>✦</span>
               ChatGPT history
             </div>
-            <div className="tab tab-4">
+            <div className={`${styles.tab} ${styles.tab4}`}>
               📄 notes-final-v3.md
             </div>
-            <div className="tab tab-accent tab-5">
-              <span className="pull pull-sm clay">&quot;…where was it?&quot;</span>
+            <div className={`${styles.tab} ${styles.tabAccent} ${styles.tab5}`}>
+              <span className={`${styles.pull} ${styles.pullSm} ${styles.clay}`}>&quot;…where was it?&quot;</span>
             </div>
           </div>
         </div>
-        <div className="problem-quote-block">
-          <p className="pull problem-quote">
-            <span className="clay">&quot;</span>There was an amazing explanation of consistent hashing…{' '}
-            <span className="dim">where was it?</span>
-            <span className="clay">&quot;</span>
+        <div className={styles.problemQuoteBlock}>
+          <p className={`${styles.pull} ${styles.problemQuote}`}>
+            <span className={styles.clay}>&quot;</span>There was a great explanation of how plants make food from sunlight…{' '}
+            <span className={styles.dim}>where was it?</span>
+            <span className={styles.clay}>&quot;</span>
           </p>
         </div>
       </div>

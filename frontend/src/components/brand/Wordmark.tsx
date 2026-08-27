@@ -8,8 +8,8 @@ import styles from './brand.module.css'
  * brand never drifts between surfaces.
  *
  * Newsreader 400 tracked in to -0.022em, split two-tone at the compound seam:
- * "exo" in forest, "memri" in ink. The site's own display serif doing
- * logotype work, rather than the UI sans it used to borrow.
+ * "exo" in forest (or mint on dusk), "memri" in ink. The site's own display
+ * serif doing logotype work, rather than the UI sans it used to borrow.
  */
 export function Wordmark({
   size,
@@ -36,6 +36,7 @@ export function Wordmark({
 
 const WORDMARK_TONES: Record<BrandTone, { base: CSSProperties; prefix: CSSProperties }> = {
   forest: { base: { color: BRAND_COLORS.ink }, prefix: { color: BRAND_COLORS.forest } },
+  dusk: { base: { color: BRAND_COLORS.duskInk }, prefix: { color: BRAND_COLORS.forestLight } },
   reversed: { base: { color: BRAND_COLORS.paper }, prefix: { color: BRAND_COLORS.forestLight } },
   ink: { base: { color: BRAND_COLORS.ink }, prefix: { color: BRAND_COLORS.ink } },
   paper: { base: { color: BRAND_COLORS.paper }, prefix: { color: BRAND_COLORS.paper } },

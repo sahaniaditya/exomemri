@@ -10,13 +10,26 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line, rgba(27, 26, 22, 0.16));
   background: transparent;
+  color: var(--ink, #1b1a16);
   cursor: pointer;
-  font-size: 16px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .themeToggle:hover {
   background: rgba(27, 26, 22, 0.05);
+}
+:global(.dark) .themeToggle {
+  border-color: var(--line, rgba(255, 255, 255, 0.12));
+  color: var(--ink, #fafafa);
+}
+:global(.dark) .themeToggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.themeToggleIcon {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 .app {
   --ink: #1b1a16;
@@ -45,27 +58,26 @@
    `.app` defines its own local palette above, independent of any global
    --color-bg variables, so dark mode has to override these same custom
    properties when the `dark` class (set by next-themes on <html>) is an
-   ancestor. Background becomes dark gray; text/borders lighten to match;
-   `--on-accent` (text sitting on colored buttons/badges) flips from the
-   old cream paper tone to a light neutral so it stays readable once
-   --paper itself goes dark. Light mode is untouched. */
+   ancestor. Warm charcoal with a forest undertone; accents lift for contrast;
+   `--on-accent` is dark so it stays readable on the lifted mint
+   forest buttons used in dark mode. Light mode is untouched. */
 :global(.dark) .app {
-  --ink: #ececea;
-  --paper: #1a1a1a;
-  --card: #242424;
-  --forest: #6fae9b;
-  --forest-deep: #5a9684;
-  --clay: #d98b64;
-  --muted: #a8a8a2;
-  --sage: #8f9a8f;
-  --sage-light: #6e756e;
-  --line: rgba(255, 255, 255, 0.12);
-  --on-accent: #f5f5f3;
+  --ink: #fafafa;
+  --paper: #09090b;
+  --card: #18181b;
+  --forest: #8fbfad;
+  --forest-deep: #6fae9b;
+  --clay: #e09a6e;
+  --muted: #a1a1aa;
+  --sage: #a1a1aa;
+  --sage-light: #71717a;
+  --line: rgba(255, 255, 255, 0.1);
+  --on-accent: #09090b;
 }
 
 /* Buttons/badges/avatars that use var(--paper) as a text color on a
-   colored (forest/clay/ink) background need to keep using a light color
-   in dark mode, not the now-dark --paper. Swap them to --on-accent. */
+   colored (forest/clay/ink) background need a contrast-safe ink in
+   dark mode. Swap them to --on-accent (dark on mint / light grounds). */
 :global(.dark) .app .avatar,
 :global(.dark) .app .newbtn,
 :global(.dark) .app .contbtn,
@@ -92,8 +104,8 @@
 }
 
 :global(.dark) .loading {
-  background: #1a1a1a;
-  color: #8f9a8f;
+  background: #09090b;
+  color: #a1a1aa;
 }
 
 .app *,
@@ -145,8 +157,8 @@
   border-right: 1px solid var(--line);
   background: linear-gradient(
     180deg,
-    rgba(36, 36, 36, 0.92) 0%,
-    rgba(26, 26, 26, 0.88) 100%
+    rgba(24, 24, 27, 0.96) 0%,
+    rgba(9, 9, 11, 0.92) 100%
   );
 }
 .brand {
@@ -2667,9 +2679,9 @@ button.chip {
 :global(.dark) .memoryPanel {
   border-left: 1px solid var(--line);
   background:
-    radial-gradient(90% 60% at 100% 0%, rgba(111, 174, 155, 0.14), transparent 55%),
-    linear-gradient(180deg, #242424 0%, #1a1a1a 100%);
-  box-shadow: -28px 0 60px -28px rgba(0, 0, 0, 0.6);
+    radial-gradient(90% 60% at 100% 0%, rgba(143, 191, 173, 0.12), transparent 55%),
+    linear-gradient(180deg, #18181b 0%, #09090b 100%);
+  box-shadow: -28px 0 60px -28px rgba(0, 0, 0, 0.65);
 }
 .memoryPanelResizing {
   animation: none;
@@ -2799,7 +2811,7 @@ button.chip {
 }
 :global(.dark) .memoryPanelClose {
   border: 1px solid var(--line);
-  background: rgba(36, 36, 36, 0.7);
+  background: rgba(24, 24, 27, 0.8);
 }
 .memoryPanelClose svg {
   width: 14px;

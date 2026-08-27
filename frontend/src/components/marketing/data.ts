@@ -1,8 +1,9 @@
 export const FULL_ANSWER =
-  "Across your sources, caching stores frequently-accessed data closer to where it's used to cut latency. You've covered cache-aside and write-through — but you haven't studied cache invalidation yet.";
+  "Across your sources, photosynthesis is how plants turn sunlight, water, and carbon dioxide into sugar — and release oxygen. You've covered the light reactions and chloroplasts — but you haven't studied the Calvin cycle yet.";
 
 export const NAV_LINKS = [
   { label: 'How it works', href: '#how' },
+  { label: 'Knowledge map', href: '#map' },
   { label: 'Features', href: '#features' },
   { label: 'Why exomemri', href: '#why' },
   { label: 'FAQ', href: '#faq' },
@@ -17,17 +18,17 @@ export const FEATURES_MAIN = [
   {
     n: 'F2',
     title: 'Learning Spaces',
-    body: 'Start with a goal, not a blank page. Create a space like "System Design," and everything you consume flows into it automatically — organized without manual filing.',
+    body: 'Start with a goal, not a blank page. Create a space like "Biology," and everything you consume flows into it automatically — organized without manual filing.',
   },
   {
     n: 'F3',
     title: 'Instant AI summaries',
-    body: 'Every source becomes a crisp summary the moment you save it: key points, core concepts, examples, and interview-ready takeaways. Useful immediately, not a growing to-read pile.',
+    body: 'Every source becomes a crisp summary the moment you save it: key points, core concepts, and clear takeaways. Useful immediately, not a growing to-read pile.',
   },
   {
     n: 'F4',
-    title: 'Knowledge that merges itself',
-    body: "When three videos and an article all explain load balancers, exomemri combines them into one clear, connected note — with references back to every source. Real understanding, not duplicate clutter.",
+    title: 'A map of what you know',
+    body: 'As you capture, exomemri pulls out the concepts you studied and draws how your sources connect — so overlapping videos and articles become one map, not a pile of duplicates.',
   },
   {
     n: 'F5',
@@ -36,8 +37,8 @@ export const FEATURES_MAIN = [
   },
   {
     n: 'F6',
-    title: 'Know what you know',
-    body: "exomemri tracks what you've actually learned versus what you've merely saved. See your coverage on a topic, spot weak areas, and get told exactly what to study next — like a tutor, not a filing cabinet.",
+    title: 'Your notes, on every capture',
+    body: 'Add your own note pages beside any source — write, link, and paste images next to the video or article that inspired them. Your words stay with the learning that sparked them.',
   },
 ];
 
@@ -60,21 +61,21 @@ export const STEPS = [
 ];
 
 export const AUDIENCE = [
-  { icon: '⌘', title: 'Developers', body: "Preparing for technical interviews who can't afford to forget what they studied." },
-  { icon: '✎', title: 'Students', body: 'Juggling courses, videos, and articles across dozens of topics.' },
-  { icon: '✦', title: 'Self-learners', body: 'Who use AI chats as a temporary brain and want a permanent one.' },
+  { icon: '✦', title: 'Self-learners', body: 'Who use videos, articles, and AI chats as a temporary brain — and want a permanent one.' },
+  { icon: '✎', title: 'Students', body: 'Juggling courses, lectures, and readings across dozens of topics.' },
   { icon: '↗', title: 'Career switchers', body: 'Teaching themselves new fields from scattered online sources.' },
+  { icon: '⌘', title: 'Lifelong learners', body: 'Curious people who learn for years, not just for the next exam.' },
 ];
 
 export const FAQS = [
   {
     q: "Isn't this just another note-taking app?",
-    a: 'No. Note apps give you a blank page. exomemri captures your sources automatically, understands them, and tracks what you actually know — so it works like memory, not a notebook.',
+    a: 'No. Note apps give you a blank page. exomemri captures your sources automatically, understands them, and tracks what you actually know. You can still add your own notes on each capture — but the product works like memory, not a notebook.',
     open: true,
   },
   {
     q: 'How is it different from NotebookLM or Recall?',
-    a: 'Those tools store and let you chat with your sources. exomemri adds a model of your understanding: coverage, gaps, and "you already know 70% of this" context while you browse — built around learning over months, not single documents.',
+    a: 'Those tools store and let you chat with your sources. exomemri adds a model of your understanding: a knowledge map of how concepts connect, coverage and gaps, and "you already know 70% of this" context while you browse — built around learning over months, not single documents.',
   },
   {
     q: 'Do I have to copy-paste anything?',

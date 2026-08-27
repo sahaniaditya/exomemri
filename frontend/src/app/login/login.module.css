@@ -32,28 +32,28 @@
 
 /* Dark Theme Overrides */
 :global(.dark) .container {
-  --bg-main: #0F1412;
-  --bg-card: #161D1A;
-  --bg-input: #0F1412;
-  --text-main: #EAE8E1;
-  --text-muted: #9AA69C;
-  --text-label: #7C8A7E;
-  --text-footer: #5B5A52;
-  --accent: #3E7C6A;
-  --accent-hover: #4E9580;
-  --accent-disabled: #274D42;
-  --border: rgba(234, 232, 225, 0.12);
-  --border-input: rgba(234, 232, 225, 0.16);
-  --border-button: rgba(234, 232, 225, 0.18);
-  --divider: rgba(234, 232, 225, 0.12);
-  --autofill-bg: #161D1A;
-  --contour-opacity: 0.25;
+  --bg-main: #09090B;
+  --bg-card: #18181B;
+  --bg-input: #111113;
+  --text-main: #FAFAFA;
+  --text-muted: #A1A1AA;
+  --text-label: #A1A1AA;
+  --text-footer: #71717A;
+  --accent: #8FBFAD;
+  --accent-hover: #6FAE9B;
+  --accent-disabled: #3F5C54;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-input: rgba(255, 255, 255, 0.14);
+  --border-button: rgba(255, 255, 255, 0.16);
+  --divider: rgba(255, 255, 255, 0.1);
+  --autofill-bg: #18181B;
+  --contour-opacity: 0.22;
 }
 
 .brandLink {
-  position: absolute;
-  left: 2rem;
-  top: 1.75rem;
+  position: relative;
+  left: auto;
+  top: auto;
   display: flex;
   align-items: center;
   gap: 0.625rem;

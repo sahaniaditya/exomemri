@@ -1,21 +1,24 @@
 import Link from 'next/link';
 import { Lockup } from '@/components/brand/Lockup';
+import styles from './marketing.module.css';
 
 export function Footer() {
   return (
-    <footer className="divide">
-      <div className="wrap footer-row">
-        <Link href="/" className="brand brand-sm">
+    <footer className={styles.divide}>
+      <div className={`${styles.wrap} ${styles.footerRow}`}>
+        <Link href="/" className={`${styles.brand} ${styles.brandSm}`}>
           <Lockup size={22} />
         </Link>
-        <div className="footer-links">
-          <a className="footlink" href="#features">Features</a>
-          <a className="footlink" href="#how">How it works</a>
-          <a className="footlink" href="#faq">FAQ</a>
-          <a className="footlink" href="/login">Log in</a>
-          <a className="footlink" href="/signup">Start free</a>
+        <div className={styles.footerLinks}>
+          <a className={styles.footlink} href="#map">Knowledge map</a>
+          <a className={styles.footlink} href="#notes">Notes</a>
+          <a className={styles.footlink} href="#features">Features</a>
+          <a className={styles.footlink} href="#how">How it works</a>
+          <a className={styles.footlink} href="#faq">FAQ</a>
+          <a className={styles.footlink} href="/login">Log in</a>
+          <a className={styles.footlink} href="/signup">Start free</a>
         </div>
-        <span className="mono footer-copy">
+        <span className={`${styles.mono} ${styles.footerCopy}`}>
           © {new Date().getFullYear()} exomemri · Your AI learning memory
         </span>
       </div>
