@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
 import { toCapturedSource } from '@/lib/dashboard-data'
 import { atlasFontVars } from '@/lib/fonts'
-import type { Profile } from '@/lib/profile'
+import { streakDays, type Profile } from '@/lib/profile'
 import { getSpaceCoverage } from '@/lib/coverage'
 import { getStudyPlan } from '@/lib/plan'
 import { listSpaceFolders, listSpaceSources, listSpaces } from '@/lib/spaces'
@@ -60,7 +60,12 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
 
   return (
     <div className={`${styles.app} ${atlasFontVars}`}>
-      <SpacesSidebar spaces={spaces} activeSpaceId={spaceId} />
+      <SpacesSidebar
+        spaces={spaces}
+        activeSpaceId={spaceId}
+        profile={profile}
+        streakDays={streakDays(profile)}
+      />
       <main className={styles.main}>
         <ContourBg />
         <div className={styles.inner}>

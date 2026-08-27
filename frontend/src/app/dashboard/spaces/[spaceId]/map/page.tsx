@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api'
 import { getCredits } from '@/lib/credits'
 import { atlasFontVars } from '@/lib/fonts'
 import { getSpaceGraph, rankConcepts } from '@/lib/graph'
-import type { Profile } from '@/lib/profile'
+import { streakDays, type Profile } from '@/lib/profile'
 import { listSpaces } from '@/lib/spaces'
 import styles from '@/components/dashboard/dashboard.module.css'
 import ContourBg from '@/components/dashboard/ContourBg'
@@ -55,7 +55,13 @@ export default async function SpaceMapPage({ params }: SpaceMapPageProps) {
 
   return (
     <div className={`${styles.app} ${atlasFontVars}`}>
-      <SpacesSidebar spaces={spaces} activeSpaceId={spaceId} />
+      <SpacesSidebar
+        spaces={spaces}
+        activeSpaceId={spaceId}
+        profile={profile}
+        streakDays={streakDays(profile)}
+        credits={credits}
+      />
       <main className={styles.main}>
         <ContourBg />
         <div className={styles.inner}>
@@ -63,6 +69,7 @@ export default async function SpaceMapPage({ params }: SpaceMapPageProps) {
             profile={profile}
             totalSources={totalSources}
             spaceCount={spaces.length}
+            streakDays={streakDays(profile)}
             variant="compact"
             credits={credits}
           />

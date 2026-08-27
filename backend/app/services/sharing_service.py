@@ -1,33 +1,50 @@
-"""Read-only capture sharing: grant/revoke/list collaborators.
+"""Read-only capture sharing: collaborators + shareable links.
 
-Account-based, not a public link: the recipient must be a real exomemri user
-(resolved by username), so access is per-person and revocable, and captured
-content never sits behind an unauthenticated route. A collaborator's access
-is read-only and scoped to that one source — see
-``SpaceService.require_viewable_source``, which this feature's grants make
-non-empty. Chat, the knowledge graph, other captures in the space, and
-writes stay owner-only; nothing here touches those.
+Account-based access only: either a username invite or a redeemable link
+that any logged-in user can open. Both paths land on a ``source_collaborators``
+grant, so ``SpaceService.require_viewable_source`` stays the single auth gate.
+Chat, the knowledge graph, other captures in the space, and writes stay
+owner-only.
 """
 
 from __future__ import annotations
 
+import secrets
 from uuid import UUID
 
 from app.errors import ConflictError, NotFoundError, ValidationError
 from app.repositories.collaborator_repo import CollaboratorRepo
 from app.repositories.profile_repo import ProfileRepo
+from app.repositories.share_link_repo import ShareLinkRepo
 from app.schemas.common import User
-from app.schemas.sharing import CollaboratorResponse, SharedSourceSummary
+from app.schemas.sharing import (
+    CollaboratorResponse,
+    RedeemShareLinkResponse,
+    SharedSourceSummary,
+    ShareLinkResponse,
+    ShareLinkStatusResponse,
+)
 from app.services.space_service import SpaceService
+
+_SHARE_PATH_PREFIX = "/s/"
+
+
+def _share_path(token: str) -> str:
+    return f"{_SHARE_PATH_PREFIX}{token}"
 
 
 class SharingService:
     def __init__(
-        self, collaborators: CollaboratorRepo, spaces: SpaceService, profiles: ProfileRepo
+        self,
+        collaborators: CollaboratorRepo,
+        spaces: SpaceService,
+        profiles: ProfileRepo,
+        share_links: ShareLinkRepo,
     ) -> None:
         self._collaborators = collaborators
         self._spaces = spaces
         self._profiles = profiles
+        self._share_links = share_links
 
     def invite(self, owner: User, source_id: UUID, username: str) -> CollaboratorResponse:
         source = self._spaces.require_owned_source(owner, source_id)
@@ -111,3 +128,101 @@ class SharingService:
                 )
             )
         return summaries
+
+    # --- shareable links ---
+
+    def get_link(self, owner: User, source_id: UUID) -> ShareLinkStatusResponse:
+        self._spaces.require_owned_source(owner, source_id)
+        row = self._share_links.get_active_for_source(source_id=str(source_id))
+        if not row:
+            return ShareLinkStatusResponse(enabled=False)
+        return ShareLinkStatusResponse(
+            enabled=True,
+            token=row["token"],
+            path=_share_path(row["token"]),
+            created_at=row.get("created_at"),
+        )
+
+    def create_or_get_link(self, owner: User, source_id: UUID) -> ShareLinkResponse:
+        source = self._spaces.require_owned_source(owner, source_id)
+        existing = self._share_links.get_active_for_source(source_id=str(source_id))
+        if existing:
+            return ShareLinkResponse(
+                token=existing["token"],
+                path=_share_path(existing["token"]),
+                created_at=existing["created_at"],
+            )
+
+        token = secrets.token_urlsafe(32)
+        try:
+            row = self._share_links.create(
+                source_id=str(source_id),
+                space_id=source["space_id"],
+                token=token,
+                created_by=str(owner.id),
+            )
+        except Exception as exc:  # noqa: BLE001 - race on active-source unique index
+            msg = str(exc).lower()
+            if "23505" in msg or "violates unique constraint" in msg:
+                raced = self._share_links.get_active_for_source(source_id=str(source_id))
+                if raced:
+                    return ShareLinkResponse(
+                        token=raced["token"],
+                        path=_share_path(raced["token"]),
+                        created_at=raced["created_at"],
+                    )
+            raise
+
+        return ShareLinkResponse(
+            token=row["token"],
+            path=_share_path(row["token"]),
+            created_at=row["created_at"],
+        )
+
+    def revoke_link(self, owner: User, source_id: UUID) -> None:
+        self._spaces.require_owned_source(owner, source_id)
+        self._share_links.revoke(source_id=str(source_id))
+
+    def redeem_link(self, user: User, token: str) -> RedeemShareLinkResponse:
+        link = self._share_links.get_active_by_token(token=token.strip())
+        if not link:
+            raise NotFoundError("Share link not found.")
+
+        source = self._spaces.get_source_any(UUID(link["source_id"]))
+        if not source:
+            raise NotFoundError("Share link not found.")
+
+        is_owner = source["user_id"] == str(user.id)
+        if not is_owner and not self._collaborators.is_collaborator(
+            source_id=source["id"], user_id=str(user.id)
+        ):
+            try:
+                self._collaborators.add(
+                    source_id=source["id"],
+                    space_id=source["space_id"],
+                    user_id=str(user.id),
+                    invited_by=link["created_by"],
+                )
+            except Exception as exc:  # noqa: BLE001 - concurrent redeem is fine
+                msg = str(exc).lower()
+                if "23505" not in msg and "violates unique constraint" not in msg:
+                    raise
+
+        space = self._spaces.get_space_any(UUID(source["space_id"]))
+        space_name = (space or {}).get("name") or ""
+        owner = self._profiles.get_profile(source["user_id"])
+
+        return RedeemShareLinkResponse(
+            source_id=UUID(source["id"]),
+            title=source["title"],
+            type=source["type"],
+            url=source.get("url"),
+            author=source.get("author"),
+            captured_at=source.get("captured_at"),
+            processing_status=source["processing_status"],
+            space_id=UUID(source["space_id"]),
+            space_name=space_name,
+            owner_username=owner.get("username") if owner else None,
+            shared_at=link.get("created_at"),
+            is_owner=is_owner,
+        )

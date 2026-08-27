@@ -1,15 +1,21 @@
 'use client'
 import Link from 'next/link'
-import styles from './dashboard.module.css'
-import { Lockup } from '@/components/brand/Lockup'
+import type { CreditsBalance } from '@/lib/credits'
 import { SOURCE_GLYPH } from '@/lib/dashboard-data'
-import OriginalLink from './OriginalLink'
+import type { Profile } from '@/lib/profile'
 import type { Source, Space } from '@/lib/spaces'
+import AccountChrome from './AccountChrome'
+import OriginalLink from './OriginalLink'
+import SideChrome from './SideChrome'
+import styles from './dashboard.module.css'
 
 interface SourceSidebarProps {
   space: Space
   sources: Source[]
   activeSourceId: string
+  profile?: Profile | null
+  streakDays?: number
+  credits?: CreditsBalance | null
 }
 
 const GLYPH_BY_TYPE: Record<Source['type'], string> = {
@@ -20,13 +26,20 @@ const GLYPH_BY_TYPE: Record<Source['type'], string> = {
   note: SOURCE_GLYPH.note,
 }
 
-export default function SourceSidebar({ space, sources, activeSourceId }: SourceSidebarProps) {
+export default function SourceSidebar({
+  space,
+  sources,
+  activeSourceId,
+  profile = null,
+  streakDays = 0,
+  credits = null,
+}: SourceSidebarProps) {
   return (
-    <aside className={styles.side}>
-      <Link className={styles.brand} href="/dashboard">
-        <Lockup size={24} />
-      </Link>
-
+    <SideChrome
+      account={
+        <AccountChrome profile={profile} streakDays={streakDays} credits={credits} />
+      }
+    >
       <Link href={`/dashboard/spaces/${space.id}`} className={styles.navitem}>
         <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
           <path d="M15 18l-6-6 6-6" />
@@ -67,6 +80,6 @@ export default function SourceSidebar({ space, sources, activeSourceId }: Source
       </div>
 
       <div className={styles.spacer} />
-    </aside>
+    </SideChrome>
   )
 }

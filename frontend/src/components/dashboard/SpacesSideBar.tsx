@@ -1,21 +1,37 @@
 'use client'
 import Link from 'next/link'
-import styles from './dashboard.module.css'
-import { Lockup } from '@/components/brand/Lockup'
+import { usePathname } from 'next/navigation'
+import type { CreditsBalance } from '@/lib/credits'
+import type { Profile } from '@/lib/profile'
 import type { Space } from '@/lib/spaces'
+import AccountChrome from './AccountChrome'
+import SideChrome from './SideChrome'
+import styles from './dashboard.module.css'
 
 interface SpacesSidebarProps {
   spaces: Space[]
   activeSpaceId: string
+  profile?: Profile | null
+  streakDays?: number
+  credits?: CreditsBalance | null
 }
 
-export default function SpacesSidebar({ spaces, activeSpaceId }: SpacesSidebarProps) {
-  return (
-    <aside className={styles.side}>
-      <Link className={styles.brand} href="/dashboard">
-        <Lockup size={24} />
-      </Link>
+export default function SpacesSidebar({
+  spaces,
+  activeSpaceId,
+  profile = null,
+  streakDays = 0,
+  credits = null,
+}: SpacesSidebarProps) {
+  const pathname = usePathname()
+  const onMap = pathname.endsWith('/map')
 
+  return (
+    <SideChrome
+      account={
+        <AccountChrome profile={profile} streakDays={streakDays} credits={credits} />
+      }
+    >
       <div className={styles.navsec}>
         <Link className={styles.navitem} href="/dashboard">
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
@@ -64,9 +80,9 @@ export default function SpacesSidebar({ spaces, activeSpaceId }: SpacesSidebarPr
         <div className={styles.navlabel}>In this space</div>
         <nav className={styles.nav} aria-label="Space tools">
           <Link
-            className={`${styles.navitem} ${styles.on}`}
+            className={`${styles.navitem} ${!onMap ? styles.on : ''}`}
             href={`/dashboard/spaces/${activeSpaceId}`}
-            aria-current="page"
+            aria-current={!onMap ? 'page' : undefined}
           >
             <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
               <path d="M4 6h16M4 12h16M4 18h10" />
@@ -75,8 +91,9 @@ export default function SpacesSidebar({ spaces, activeSpaceId }: SpacesSidebarPr
             <span className={styles.navitemShort}>Captures</span>
           </Link>
           <Link
-            className={styles.navitem}
+            className={`${styles.navitem} ${onMap ? styles.on : ''}`}
             href={`/dashboard/spaces/${activeSpaceId}/map`}
+            aria-current={onMap ? 'page' : undefined}
           >
             <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
               <circle cx="6" cy="7" r="2.5" />
@@ -102,6 +119,6 @@ export default function SpacesSidebar({ spaces, activeSpaceId }: SpacesSidebarPr
           with one click.
         </p>
       </div>
-    </aside>
+    </SideChrome>
   )
 }

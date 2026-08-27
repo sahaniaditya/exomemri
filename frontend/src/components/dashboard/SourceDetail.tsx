@@ -22,7 +22,7 @@ import {
 import type { Source } from '@/lib/spaces'
 import type { ChatMessage, SummaryResponse } from '@/lib/sources'
 import type { NotePage } from '@/lib/notes'
-import type { Collaborator } from '@/lib/sharing'
+import type { Collaborator, ShareLinkStatus } from '@/lib/sharing'
 import ShareManager from './ShareManager'
 
 const KIND_LABEL: Record<SourceKind, string> = {
@@ -43,6 +43,7 @@ interface SourceDetailProps {
   initialNotes: NotePage[]
   notesLoadError?: boolean
   initialCollaborators?: Collaborator[]
+  initialShareLink?: ShareLinkStatus
   readOnly?: boolean
 }
 
@@ -54,6 +55,7 @@ export default function SourceDetail({
   initialNotes,
   notesLoadError = false,
   initialCollaborators = [],
+  initialShareLink,
   readOnly = false,
 }: SourceDetailProps) {
   const router = useRouter()
@@ -129,12 +131,13 @@ export default function SourceDetail({
                   Captured {relativeTime(source.captured_at)}
                 </li>
               ) : null}
-              <ThemeToggle />
+              <li className={styles.captureThemeToggle}>
+                <ThemeToggle />
+              </li>
             </ul>
              
           </div>
           <div className={styles.captureActions}>
-           
             {source.url ? <OriginalLink url={source.url} /> : null}
             {readOnly ? null : (
               <>
@@ -142,6 +145,8 @@ export default function SourceDetail({
                   type="button"
                   className={styles.captureShareBtn}
                   onClick={() => setShareOpen(true)}
+                  aria-label="Share"
+                  title="Share"
                 >
                   <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">
                     <circle cx="8" cy="10" r="2.4" />
@@ -149,20 +154,22 @@ export default function SourceDetail({
                     <circle cx="16" cy="15" r="2.4" />
                     <path d="M10 10.8 14 8.2M10 11.4 14 13.8" />
                   </svg>
-                  Share
+                  <span className={styles.captureActionLabel}>Share</span>
                 </button>
                 <button
                   type="button"
                   className={styles.captureAskBtn}
                   onClick={() => setChatOpen(true)}
                   aria-expanded={chatOpen}
+                  aria-label="Ask this capture"
+                  title="Ask this capture"
                   disabled={status === 'processing'}
                 >
                   <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">
                     <path d="M5 8.5C5 6.6 6.8 5 9 5h6c2.2 0 4 1.6 4 3.5V14c0 1.9-1.8 3.5-4 3.5h-3.2L8 21v-3.5C6.2 17.3 5 15.8 5 14V8.5Z" />
                     <path d="M9 10h6M9 13h4" />
                   </svg>
-                  Ask this capture
+                  <span className={styles.captureActionLabel}>Ask this capture</span>
                 </button>
                 <DeleteCaptureButton
                   sourceId={source.id}
@@ -213,6 +220,7 @@ export default function SourceDetail({
           key={source.id}
           sourceId={source.id}
           initialCollaborators={initialCollaborators}
+          initialShareLink={initialShareLink}
           open={shareOpen}
           onClose={() => setShareOpen(false)}
         />

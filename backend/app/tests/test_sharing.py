@@ -31,6 +31,7 @@ from app.tests.conftest import (
     FakeLLMService,
     FakeNoteRepo,
     FakeProfileRepo,
+    FakeShareLinkRepo,
     FakeSpaceRepo,
     FakeStorage,
 )
@@ -81,10 +82,14 @@ def _build_services(
     space_repo: FakeSpaceRepo,
     collaborator_repo: FakeCollaboratorRepo,
     profile_repo: FakeProfileRepo,
+    share_link_repo: FakeShareLinkRepo | None = None,
 ) -> tuple[SpaceService, SharingService]:
     space_svc = SpaceService(space_repo, collaborator_repo)  # type: ignore[arg-type]
     sharing_svc = SharingService(
-        collaborator_repo, space_svc, profile_repo  # type: ignore[arg-type]
+        collaborator_repo,
+        space_svc,
+        profile_repo,
+        share_link_repo or FakeShareLinkRepo(),  # type: ignore[arg-type]
     )
     return space_svc, sharing_svc
 
@@ -387,3 +392,163 @@ def test_collaborator_http_can_read_granted_capture_only(
     )
     assert client.get(f"/v1/spaces/{OTHER_USER_SPACE_ID}/graph").status_code == 404
     assert client.get(f"/v1/spaces/{OTHER_USER_SPACE_ID}/sources").status_code == 404
+
+
+# --- shareable links ---
+
+
+def test_create_or_get_share_link_returns_token(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    source = _seed_source(space_repo, space_id=SEEDED_SPACE_ID, user_id=DEV_USER_ID)
+    created = client.put(f"/v1/sources/{source['id']}/share-link")
+    assert created.status_code == 200
+    body = created.json()
+    assert body["token"]
+    assert body["path"] == f"/s/{body['token']}"
+
+    again = client.put(f"/v1/sources/{source['id']}/share-link")
+    assert again.status_code == 200
+    assert again.json()["token"] == body["token"]
+
+    status = client.get(f"/v1/sources/{source['id']}/share-link")
+    assert status.status_code == 200
+    assert status.json()["enabled"] is True
+    assert status.json()["token"] == body["token"]
+
+
+def test_share_link_status_disabled_when_absent(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    source = _seed_source(space_repo, space_id=SEEDED_SPACE_ID, user_id=DEV_USER_ID)
+    status = client.get(f"/v1/sources/{source['id']}/share-link")
+    assert status.status_code == 200
+    assert status.json() == {
+        "enabled": False,
+        "token": None,
+        "path": None,
+        "created_at": None,
+    }
+
+
+def test_redeem_grants_view_access(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    share_link_repo: FakeShareLinkRepo,
+    collaborator_repo: FakeCollaboratorRepo,
+    profile_repo: FakeProfileRepo,
+) -> None:
+    """Other user owns the capture; hermetic client authenticates as DEV and redeems."""
+    source = _seed_source(
+        space_repo, space_id=OTHER_USER_SPACE_ID, user_id=OTHER_USER_ID
+    )
+    profile_repo.profiles[OTHER_USER_ID] = {
+        "id": OTHER_USER_ID,
+        "username": "other",
+    }
+    token = "test-share-token-abc"
+    share_link_repo.create(
+        source_id=source["id"],
+        space_id=OTHER_USER_SPACE_ID,
+        token=token,
+        created_by=OTHER_USER_ID,
+    )
+
+    redeem = client.post(f"/v1/share-links/{token}/redeem")
+    assert redeem.status_code == 200
+    data = redeem.json()
+    assert data["source_id"] == source["id"]
+    assert data["is_owner"] is False
+    assert data["owner_username"] == "other"
+    assert collaborator_repo.is_collaborator(
+        source_id=source["id"], user_id=DEV_USER_ID
+    )
+
+    assert client.get(f"/v1/sources/{source['id']}/summary").status_code == 200
+
+    # Idempotent second redeem
+    assert client.post(f"/v1/share-links/{token}/redeem").status_code == 200
+
+
+def test_revoke_link_blocks_new_redeem_but_keeps_prior_viewer(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    share_link_repo: FakeShareLinkRepo,
+    collaborator_repo: FakeCollaboratorRepo,
+    profile_repo: FakeProfileRepo,
+    other_user: User,
+) -> None:
+    source = _seed_source(space_repo, space_id=SEEDED_SPACE_ID, user_id=DEV_USER_ID)
+    profile_repo.profiles[OTHER_USER_ID] = {"id": OTHER_USER_ID, "username": "friend"}
+    created = client.put(f"/v1/sources/{source['id']}/share-link")
+    token = created.json()["token"]
+
+    # Simulate other user already redeemed via direct grant
+    collaborator_repo.add(
+        source_id=source["id"],
+        space_id=SEEDED_SPACE_ID,
+        user_id=OTHER_USER_ID,
+        invited_by=DEV_USER_ID,
+    )
+
+    revoke = client.delete(f"/v1/sources/{source['id']}/share-link")
+    assert revoke.status_code == 204
+
+    status = client.get(f"/v1/sources/{source['id']}/share-link")
+    assert status.json()["enabled"] is False
+
+    assert share_link_repo.get_active_by_token(token=token) is None
+
+    space_svc, _ = _build_services(space_repo, collaborator_repo, profile_repo)
+    viewed = space_svc.require_viewable_source(other_user, UUID(source["id"]))
+    assert viewed["id"] == source["id"]
+
+
+def test_revoked_token_redeem_is_not_found(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    share_link_repo: FakeShareLinkRepo,
+) -> None:
+    source = _seed_source(
+        space_repo, space_id=OTHER_USER_SPACE_ID, user_id=OTHER_USER_ID
+    )
+    token = "revoked-token"
+    share_link_repo.create(
+        source_id=source["id"],
+        space_id=OTHER_USER_SPACE_ID,
+        token=token,
+        created_by=OTHER_USER_ID,
+    )
+    share_link_repo.revoke(source_id=source["id"])
+
+    res = client.post(f"/v1/share-links/{token}/redeem")
+    assert res.status_code == 404
+
+
+def test_owner_redeem_is_safe_no_self_grant(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    collaborator_repo: FakeCollaboratorRepo,
+) -> None:
+    source = _seed_source(space_repo, space_id=SEEDED_SPACE_ID, user_id=DEV_USER_ID)
+    created = client.put(f"/v1/sources/{source['id']}/share-link")
+    token = created.json()["token"]
+
+    redeem = client.post(f"/v1/share-links/{token}/redeem")
+    assert redeem.status_code == 200
+    assert redeem.json()["is_owner"] is True
+    assert not collaborator_repo.is_collaborator(
+        source_id=source["id"], user_id=DEV_USER_ID
+    )
+
+
+def test_reenable_after_revoke_issues_new_token(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    source = _seed_source(space_repo, space_id=SEEDED_SPACE_ID, user_id=DEV_USER_ID)
+    first = client.put(f"/v1/sources/{source['id']}/share-link").json()["token"]
+    client.delete(f"/v1/sources/{source['id']}/share-link")
+    second = client.put(f"/v1/sources/{source['id']}/share-link").json()["token"]
+    assert second != first
+    assert client.post(f"/v1/share-links/{first}/redeem").status_code == 404
+    assert client.post(f"/v1/share-links/{second}/redeem").status_code == 200

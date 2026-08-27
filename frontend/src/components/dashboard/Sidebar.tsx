@@ -1,12 +1,18 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import type { CreditsBalance } from '@/lib/credits'
+import type { Profile } from '@/lib/profile'
+import AccountChrome from './AccountChrome'
+import SideChrome from './SideChrome'
 import styles from './dashboard.module.css'
-import { Lockup } from '@/components/brand/Lockup'
 
 interface SidebarProps {
   spaceCount: number
   sourceCount: number
+  profile?: Profile | null
+  streakDays?: number
+  credits?: CreditsBalance | null
 }
 
 const NAV = [
@@ -65,16 +71,22 @@ function isNavActive(href: string, pathname: string): boolean {
   return pathname === path || pathname.startsWith(`${path}/`)
 }
 
-export default function Sidebar({ spaceCount, sourceCount }: SidebarProps) {
+export default function Sidebar({
+  spaceCount,
+  sourceCount,
+  profile = null,
+  streakDays = 0,
+  credits = null,
+}: SidebarProps) {
   const pathname = usePathname()
   const counts: Record<string, number> = { spaces: spaceCount, sources: sourceCount }
 
   return (
-    <aside className={styles.side}>
-      <Link className={styles.brand} href="/dashboard">
-        <Lockup size={24} />
-      </Link>
-
+    <SideChrome
+      account={
+        <AccountChrome profile={profile} streakDays={streakDays} credits={credits} />
+      }
+    >
       <div className={styles.navsec}>
         <div className={styles.navlabel}>Workspace</div>
         <nav className={styles.nav} aria-label="Workspace">
@@ -107,6 +119,6 @@ export default function Sidebar({ spaceCount, sourceCount }: SidebarProps) {
         </div>
         <p>Capture videos, articles, and AI chats with one click while you browse.</p>
       </div>
-    </aside>
+    </SideChrome>
   )
 }

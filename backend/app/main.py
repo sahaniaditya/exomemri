@@ -63,6 +63,7 @@ def create_app() -> FastAPI:
     app.include_router(plan_router.router, prefix=API_PREFIX)
     app.include_router(sharing_router.router, prefix=API_PREFIX)
     app.include_router(sharing_router.shared_with_me_router, prefix=API_PREFIX)
+    app.include_router(sharing_router.share_links_router, prefix=API_PREFIX)
     app.include_router(profile_router.router, prefix=API_PREFIX)
     app.include_router(profile_router.public_router, prefix=API_PREFIX)
 

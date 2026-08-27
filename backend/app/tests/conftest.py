@@ -763,6 +763,50 @@ class FakeCollaboratorRepo:
         return out
 
 
+class FakeShareLinkRepo:
+    """In-memory stand-in for ``source_share_links``."""
+
+    def __init__(self) -> None:
+        self.links: list[dict] = []
+
+    def get_active_for_source(self, *, source_id: str) -> dict | None:
+        for row in self.links:
+            if row["source_id"] == source_id and row.get("revoked_at") is None:
+                return dict(row)
+        return None
+
+    def get_active_by_token(self, *, token: str) -> dict | None:
+        for row in self.links:
+            if row["token"] == token and row.get("revoked_at") is None:
+                return dict(row)
+        return None
+
+    def create(
+        self, *, source_id: str, space_id: str, token: str, created_by: str
+    ) -> dict:
+        if self.get_active_for_source(source_id=source_id):
+            raise RuntimeError("duplicate key value violates unique constraint (23505)")
+        if any(r["token"] == token for r in self.links):
+            raise RuntimeError("duplicate key value violates unique constraint (23505)")
+        row = {
+            "id": str(uuid4()),
+            "source_id": source_id,
+            "space_id": space_id,
+            "token": token,
+            "created_by": created_by,
+            "created_at": datetime.now(UTC).isoformat(),
+            "revoked_at": None,
+        }
+        self.links.append(row)
+        return dict(row)
+
+    def revoke(self, *, source_id: str) -> None:
+        now = datetime.now(UTC).isoformat()
+        for row in self.links:
+            if row["source_id"] == source_id and row.get("revoked_at") is None:
+                row["revoked_at"] = now
+
+
 class FakeEmbeddingService:
     """Deterministic vectors (no network) — same text always embeds the same."""
 
@@ -898,6 +942,11 @@ def collaborator_repo(
 
 
 @pytest.fixture
+def share_link_repo() -> FakeShareLinkRepo:
+    return FakeShareLinkRepo()
+
+
+@pytest.fixture
 def concept_repo(space_repo: FakeSpaceRepo) -> FakeConceptRepo:
     repo = FakeConceptRepo()
     repo._space_repo = space_repo
@@ -941,6 +990,7 @@ def client(
     profile_repo: FakeProfileRepo,
     profile_settings_repo: FakeProfileSettingsRepo,
     collaborator_repo: FakeCollaboratorRepo,
+    share_link_repo: FakeShareLinkRepo,
     note_repo: FakeNoteRepo,
     credits_repo: FakeCreditsRepo,
     embedding_service: FakeEmbeddingService,
@@ -992,7 +1042,7 @@ def client(
     )
     plan_svc = PlanService(coverage_svc, space_svc)  # type: ignore[arg-type]
     sharing_svc = SharingService(
-        collaborator_repo, space_svc, profile_repo  # type: ignore[arg-type]
+        collaborator_repo, space_svc, profile_repo, share_link_repo  # type: ignore[arg-type]
     )
     chat_svc = SourceChatService(
         space_svc, extract_svc, llm_service, embedding_service, chunk_repo, credits_svc  # type: ignore[arg-type]

@@ -93,6 +93,10 @@
   .heroText {
     align-items: center;
   }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------- stat row (replaces plain text chips) ---------- */

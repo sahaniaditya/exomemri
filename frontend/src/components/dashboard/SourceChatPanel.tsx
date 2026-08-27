@@ -3,11 +3,14 @@
 /**
  * Right-docked memory panel for a single capture.
  * Left-edge drag resizes width (extends into the page). Brand lockup + mark on send.
+ * Portaled to document.body so it sits above the sticky mobile nav stacking context.
  */
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Lockup } from '@/components/brand/Lockup'
 import { ThemeMark } from '@/components/brand/ThemeMark'
 import { Mark } from '@/components/brand/Mark'
+import { useIsMounted } from '@/lib/use-is-mounted'
 import styles from './dashboard.module.css'
 import type { ChatMessage } from '@/lib/sources'
 
@@ -21,6 +24,7 @@ interface SourceChatPanelProps {
 const DEFAULT_WIDTH = 400
 const MIN_WIDTH = 320
 const MAX_WIDTH_RATIO = 0.72
+const MOBILE_MQ = '(max-width: 760px)'
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString(undefined, {
@@ -29,12 +33,18 @@ function formatTime(iso: string) {
   })
 }
 
+function isMobileViewport() {
+  return typeof window !== 'undefined' && window.matchMedia(MOBILE_MQ).matches
+}
+
 function maxWidth() {
   if (typeof window === 'undefined') return 720
+  if (isMobileViewport()) return window.innerWidth
   return Math.max(MIN_WIDTH, Math.floor(window.innerWidth * MAX_WIDTH_RATIO))
 }
 
 function clampWidth(width: number) {
+  if (isMobileViewport()) return window.innerWidth
   return Math.min(Math.max(MIN_WIDTH, width), maxWidth())
 }
 
@@ -44,7 +54,8 @@ export default function SourceChatPanel({
   initialMessages,
   onClose,
 }: SourceChatPanelProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
+  const mounted = useIsMounted()
+  const [messages, setMessages] = useState(initialMessages)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
@@ -67,7 +78,9 @@ export default function SourceChatPanel({
       const next = clampWidth(widthRef.current)
       widthRef.current = next
       setWidth(next)
-      if (panelRef.current) panelRef.current.style.width = `${next}px`
+      if (panelRef.current) {
+        panelRef.current.style.width = isMobileViewport() ? '100%' : `${next}px`
+      }
     }
     window.addEventListener('resize', onWindowResize)
     return () => window.removeEventListener('resize', onWindowResize)
@@ -97,6 +110,14 @@ export default function SourceChatPanel({
   }, [])
 
   useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
+  useEffect(() => {
     if (!resizing) return
     const prev = document.body.style.cursor
     const prevSelect = document.body.style.userSelect
@@ -109,7 +130,7 @@ export default function SourceChatPanel({
   }, [resizing])
 
   const onResizeStart = (event: PointerEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) return
+    if (event.button !== 0 || isMobileViewport()) return
     event.preventDefault()
     event.stopPropagation()
     resizingRef.current = true
@@ -118,7 +139,7 @@ export default function SourceChatPanel({
   }
 
   const onResizeMove = (event: PointerEvent<HTMLButtonElement>) => {
-    if (!resizingRef.current) return
+    if (!resizingRef.current || isMobileViewport()) return
     // Right-docked panel: drag left edge leftward to widen.
     const next = clampWidth(window.innerWidth - event.clientX)
     widthRef.current = next
@@ -184,7 +205,9 @@ export default function SourceChatPanel({
     }
   }
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <div className={styles.memoryOverlay} role="presentation">
       <button
         type="button"
@@ -196,7 +219,7 @@ export default function SourceChatPanel({
         ref={panelRef}
         className={`${styles.memoryPanel} ${resizing ? styles.memoryPanelResizing : ''}`}
         aria-label="Ask this capture"
-        style={{ width }}
+        style={isMobileViewport() ? { width: '100%' } : { width }}
       >
         <button
           type="button"
@@ -332,6 +355,7 @@ export default function SourceChatPanel({
           ) : null}
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body
   )
 }

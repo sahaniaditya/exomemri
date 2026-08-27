@@ -55,9 +55,10 @@ export default function KnowledgeMap({
     if (!el) return
     const apply = () => {
       const rect = el.getBoundingClientRect()
+      const narrow = window.matchMedia('(max-width: 760px)').matches
       setSize({
-        width: Math.max(320, Math.floor(rect.width)),
-        height: Math.max(360, Math.floor(rect.height)),
+        width: Math.max(280, Math.floor(rect.width)),
+        height: Math.max(narrow ? 220 : 360, Math.floor(rect.height)),
       })
     }
     apply()
@@ -159,8 +160,13 @@ export default function KnowledgeMap({
       </div>
 
       <p className={styles.maphint}>
-        Drag nodes to rearrange · scroll to zoom · pan the canvas. Click a concept to isolate it;
-        click a source to open it.
+        <span className={styles.maphintDesktop}>
+          Drag nodes to rearrange · scroll to zoom · pan the canvas. Click a concept to isolate it;
+          click a source to open it.
+        </span>
+        <span className={styles.maphintMobile}>
+          Drag to pan · pinch to zoom · tap a concept to isolate it; tap a source to open it.
+        </span>
       </p>
     </div>
   )

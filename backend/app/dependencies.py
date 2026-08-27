@@ -16,6 +16,7 @@ from app.repositories.credits_repo import CreditsRepo
 from app.repositories.note_repo import NoteRepo
 from app.repositories.profile_repo import ProfileRepo
 from app.repositories.profile_settings_repo import ProfileSettingsRepo
+from app.repositories.share_link_repo import ShareLinkRepo
 from app.repositories.space_repo import SpaceRepo
 from app.repositories.storage_repo import StorageRepo, get_storage_repo
 from app.repositories.supabase_client import get_auth_client, get_service_client
@@ -46,6 +47,10 @@ def get_space_repo() -> SpaceRepo:
 
 def get_collaborator_repo() -> CollaboratorRepo:
     return CollaboratorRepo(get_service_client())
+
+
+def get_share_link_repo() -> ShareLinkRepo:
+    return ShareLinkRepo(get_service_client())
 
 
 def get_space_service(
@@ -88,8 +93,9 @@ def get_sharing_service(
     collaborators: CollaboratorRepo = Depends(get_collaborator_repo),
     space_service: SpaceService = Depends(get_space_service),
     profiles: ProfileRepo = Depends(get_profile_repo),
+    share_links: ShareLinkRepo = Depends(get_share_link_repo),
 ) -> SharingService:
-    return SharingService(collaborators, space_service, profiles)
+    return SharingService(collaborators, space_service, profiles, share_links)
 
 
 def get_note_repo() -> NoteRepo:
