@@ -14,6 +14,7 @@ from app.routers import credits as credits_router
 from app.routers import graph as graph_router
 from app.routers import plan as plan_router
 from app.routers import profile as profile_router
+from app.routers import reviews as reviews_router
 from app.routers import session as session_router
 from app.routers import sharing as sharing_router
 from app.routers import sources as sources_router
@@ -66,6 +67,8 @@ def create_app() -> FastAPI:
     app.include_router(sharing_router.share_links_router, prefix=API_PREFIX)
     app.include_router(profile_router.router, prefix=API_PREFIX)
     app.include_router(profile_router.public_router, prefix=API_PREFIX)
+    app.include_router(reviews_router.router, prefix=API_PREFIX)
+    app.include_router(reviews_router.public_router, prefix=API_PREFIX)
 
     @app.get("/health", tags=["meta"])
     def health() -> dict:

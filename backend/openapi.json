@@ -844,6 +844,37 @@
         "title": "PublicProfileResponse",
         "type": "object"
       },
+      "PublicReview": {
+        "description": "A review shown on the marketing landing page.",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "primary_role": {
+            "title": "Primary Role",
+            "type": "string"
+          },
+          "rating": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rating",
+          "body",
+          "full_name",
+          "primary_role"
+        ],
+        "title": "PublicReview",
+        "type": "object"
+      },
       "PublicSpaceSummary": {
         "description": "A portfolio tile \u2014 counts only, never source titles, URLs, or content.",
         "properties": {
@@ -1013,6 +1044,55 @@
           "name"
         ],
         "title": "RenameFolderRequest",
+        "type": "object"
+      },
+      "ReviewResponse": {
+        "description": "The authenticated user's own review row.",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rating": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "rating",
+          "body"
+        ],
+        "title": "ReviewResponse",
         "type": "object"
       },
       "SendMessageRequest": {
@@ -1793,6 +1873,20 @@
         "title": "SyllabusTopic",
         "type": "object"
       },
+      "TopReviewsResponse": {
+        "description": "Top reviews by rating for the public landing page.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicReview"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "TopReviewsResponse",
+        "type": "object"
+      },
       "UpdateNotePageRequest": {
         "description": "Replace the page title and/or TipTap document. At least one is required.",
         "properties": {
@@ -1917,6 +2011,29 @@
           "path"
         ],
         "title": "UploadUrlResponse",
+        "type": "object"
+      },
+      "UpsertReviewRequest": {
+        "description": "Create or replace the caller's single product review.",
+        "properties": {
+          "body": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Body",
+            "type": "string"
+          },
+          "rating": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rating",
+          "body"
+        ],
+        "title": "UpsertReviewRequest",
         "type": "object"
       },
       "User": {
@@ -2497,6 +2614,120 @@
         "summary": "Get Public Profile",
         "tags": [
           "profile"
+        ]
+      }
+    },
+    "/v1/reviews/me": {
+      "get": {
+        "operationId": "get_my_review_v1_reviews_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get My Review",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "put": {
+        "operationId": "upsert_my_review_v1_reviews_me_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upsert My Review",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/v1/reviews/top": {
+      "get": {
+        "description": "Highest-rated product reviews. No authentication required.",
+        "operationId": "list_top_reviews_v1_reviews_top_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopReviewsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Top Reviews",
+        "tags": [
+          "reviews"
         ]
       }
     },

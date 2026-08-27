@@ -18,6 +18,7 @@ import { Proof } from '@/components/marketing/Proof';
 import { Solution } from '@/components/marketing/Solution';
 import { WhyDifferent } from '@/components/marketing/WhyDifferent';
 import styles from '@/components/marketing/marketing.module.css';
+import { getTopReviews } from '@/lib/reviews';
 
 const instrumentSans = Instrument_Sans({
   subsets: ['latin'],
@@ -41,7 +42,9 @@ const ibmPlexMono = IBM_Plex_Mono({
   display: 'swap',
 });
 
-export default function Home() {
+export default async function Home() {
+  const reviews = await getTopReviews()
+
   return (
     <div
       className={`${styles.page} ${instrumentSans.variable} ${newsreader.variable} ${ibmPlexMono.variable}`}
@@ -56,7 +59,7 @@ export default function Home() {
       <Features />
       <WhyDifferent />
       <Audience />
-      <Proof />
+      <Proof reviews={reviews} />
       <Faq />
       <FinalCta />
       <Footer />

@@ -16,6 +16,7 @@ from app.repositories.credits_repo import CreditsRepo
 from app.repositories.note_repo import NoteRepo
 from app.repositories.profile_repo import ProfileRepo
 from app.repositories.profile_settings_repo import ProfileSettingsRepo
+from app.repositories.review_repo import ReviewRepo
 from app.repositories.share_link_repo import ShareLinkRepo
 from app.repositories.space_repo import SpaceRepo
 from app.repositories.storage_repo import StorageRepo, get_storage_repo
@@ -34,6 +35,7 @@ from app.services.note_service import NoteService
 from app.services.pipeline_service import PipelineService
 from app.services.plan_service import PlanService
 from app.services.profile_service import ProfileService
+from app.services.review_service import ReviewService
 from app.services.session_service import SessionService
 from app.services.sharing_service import SharingService
 from app.services.source_chat_service import SourceChatService
@@ -119,6 +121,16 @@ def get_credits_service(
     credits: CreditsRepo = Depends(get_credits_repo),
 ) -> CreditsService:
     return CreditsService(credits)
+
+
+def get_review_repo() -> ReviewRepo:
+    return ReviewRepo(get_service_client())
+
+
+def get_review_service(
+    reviews: ReviewRepo = Depends(get_review_repo),
+) -> ReviewService:
+    return ReviewService(reviews)
 
 
 # --- Auth (real Supabase JWT) ---
