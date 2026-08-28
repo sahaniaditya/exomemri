@@ -263,12 +263,18 @@
 .spacer {
   flex: 1;
 }
+.extStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
 .ext {
   border: 1px solid rgba(44, 93, 79, 0.22);
   background: rgba(44, 93, 79, 0.06);
   border-radius: 6px;
   padding: 14px 14px 13px;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 .ext .st {
   display: flex;
@@ -4492,7 +4498,7 @@ button.chip {
     display: block;
     flex: 1;
   }
-  .sidePanel .ext {
+  .sidePanel .extStack {
     display: none;
   }
   .sideAccount {
