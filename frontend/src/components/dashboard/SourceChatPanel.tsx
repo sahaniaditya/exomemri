@@ -3,7 +3,8 @@
 /**
  * Right-docked memory panel for a single capture.
  * Left-edge drag resizes width (extends into the page). Brand lockup + mark on send.
- * Portaled to document.body so it sits above the sticky mobile nav stacking context.
+ * Portaled onto <html> so iOS body { position: fixed } cannot become the
+ * overlay's containing block.
  */
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
