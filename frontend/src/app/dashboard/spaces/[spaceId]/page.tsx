@@ -101,14 +101,13 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
 
           {planItems.length > 0 && (
             <section id="plan" className={styles.section}>
-              <Plate num="02" title="Suggested next topics" />
               <PlanCard items={planItems} />
             </section>
           )}
 
           {captures.length > 0 && (
             <section id="coverage" className={styles.section}>
-              <Plate num="03" title="Coverage" />
+              <Plate num="02" title="Coverage" />
               <CoverageCard coverage={coverage} />
             </section>
           )}
