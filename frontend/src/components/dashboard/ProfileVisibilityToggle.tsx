@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useIsMounted } from '@/lib/use-is-mounted'
 import styles from './dashboard.module.css'
 
 interface ProfileVisibilityToggleProps {
@@ -13,6 +14,11 @@ export default function ProfileVisibilityToggle({
 }: ProfileVisibilityToggleProps) {
   const [isPublic, setIsPublic] = useState(initialPublic)
   const [busy, setBusy] = useState(false)
+  const mounted = useIsMounted()
+  const profilePath = `/u/${username}`
+  const profileLabel = mounted
+    ? `${window.location.host}${profilePath}`
+    : profilePath
 
   const handleToggle = async () => {
     const next = !isPublic
@@ -48,9 +54,7 @@ export default function ProfileVisibilityToggle({
       {isPublic && (
         <p className={styles.planrationale}>
           Your profile:{' '}
-          <a href={`/u/${username}`}>
-            {`${typeof window === 'undefined' ? '' : window.location.host}/u/${username}`}
-          </a>
+          <a href={profilePath}>{profileLabel}</a>
         </p>
       )}
     </div>

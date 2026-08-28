@@ -4,6 +4,7 @@ import {
   Newsreader,
 } from 'next/font/google';
 import { Audience } from '@/components/marketing/Audience';
+import { DemoVideo } from '@/components/marketing/DemoVideo';
 import { Faq } from '@/components/marketing/Faq';
 import { Features } from '@/components/marketing/Features';
 import { FinalCta } from '@/components/marketing/FinalCta';
@@ -51,6 +52,7 @@ export default async function Home() {
     >
       <Nav />
       <Hero />
+      <DemoVideo />
       <Problem />
       <Solution />
       <HowItWorks />

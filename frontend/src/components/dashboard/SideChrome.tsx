@@ -9,6 +9,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Lockup } from '@/components/brand/Lockup'
+import { useLockBodyScroll } from '@/lib/lock-body-scroll'
 import styles from './dashboard.module.css'
 
 interface SideChromeProps {
@@ -26,9 +27,24 @@ export default function SideChrome({ children, account }: SideChromeProps) {
   )
 }
 
+const MOBILE_MQ = '(max-width: 760px)'
+
 function SideChromeDrawer({ children, account }: SideChromeProps) {
   const [open, setOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const panelId = useId()
+  useLockBodyScroll(open && isMobile)
+
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_MQ)
+    const sync = () => {
+      setIsMobile(mq.matches)
+      if (!mq.matches) setOpen(false)
+    }
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -36,12 +52,7 @@ function SideChromeDrawer({ children, account }: SideChromeProps) {
       if (event.key === 'Escape') setOpen(false)
     }
     document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-    }
+    return () => document.removeEventListener('keydown', onKey)
   }, [open])
 
   return (

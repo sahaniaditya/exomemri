@@ -1,8 +1,29 @@
 'use client';
 import { Contour } from './Contour';
-import { FULL_ANSWER } from './data';
+import { CHROME_WEB_STORE_URL, FULL_ANSWER } from './data';
 import { useTypewriter } from './useTypewriter';
 import styles from './marketing.module.css';
+
+function ChromeMark({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="18"
+      height="18"
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="3.5" />
+      <circle cx="24" cy="24" r="8" fill="none" stroke="currentColor" strokeWidth="3.5" />
+      <path
+        d="M24 4a20 20 0 0 1 17.32 10H24z"
+        fill="currentColor"
+        opacity="0.22"
+      />
+    </svg>
+  );
+}
 
 export function Hero() {
   const { typed, done } = useTypewriter(FULL_ANSWER);
@@ -29,14 +50,27 @@ export function Hero() {
             </p>
             <div className={styles.heroCtas}>
               <a href="/signup" className={`${styles.btn} ${styles.btnP}`}>
-                Start building your learning memory — free <span className={styles.arrow}>→</span>
+                Start building your learning memory — free{' '}
+                <span className={styles.arrow}>→</span>
               </a>
-              <a href="/login" className={`${styles.btn} ${styles.btnG}`}>
-                Log in
+              <a
+                href={CHROME_WEB_STORE_URL}
+                className={`${styles.btn} ${styles.btnExt}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ChromeMark className={styles.btnExtIcon} />
+                Get the extension
               </a>
             </div>
+            <p className={styles.heroLogin}>
+              Already have an account?{' '}
+              <a href="/login" className={styles.heroLoginLink}>
+                Log in
+              </a>
+            </p>
             <p className={`${styles.mono} ${styles.heroNote}`}>
-              Works right inside your browser · Save with one click · No copy-paste, ever.
+              Free on the Chrome Web Store · Save with one click · No copy-paste, ever.
             </p>
           </div>
           <div className={styles.floaty}>

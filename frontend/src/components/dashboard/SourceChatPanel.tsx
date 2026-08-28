@@ -3,13 +3,15 @@
 /**
  * Right-docked memory panel for a single capture.
  * Left-edge drag resizes width (extends into the page). Brand lockup + mark on send.
- * Portaled to document.body so it sits above the sticky mobile nav stacking context.
+ * Portaled onto <html> so iOS body { position: fixed } cannot become the
+ * overlay's containing block.
  */
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Lockup } from '@/components/brand/Lockup'
 import { ThemeMark } from '@/components/brand/ThemeMark'
 import { Mark } from '@/components/brand/Mark'
+import { useLockBodyScroll } from '@/lib/lock-body-scroll'
 import { useIsMounted } from '@/lib/use-is-mounted'
 import styles from './dashboard.module.css'
 import type { ChatMessage } from '@/lib/sources'
@@ -63,11 +65,16 @@ export default function SourceChatPanel({
     typeof window === 'undefined' ? DEFAULT_WIDTH : clampWidth(DEFAULT_WIDTH)
   )
   const [resizing, setResizing] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const logRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const resizingRef = useRef(false)
   const widthRef = useRef(width)
+  const [viewportBox, setViewportBox] = useState<{ top: number; height: number } | null>(
+    null
+  )
+
+  useLockBodyScroll(true)
 
   useEffect(() => {
     widthRef.current = width
@@ -87,7 +94,29 @@ export default function SourceChatPanel({
   }, [])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const vv = window.visualViewport
+    const sync = () => {
+      if (!isMobileViewport() || !vv) {
+        setViewportBox(null)
+        return
+      }
+      setViewportBox({ top: vv.offsetTop, height: vv.height })
+    }
+    sync()
+    vv?.addEventListener('resize', sync)
+    vv?.addEventListener('scroll', sync)
+    window.addEventListener('resize', sync)
+    return () => {
+      vv?.removeEventListener('resize', sync)
+      vv?.removeEventListener('scroll', sync)
+      window.removeEventListener('resize', sync)
+    }
+  }, [])
+
+  useEffect(() => {
+    const log = logRef.current
+    if (!log) return
+    log.scrollTo({ top: log.scrollHeight, behavior: 'smooth' })
   }, [messages, sending])
 
   useEffect(() => {
@@ -106,15 +135,7 @@ export default function SourceChatPanel({
   }, [onClose])
 
   useEffect(() => {
-    textareaRef.current?.focus()
-  }, [])
-
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    if (!isMobileViewport()) textareaRef.current?.focus()
   }, [])
 
   useEffect(() => {
@@ -207,8 +228,15 @@ export default function SourceChatPanel({
 
   if (!mounted) return null
 
+  const overlayStyle = viewportBox
+    ? { top: viewportBox.top, height: viewportBox.height, bottom: 'auto' as const }
+    : undefined
+  const panelStyle = isMobileViewport()
+    ? { width: '100%', ...(viewportBox ? { height: viewportBox.height } : {}) }
+    : { width }
+
   return createPortal(
-    <div className={styles.memoryOverlay} role="presentation">
+    <div className={styles.memoryOverlay} role="presentation" style={overlayStyle}>
       <button
         type="button"
         className={styles.memoryBackdrop}
@@ -219,7 +247,7 @@ export default function SourceChatPanel({
         ref={panelRef}
         className={`${styles.memoryPanel} ${resizing ? styles.memoryPanelResizing : ''}`}
         aria-label="Ask this capture"
-        style={isMobileViewport() ? { width: '100%' } : { width }}
+        style={panelStyle}
       >
         <button
           type="button"
@@ -257,7 +285,7 @@ export default function SourceChatPanel({
           <span>{sourceTitle}</span>
         </div>
 
-        <div className={styles.memoryLog}>
+        <div ref={logRef} className={styles.memoryLog}>
           {messages.length === 0 && !sending ? (
             <div className={styles.memoryEmpty}>
               <div className={styles.memoryEmptyIcon} aria-hidden="true">
@@ -314,7 +342,6 @@ export default function SourceChatPanel({
               </div>
             </div>
           ) : null}
-          <div ref={bottomRef} />
         </div>
 
         <div className={styles.memoryComposer}>
@@ -356,6 +383,6 @@ export default function SourceChatPanel({
         </div>
       </aside>
     </div>,
-    document.body
+    document.documentElement
   )
 }

@@ -1,6 +1,14 @@
 export const FULL_ANSWER =
   "Across your sources, photosynthesis is how plants turn sunlight, water, and carbon dioxide into sugar — and release oxygen. You've covered the light reactions and chloroplasts — but you haven't studied the Calvin cycle yet.";
 
+/**
+ * Chrome Web Store listing for the capture extension.
+ * Set `NEXT_PUBLIC_CHROME_WEB_STORE_URL` in production once the listing is live.
+ */
+export const CHROME_WEB_STORE_URL =
+  process.env.NEXT_PUBLIC_CHROME_WEB_STORE_URL?.trim() ||
+  'https://chromewebstore.google.com/detail/exomemri';
+
 export const NAV_LINKS = [
   { label: 'How it works', href: '#how' },
   { label: 'Knowledge map', href: '#map' },
