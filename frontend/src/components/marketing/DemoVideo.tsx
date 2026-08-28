@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from 'react'
 import styles from './marketing.module.css'
 
-const VIDEO_SRC = '/videos/promo.mp4'
+const VIDEO_SRC = '/videos/Exomemri-Demo.mp4'
 
 export function DemoVideo() {
   const videoRef = useRef<HTMLVideoElement>(null)
