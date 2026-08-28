@@ -21,6 +21,10 @@ _BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 # Transient HF serverless failures worth a single retry.
 _RETRYABLE_STATUS = frozenset({503, 504})
 
+# HF serverless payloads blow up when hundreds of chunks go in one request.
+# 32 keeps each call small while still finishing a long doc in a few round trips.
+EMBED_BATCH_SIZE = 32
+
 
 class EmbeddingProviderError(AppError):
     """Upstream embedding provider failed after retries."""
@@ -48,7 +52,11 @@ class EmbeddingService:
     async def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        return await self._embed(texts)
+        vectors: list[list[float]] = []
+        for start in range(0, len(texts), EMBED_BATCH_SIZE):
+            batch = texts[start : start + EMBED_BATCH_SIZE]
+            vectors.extend(await self._embed(batch))
+        return vectors
 
     async def embed_query(self, text: str) -> list[float]:
         vectors = await self._embed([f"{_BGE_QUERY_PREFIX}{text}"])

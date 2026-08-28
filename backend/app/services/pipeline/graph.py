@@ -124,10 +124,7 @@ def build_pipeline(
                     status=ProcessingStatus.summarizing.value,
                 )
             )
-            summary = await llm.summarize(
-                title=state["source"]["title"], extract=state["extract"]
-            )
-            sections = await llm.summarize_structured(
+            summary, sections = await llm.summarize_document_bundle(
                 title=state["source"]["title"], extract=state["extract"]
             )
             await anyio.to_thread.run_sync(

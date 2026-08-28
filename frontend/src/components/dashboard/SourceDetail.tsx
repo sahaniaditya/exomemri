@@ -200,7 +200,7 @@ export default function SourceDetail({
         )}
         <SourceNotes
           key={source.id}
-          sourceId={source.id}
+          scope={{ kind: 'source', sourceId: source.id }}
           initialNotes={initialNotes}
           loadError={notesLoadError}
           editable={!readOnly}

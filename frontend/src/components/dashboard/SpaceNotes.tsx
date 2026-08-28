@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Named note pages for a capture or a space. Click a page title to toggle its editor.
+ * Space-scoped named note pages. Header + empty state match the space-notes
+ * plate design (numbered title, outlined + New page, muted empty copy).
  */
 import { useCallback, useState } from 'react'
 import NotePageEditor from './NotePageEditor'
@@ -10,28 +11,22 @@ import {
   EMPTY_NOTE_DOC,
   notesApiBase,
   type NotePage,
-  type NotesScope,
 } from '@/lib/notes'
 
-interface SourceNotesProps {
-  scope: NotesScope
+interface SpaceNotesProps {
+  spaceId: string
+  plateNum?: string
   initialNotes: NotePage[]
   loadError?: boolean
-  editable?: boolean
-  /** Plate number shown in the section header (source detail uses 05). */
-  plateNum?: string
-  /** When false, omit the inner plate (parent section already has a Plate). */
-  showHeader?: boolean
 }
 
-export default function SourceNotes({
-  scope,
+export default function SpaceNotes({
+  spaceId,
+  plateNum = '02',
   initialNotes,
   loadError = false,
-  editable = true,
-  plateNum = '05',
-  showHeader = true,
-}: SourceNotesProps) {
+}: SpaceNotesProps) {
+  const scope = { kind: 'space' as const, spaceId }
   const apiBase = notesApiBase(scope)
   const [pages, setPages] = useState<NotePage[]>(initialNotes)
   const [openIds, setOpenIds] = useState<Set<string>>(
@@ -70,7 +65,7 @@ export default function SourceNotes({
   }
 
   async function createPage() {
-    if (!editable || busyId) return
+    if (busyId) return
     setBusyId('create')
     setListError(null)
     try {
@@ -80,11 +75,7 @@ export default function SourceNotes({
         body: JSON.stringify({}),
       })
       if (res.status === 409) {
-        setListError(
-          scope.kind === 'space'
-            ? 'This space already has the maximum number of pages (50).'
-            : 'This capture already has the maximum number of pages (50).'
-        )
+        setListError('This space already has the maximum number of pages (50).')
         return
       }
       if (res.status === 401) {
@@ -183,78 +174,26 @@ export default function SourceNotes({
     }
   }
 
-  const label =
-    scope.kind === 'space'
-      ? 'Space notes'
-      : editable
-        ? 'Your notes'
-        : "Owner's notes"
-
-  const isEmpty = pages.length === 0
-  const showCreateInHeader = editable && !isEmpty
-
-  const emptyTitle = loadError
-    ? 'Couldn’t load notes'
-    : editable
-      ? 'Start your first page'
-      : 'No notes yet'
-  const emptyBody = loadError
-    ? 'Refresh the page to try again.'
-    : editable
-      ? scope.kind === 'space'
-        ? 'Jot down what you want to remember about this space.'
-        : 'Jot down what you want to remember from this capture.'
-      : 'No notes on this capture.'
-
   return (
-    <section
-      className={
-        showHeader
-          ? styles.notesSection
-          : `${styles.notesSection} ${styles.notesSectionEmbedded}`
-      }
-      aria-label={label}
-    >
-      {showHeader ? (
-        <div className={styles.capturePlate}>
-          <span className={styles.capturePlateIcon} aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7">
-              <path d="M6 4h9l3 3v13H6z" />
-              <path d="M15 4v3h3M9 12h6M9 16h4" />
-            </svg>
-          </span>
-          <div className={styles.capturePlateCopy}>
-            <span className={styles.capturePlateNum}>{plateNum}</span>
-            <span className={styles.capturePlateTitle}>{label}</span>
-          </div>
-          <span className={styles.capturePlateLine} />
-          {showCreateInHeader ? (
-            <button
-              type="button"
-              className={styles.plateAction}
-              disabled={Boolean(busyId)}
-              onClick={() => void createPage()}
-            >
-              New page
-            </button>
-          ) : null}
-        </div>
-      ) : showCreateInHeader ? (
-        <div className={styles.notesToolbarRow}>
-          <button
-            type="button"
-            className={styles.plateAction}
-            disabled={Boolean(busyId)}
-            onClick={() => void createPage()}
-          >
-            New page
-          </button>
-        </div>
-      ) : null}
+    <section className={styles.spaceNotes} aria-label="Space notes">
+      <div className={styles.plate}>
+        <span className={styles.platenum}>{plateNum}</span>
+        <span className={styles.platetitle}>Space notes</span>
+        <span className={styles.plateline} />
+        <button
+          type="button"
+          className={styles.spaceNotesNewBtn}
+          disabled={Boolean(busyId)}
+          onClick={() => void createPage()}
+        >
+          <span aria-hidden="true">+</span>
+          New page
+        </button>
+      </div>
 
       {listError ? <p className={styles.notesListError}>{listError}</p> : null}
 
-      {isEmpty ? (
+      {pages.length === 0 ? (
         <div className={styles.notesEmpty}>
           <span className={styles.notesEmptyIcon} aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
@@ -263,18 +202,14 @@ export default function SourceNotes({
               <path d="M10 12h6M10 15.5h4" />
             </svg>
           </span>
-          <div className={styles.notesEmptyTitle}>{emptyTitle}</div>
-          <p className={styles.notesEmptyBody}>{emptyBody}</p>
-          {editable && !loadError ? (
-            <button
-              type="button"
-              className={styles.notesEmptyCta}
-              disabled={Boolean(busyId)}
-              onClick={() => void createPage()}
-            >
-              <span aria-hidden="true">+</span> New page
-            </button>
-          ) : null}
+          <div className={styles.notesEmptyTitle}>
+            {loadError ? 'Couldn’t load notes' : 'Start your first page'}
+          </div>
+          <p className={styles.notesEmptyBody}>
+            {loadError
+              ? 'Refresh the page to try again.'
+              : 'Jot down what you want to remember about this space.'}
+          </p>
         </div>
       ) : (
         <div className={styles.notesPages}>
@@ -336,26 +271,24 @@ export default function SourceNotes({
                         </span>
                         <span className={styles.folderTitle}>{page.title}</span>
                       </button>
-                      {editable ? (
-                        <div className={styles.folderActions}>
-                          <button
-                            type="button"
-                            className={styles.folderAction}
-                            disabled={busyId === page.id}
-                            onClick={() => startRename(page)}
-                          >
-                            Rename
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.folderAction}
-                            disabled={busyId === page.id}
-                            onClick={() => void removePage(page)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      ) : null}
+                      <div className={styles.folderActions}>
+                        <button
+                          type="button"
+                          className={styles.folderAction}
+                          disabled={busyId === page.id}
+                          onClick={() => startRename(page)}
+                        >
+                          Rename
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.folderAction}
+                          disabled={busyId === page.id}
+                          onClick={() => void removePage(page)}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>
@@ -371,7 +304,7 @@ export default function SourceNotes({
                     }
                     savedContent={page.content ?? EMPTY_NOTE_DOC}
                     savedAt={page.updated_at}
-                    editable={editable}
+                    editable
                     onDraft={handleDraft}
                     onSaved={handleSaved}
                   />

@@ -15,7 +15,9 @@ EXTRACT_KEY_BY_TYPE = {
     SourceType.pdf: "raw/extracted.txt",
 }
 
-# Keeps the prompt within a safe context budget regardless of source length.
+# Keeps a single inline LLM prompt within a safe context budget. The capture
+# pipeline uses ``split_for_llm`` / map-reduce for longer documents; chat and
+# lazy summary still take the first window via ``read_extract``.
 MAX_EXTRACT_CHARS = 40_000
 
 
@@ -27,10 +29,10 @@ class ExtractService:
         return (await self.read_full_extract(source))[:MAX_EXTRACT_CHARS]
 
     async def read_full_extract(self, source: dict) -> str:
-        """Untruncated text for the chunking pipeline.
+        """Untruncated text for chunking and map-reduce LLM stages.
 
-        ``read_extract``'s cap exists only to bound a single inline LLM call;
-        the pipeline chunks the whole document instead.
+        Prefer this for the pipeline (full document → chunk/embed; LLM stages
+        window internally). Use ``read_extract`` only for a single bounded call.
         """
         source_type = SourceType(source["type"])
         key = EXTRACT_KEY_BY_TYPE[source_type]

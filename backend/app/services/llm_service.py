@@ -15,11 +15,20 @@ from app.schemas.coverage import (
     SyllabusTopics,
 )
 from app.schemas.sources import StructuredSummary
+from app.services.pipeline.windows import join_for_reduce, split_for_llm
+from app.services.space_service import slugify
 
 SUMMARY_SYSTEM_PROMPT = (
     "You summarize captured learning material for a student's personal knowledge "
     "base. Write a concise summary (150-250 words) covering the main ideas, key "
     "facts, and anything worth remembering. Plain prose, no headers or bullet lists."
+)
+
+REDUCE_SUMMARY_SYSTEM_PROMPT = (
+    "You merge partial summaries of one long learning source into a single concise "
+    "summary (150-250 words). Cover the main ideas across all parts, key facts, and "
+    "anything worth remembering. Plain prose, no headers or bullet lists. Do not "
+    "mention that the material was split into parts."
 )
 
 STRUCTURED_SUMMARY_SYSTEM_PROMPT = """You summarize captured learning material for a \
@@ -107,6 +116,25 @@ SYLLABUS_GOAL_BLOCK = "The user's stated goal for this space: {goal_text}"
 NO_SYLLABUS_GOAL_BLOCK = "No goal was stated for this space."
 
 
+def merge_extracted_concepts(
+    concepts: list[ExtractedConcept],
+    *,
+    limit: int = MAX_CONCEPTS_PER_SOURCE,
+) -> list[ExtractedConcept]:
+    """Collapse map-stage concept lists: one row per slug, highest weight wins."""
+    by_slug: dict[str, ExtractedConcept] = {}
+    for item in concepts:
+        label = item.label.strip()
+        slug = slugify(label)
+        if not slug or slug == "space":
+            continue
+        existing = by_slug.get(slug)
+        if existing is None or item.weight > existing.weight:
+            by_slug[slug] = ExtractedConcept(label=label, weight=item.weight)
+    ranked = sorted(by_slug.values(), key=lambda c: c.weight, reverse=True)
+    return ranked[:limit]
+
+
 class LLMService:
     def __init__(self, settings: Settings) -> None:
         self._client = AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -122,6 +150,60 @@ class LLMService:
             max_tokens=500,
             system=SUMMARY_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Title: {title}\n\n{extract}"}],
+        )
+        return resp.content[0].text.strip()
+
+    async def summarize_document(self, *, title: str, extract: str) -> str:
+        """Map-reduce prose summary so long extracts stay inside the prompt budget."""
+        summary, _sections = await self.summarize_document_bundle(title=title, extract=extract)
+        return summary
+
+    async def summarize_structured_document(
+        self, *, title: str, extract: str
+    ) -> StructuredSummary:
+        """Structured summary over the whole document via map-reduce."""
+        _summary, sections = await self.summarize_document_bundle(title=title, extract=extract)
+        return sections
+
+    async def summarize_document_bundle(
+        self, *, title: str, extract: str
+    ) -> tuple[str, StructuredSummary]:
+        """Prose + structured summary in one map-reduce pass.
+
+        Long extracts are windowed once; part summaries feed both the reduce
+        prose call and the structured call so we do not map the document twice.
+        """
+        windows = split_for_llm(extract)
+        if not windows:
+            summary = await self.summarize(title=title, extract="")
+            sections = await self.summarize_structured(title=title, extract="")
+            return summary, sections
+        if len(windows) == 1:
+            summary = await self.summarize(title=title, extract=windows[0])
+            sections = await self.summarize_structured(title=title, extract=windows[0])
+            return summary, sections
+
+        part_summaries: list[str] = []
+        total = len(windows)
+        for i, window in enumerate(windows):
+            part_summaries.append(
+                await self.summarize(
+                    title=f"{title} (part {i + 1}/{total})",
+                    extract=window,
+                )
+            )
+        combined = join_for_reduce(part_summaries)
+        summary = await self._reduce_summary(title=title, part_summaries=part_summaries)
+        sections = await self.summarize_structured(title=title, extract=combined)
+        return summary, sections
+
+    async def _reduce_summary(self, *, title: str, part_summaries: list[str]) -> str:
+        combined = join_for_reduce(part_summaries)
+        resp = await self._client.messages.create(
+            model=self._model,
+            max_tokens=500,
+            system=REDUCE_SUMMARY_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"Title: {title}\n\n{combined}"}],
         )
         return resp.content[0].text.strip()
 
@@ -213,3 +295,27 @@ class LLMService:
             output_format=ExtractedConcepts,
         )
         return resp.parsed_output.concepts
+
+    async def extract_concepts_document(
+        self, *, title: str, extract: str, vocabulary: list[str]
+    ) -> list[ExtractedConcept]:
+        """Map-reduce concept extraction across LLM windows, then merge by slug."""
+        windows = split_for_llm(extract)
+        if not windows:
+            return []
+        if len(windows) == 1:
+            return await self.extract_concepts(
+                title=title, extract=windows[0], vocabulary=vocabulary
+            )
+
+        mapped: list[ExtractedConcept] = []
+        total = len(windows)
+        for i, window in enumerate(windows):
+            mapped.extend(
+                await self.extract_concepts(
+                    title=f"{title} (part {i + 1}/{total})",
+                    extract=window,
+                    vocabulary=vocabulary,
+                )
+            )
+        return merge_extracted_concepts(mapped)

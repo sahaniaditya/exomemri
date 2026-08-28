@@ -137,3 +137,51 @@ async def test_pipeline_marks_failed_on_node_exception(
 
     assert space_repo.sources[source["id"]]["processing_status"] == "failed"
     assert source["id"] not in chunk_repo.chunks_by_source
+
+
+async def test_pipeline_map_reduces_long_extract(
+    dev_user: User,
+    space_repo: FakeSpaceRepo,
+    storage: FakeStorage,
+    chunk_repo: FakeChunkRepo,
+    embedding_service: FakeEmbeddingService,
+    concept_repo: FakeConceptRepo,
+) -> None:
+    """A multi-window extract still reaches ready with one combined summary."""
+    from app.services.extract_service import MAX_EXTRACT_CHARS, ExtractService
+    from app.services.pipeline.windows import split_for_llm
+
+    class CountingLLM(FakeLLMService):
+        def __init__(self) -> None:
+            self.summarize_calls = 0
+
+        async def summarize(self, *, title: str, extract: str) -> str:
+            self.summarize_calls += 1
+            return await super().summarize(title=title, extract=extract)
+
+    text = ("Paragraph about distributed systems. " * 80 + "\n\n") * 40
+    assert len(text) > MAX_EXTRACT_CHARS
+    assert len(split_for_llm(text)) > 1
+
+    source = _seed_source(space_repo, storage, extract_text=text)
+    extracts = ExtractService(storage)  # type: ignore[arg-type]
+    llm = CountingLLM()
+
+    pipeline = _build_pipeline_service(
+        extracts=extracts,
+        space_repo=space_repo,
+        llm=llm,
+        embeddings=embedding_service,
+        chunks=chunk_repo,
+        concepts=concept_repo,
+    )
+
+    await pipeline.run(
+        user=dev_user, source_id=UUID(source["id"]), space_id=UUID(source["space_id"])
+    )
+
+    assert space_repo.sources[source["id"]]["processing_status"] == "ready"
+    assert space_repo.sources[source["id"]]["summary_text"] == "Summary of A long article"
+    # Map (one per window) + one reduce call — more than a single-window path.
+    assert llm.summarize_calls > 2
+    assert len(chunk_repo.chunks_by_source[source["id"]]) > 1
