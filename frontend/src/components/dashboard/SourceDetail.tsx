@@ -72,15 +72,6 @@ export default function SourceDetail({
     return () => window.clearInterval(id)
   }, [status, router])
 
-  useEffect(() => {
-    if (!chatOpen) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [chatOpen])
-
   return (
     <div className={styles.captureShell}>
       <div className={styles.captureMain}>

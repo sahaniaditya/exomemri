@@ -1313,12 +1313,18 @@
   transition: color 0.12s, transform 0.12s;
 }
 :global(.dark) .ratingStar {
-  color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.35);
 }
 .ratingStar:hover,
 .ratingStarActive {
   color: var(--forest);
   transform: translateY(-1px);
+}
+/* Same specificity as `:global(.dark) .ratingStar` so selected/hover
+   colors aren't swallowed in dark mode. */
+:global(.dark) .ratingStar:hover,
+:global(.dark) .ratingStarActive {
+  color: #7eb89a;
 }
 .dialogPeople {
   display: flex;
@@ -2706,6 +2712,7 @@ button.chip {
   z-index: 60;
   display: flex;
   justify-content: flex-end;
+  overscroll-behavior: none;
 }
 .memoryBackdrop {
   position: absolute;

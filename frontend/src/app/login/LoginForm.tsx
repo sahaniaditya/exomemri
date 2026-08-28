@@ -7,6 +7,7 @@ import { createClient } from '@/utils/supabase/client'
 import { Lockup } from '@/components/brand/Lockup'
 import { refreshExtensionSession } from '@/lib/extension-session'
 import { isAllowedShareReturnPath } from '@/lib/sharing'
+import { useIsMounted } from '@/lib/use-is-mounted'
 import ThemeToggle from '@/components/dashboard/ThemeToggle'
 import styles from './login.module.css'
 
@@ -51,6 +52,7 @@ export default function LoginForm({ returnTo }: LoginFormProps) {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null)
   const [loading, setLoading] = useState(false)
+  const mounted = useIsMounted()
   const router = useRouter()
   const supabase = createClient()
 
@@ -141,46 +143,72 @@ export default function LoginForm({ returnTo }: LoginFormProps) {
             <span className={styles.dividerLine} />
           </div>
 
-          <form onSubmit={handleEmailSignIn} className={styles.form}>
-            <div className={styles.inputGroup}>
-              <label htmlFor="email" className={styles.label}>Email</label>
-              <input
-                id="email"
-                type="email"
-                required
-                placeholder="you@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className={styles.input}
-              />
-            </div>
-
-            <div className={styles.inputGroup}>
-              <div className={styles.labelRow}>
-                <label htmlFor="password" className={styles.label}>Password</label>
-                <a href="#" className={styles.forgotLink}>Forgot?</a>
+          {/*
+            Mount email/password inputs only after hydration. Password managers
+            (e.g. Keeper) inject attributes and <keeper-lock> nodes into the DOM
+            before React hydrates, which otherwise causes a recoverable mismatch.
+          */}
+          {mounted ? (
+            <form onSubmit={handleEmailSignIn} className={styles.form}>
+              <div className={styles.inputGroup}>
+                <label htmlFor="email" className={styles.label}>Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  required
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className={styles.input}
+                />
               </div>
-              <input
-                id="password"
-                type="password"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className={styles.input}
-              />
+
+              <div className={styles.inputGroup}>
+                <div className={styles.labelRow}>
+                  <label htmlFor="password" className={styles.label}>Password</label>
+                  <a href="#" className={styles.forgotLink}>Forgot?</a>
+                </div>
+                <input
+                  id="password"
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className={styles.input}
+                />
+              </div>
+
+              {message && (
+                <p className={`${styles.message} ${message.type === 'error' ? styles.errorMessage : styles.successMessage}`}>
+                  {message.text}
+                </p>
+              )}
+
+              <button type="submit" disabled={loading} className={styles.submitBtn}>
+                {loading ? 'Signing in…' : <>Sign in <span>→</span></>}
+              </button>
+            </form>
+          ) : (
+            <div className={styles.form} aria-hidden="true">
+              <div className={styles.inputGroup}>
+                <span className={styles.label}>Email</span>
+                <div className={styles.input}>&nbsp;</div>
+              </div>
+              <div className={styles.inputGroup}>
+                <div className={styles.labelRow}>
+                  <span className={styles.label}>Password</span>
+                  <span className={styles.forgotLink}>Forgot?</span>
+                </div>
+                <div className={styles.input}>&nbsp;</div>
+              </div>
+              <div className={styles.submitBtn}>Sign in <span>→</span></div>
             </div>
-
-            {message && (
-              <p className={`${styles.message} ${message.type === 'error' ? styles.errorMessage : styles.successMessage}`}>
-                {message.text}
-              </p>
-            )}
-
-            <button type="submit" disabled={loading} className={styles.submitBtn}>
-              {loading ? 'Signing in…' : <>Sign in <span>→</span></>}
-            </button>
-          </form>
+          )}
 
           <p className={styles.signupText}>
             Don&apos;t have an account?{' '}

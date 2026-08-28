@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom'
 import { Lockup } from '@/components/brand/Lockup'
 import { ThemeMark } from '@/components/brand/ThemeMark'
 import { Mark } from '@/components/brand/Mark'
+import { useLockBodyScroll } from '@/lib/lock-body-scroll'
 import { useIsMounted } from '@/lib/use-is-mounted'
 import styles from './dashboard.module.css'
 import type { ChatMessage } from '@/lib/sources'
@@ -63,11 +64,13 @@ export default function SourceChatPanel({
     typeof window === 'undefined' ? DEFAULT_WIDTH : clampWidth(DEFAULT_WIDTH)
   )
   const [resizing, setResizing] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const logRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const resizingRef = useRef(false)
   const widthRef = useRef(width)
+
+  useLockBodyScroll(true)
 
   useEffect(() => {
     widthRef.current = width
@@ -87,7 +90,9 @@ export default function SourceChatPanel({
   }, [])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const log = logRef.current
+    if (!log) return
+    log.scrollTo({ top: log.scrollHeight, behavior: 'smooth' })
   }, [messages, sending])
 
   useEffect(() => {
@@ -107,13 +112,9 @@ export default function SourceChatPanel({
 
   useEffect(() => {
     textareaRef.current?.focus()
-  }, [])
-
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = prev
+      const active = document.activeElement
+      if (active instanceof HTMLElement) active.blur()
     }
   }, [])
 
@@ -257,7 +258,7 @@ export default function SourceChatPanel({
           <span>{sourceTitle}</span>
         </div>
 
-        <div className={styles.memoryLog}>
+        <div ref={logRef} className={styles.memoryLog}>
           {messages.length === 0 && !sending ? (
             <div className={styles.memoryEmpty}>
               <div className={styles.memoryEmptyIcon} aria-hidden="true">
@@ -314,7 +315,6 @@ export default function SourceChatPanel({
               </div>
             </div>
           ) : null}
-          <div ref={bottomRef} />
         </div>
 
         <div className={styles.memoryComposer}>
