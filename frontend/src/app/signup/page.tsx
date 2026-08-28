@@ -130,7 +130,7 @@ export default function SignupPage() {
       router.refresh()
       router.replace('/signup/verify')
       return
-      return
+    
 
     } catch (error: any) {
       setMessage({ text: error.message, type: 'error' })
