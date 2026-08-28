@@ -70,6 +70,9 @@ export default function SourceChatPanel({
   const panelRef = useRef<HTMLElement>(null)
   const resizingRef = useRef(false)
   const widthRef = useRef(width)
+  const [viewportBox, setViewportBox] = useState<{ top: number; height: number } | null>(
+    null
+  )
 
   useLockBodyScroll(true)
 
@@ -88,6 +91,26 @@ export default function SourceChatPanel({
     }
     window.addEventListener('resize', onWindowResize)
     return () => window.removeEventListener('resize', onWindowResize)
+  }, [])
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    const sync = () => {
+      if (!isMobileViewport() || !vv) {
+        setViewportBox(null)
+        return
+      }
+      setViewportBox({ top: vv.offsetTop, height: vv.height })
+    }
+    sync()
+    vv?.addEventListener('resize', sync)
+    vv?.addEventListener('scroll', sync)
+    window.addEventListener('resize', sync)
+    return () => {
+      vv?.removeEventListener('resize', sync)
+      vv?.removeEventListener('scroll', sync)
+      window.removeEventListener('resize', sync)
+    }
   }, [])
 
   useEffect(() => {
@@ -112,11 +135,7 @@ export default function SourceChatPanel({
   }, [onClose])
 
   useEffect(() => {
-    textareaRef.current?.focus()
-    return () => {
-      const active = document.activeElement
-      if (active instanceof HTMLElement) active.blur()
-    }
+    if (!isMobileViewport()) textareaRef.current?.focus()
   }, [])
 
   useEffect(() => {
@@ -209,8 +228,15 @@ export default function SourceChatPanel({
 
   if (!mounted) return null
 
+  const overlayStyle = viewportBox
+    ? { top: viewportBox.top, height: viewportBox.height, bottom: 'auto' as const }
+    : undefined
+  const panelStyle = isMobileViewport()
+    ? { width: '100%', ...(viewportBox ? { height: viewportBox.height } : {}) }
+    : { width }
+
   return createPortal(
-    <div className={styles.memoryOverlay} role="presentation">
+    <div className={styles.memoryOverlay} role="presentation" style={overlayStyle}>
       <button
         type="button"
         className={styles.memoryBackdrop}
@@ -221,7 +247,7 @@ export default function SourceChatPanel({
         ref={panelRef}
         className={`${styles.memoryPanel} ${resizing ? styles.memoryPanelResizing : ''}`}
         aria-label="Ask this capture"
-        style={isMobileViewport() ? { width: '100%' } : { width }}
+        style={panelStyle}
       >
         <button
           type="button"
@@ -357,6 +383,6 @@ export default function SourceChatPanel({
         </div>
       </aside>
     </div>,
-    document.body
+    document.documentElement
   )
 }

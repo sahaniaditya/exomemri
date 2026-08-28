@@ -84,7 +84,7 @@ function whenViewportSettled(lockedHeight: number, done: () => void): () => void
     window.clearTimeout(timeoutId)
     done()
   }
-  const onResize = () => {
+  function onResize() {
     if (viewportHasSettled(lockedHeight)) finish()
   }
   vv?.addEventListener('resize', onResize)

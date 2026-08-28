@@ -27,10 +27,24 @@ export default function SideChrome({ children, account }: SideChromeProps) {
   )
 }
 
+const MOBILE_MQ = '(max-width: 760px)'
+
 function SideChromeDrawer({ children, account }: SideChromeProps) {
   const [open, setOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const panelId = useId()
-  useLockBodyScroll(open)
+  useLockBodyScroll(open && isMobile)
+
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_MQ)
+    const sync = () => {
+      setIsMobile(mq.matches)
+      if (!mq.matches) setOpen(false)
+    }
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
 
   useEffect(() => {
     if (!open) return
