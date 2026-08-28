@@ -109,15 +109,26 @@ export default function SpacesSidebar({
 
       <div className={styles.spacer} />
 
-      <div className={styles.ext}>
-        <div className={styles.st}>
-          <span className={styles.dot} aria-hidden="true" />
-          Capture into this space
+      <div className={styles.extStack}>
+        <div className={styles.ext}>
+          <div className={styles.st}>
+            <span className={styles.dot} aria-hidden="true" />
+            Capture into this space
+          </div>
+          <p>
+            Set it as active in the extension, then save videos, articles, and chats
+            with one click.
+          </p>
         </div>
-        <p>
-          Set it as active in the extension, then save videos, articles, and chats
-          with one click.
-        </p>
+        <div className={styles.ext}>
+          <div className={styles.st}>
+            <span className={styles.dot} aria-hidden="true" />
+            English only for now
+          </div>
+          <p>
+            Capture is available for English-language content only.
+          </p>
+        </div>
       </div>
     </SideChrome>
   )

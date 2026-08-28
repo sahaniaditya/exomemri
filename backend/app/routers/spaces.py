@@ -1,4 +1,4 @@
-"""Learning Space routes (thin: delegate to SpaceService)."""
+"""Learning Space routes (thin: delegate to SpaceService / NoteService)."""
 
 from __future__ import annotations
 
@@ -6,9 +6,22 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.dependencies import get_authenticated_app_user, get_space_service
+from app.dependencies import (
+    get_authenticated_app_user,
+    get_note_service,
+    get_space_service,
+)
 from app.schemas.common import User
+from app.schemas.notes import (
+    CreateNotePageRequest,
+    NoteImageUploadRequest,
+    NoteImageUploadResponse,
+    SpaceNotePageListResponse,
+    SpaceNotePageResponse,
+    UpdateNotePageRequest,
+)
 from app.schemas.spaces import (
+    ArtifactUrlResponse,
     CreateFolderRequest,
     CreateSpaceRequest,
     FolderListResponse,
@@ -18,6 +31,7 @@ from app.schemas.spaces import (
     SpaceListResponse,
     SpaceSummary,
 )
+from app.services.note_service import NoteService
 from app.services.space_service import SpaceService
 
 router = APIRouter(prefix="/spaces", tags=["spaces"])
@@ -94,4 +108,74 @@ def delete_space_folder(
     svc: SpaceService = Depends(get_space_service),
 ) -> None:
     svc.delete_folder(user, space_id, folder_id)
+
+
+@router.get("/{space_id}/notes", response_model=SpaceNotePageListResponse)
+async def list_space_notes(
+    space_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> SpaceNotePageListResponse:
+    return await svc.list_space_pages(user=user, space_id=space_id)
+
+
+@router.post(
+    "/{space_id}/notes",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SpaceNotePageResponse,
+)
+async def create_space_note(
+    space_id: UUID,
+    body: CreateNotePageRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> SpaceNotePageResponse:
+    return await svc.create_space_page(user=user, space_id=space_id, payload=body)
+
+
+@router.put("/{space_id}/notes/{note_id}", response_model=SpaceNotePageResponse)
+async def update_space_note(
+    space_id: UUID,
+    note_id: UUID,
+    body: UpdateNotePageRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> SpaceNotePageResponse:
+    return await svc.update_space_page(
+        user=user, space_id=space_id, note_id=note_id, payload=body
+    )
+
+
+@router.delete(
+    "/{space_id}/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_space_note(
+    space_id: UUID,
+    note_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> None:
+    await svc.delete_space_page(user=user, space_id=space_id, note_id=note_id)
+
+
+@router.post("/{space_id}/note-images", response_model=NoteImageUploadResponse)
+async def create_space_note_image_upload(
+    space_id: UUID,
+    body: NoteImageUploadRequest,
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> NoteImageUploadResponse:
+    return await svc.create_space_image_upload(
+        user=user, space_id=space_id, payload=body
+    )
+
+
+@router.get("/{space_id}/note-artifact-url", response_model=ArtifactUrlResponse)
+async def get_space_note_artifact_url(
+    space_id: UUID,
+    key: str = Query(..., min_length=1),
+    user: User = Depends(get_authenticated_app_user),
+    svc: NoteService = Depends(get_note_service),
+) -> ArtifactUrlResponse:
+    return await svc.space_note_artifact_url(user=user, space_id=space_id, key=key)
 

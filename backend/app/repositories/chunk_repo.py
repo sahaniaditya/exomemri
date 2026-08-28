@@ -10,6 +10,10 @@ from __future__ import annotations
 
 from supabase import Client
 
+# PostgREST payload limits bite when each row carries a 384-d embedding.
+# Insert in slices so a long document's chunks still land reliably.
+INSERT_BATCH_SIZE = 100
+
 
 class ChunkRepo:
     def __init__(self, client: Client) -> None:
@@ -21,8 +25,9 @@ class ChunkRepo:
         alongside fresh ones (e.g. a retry after a source was re-captured).
         """
         self._client.table("source_chunks").delete().eq("source_id", source_id).execute()
-        if chunks:
-            self._client.table("source_chunks").insert(chunks).execute()
+        for start in range(0, len(chunks), INSERT_BATCH_SIZE):
+            batch = chunks[start : start + INSERT_BATCH_SIZE]
+            self._client.table("source_chunks").insert(batch).execute()
 
     def search(
         self, *, source_id: str, user_id: str, query_embedding: list[float], k: int = 6

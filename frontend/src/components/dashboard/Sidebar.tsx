@@ -112,12 +112,23 @@ export default function Sidebar({
 
       <div className={styles.spacer} />
 
-      <div className={styles.ext}>
-        <div className={styles.st}>
-          <span className={styles.dot} aria-hidden="true" />
-          Browser extension
+      <div className={styles.extStack}>
+        <div className={styles.ext}>
+          <div className={styles.st}>
+            <span className={styles.dot} aria-hidden="true" />
+            Browser extension
+          </div>
+          <p>Capture videos, articles, and AI chats with one click while you browse.</p>
         </div>
-        <p>Capture videos, articles, and AI chats with one click while you browse.</p>
+        <div className={styles.ext}>
+          <div className={styles.st}>
+            <span className={styles.dot} aria-hidden="true" />
+            English only for now
+          </div>
+          <p>
+            Capture is available for English-language content only.
+          </p>
+        </div>
       </div>
     </SideChrome>
   )

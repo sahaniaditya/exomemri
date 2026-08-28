@@ -8,6 +8,7 @@ import { streakDays, type Profile } from '@/lib/profile'
 import { getSpaceCoverage } from '@/lib/coverage'
 import { getStudyPlan } from '@/lib/plan'
 import { listSpaceFolders, listSpaceSources, listSpaces } from '@/lib/spaces'
+import { listSpaceNotes } from '@/lib/notes'
 import styles from '@/components/dashboard/dashboard.module.css'
 import { NewFolderButton } from '@/components/dashboard/NewFolderDialog'
 import SpaceCaptureFeed from '@/components/dashboard/SpaceCaptureFeed'
@@ -16,6 +17,7 @@ import CoverageCard from '@/components/dashboard/CoverageCard'
 import Plate from '@/components/dashboard/Plate'
 import PlanCard from '@/components/dashboard/PlanCard'
 import SpaceHero from '@/components/dashboard/SpaceHero'
+import SpaceNotes from '@/components/dashboard/SpaceNotes'
 import SpacesSidebar from '@/components/dashboard/SpacesSideBar'
 
 export const metadata: Metadata = {
@@ -42,7 +44,7 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
   const { spaceId } = await params
   const token = (await cookies()).get('atlas_token')?.value ?? ''
 
-  const [profile, spaces, spaceSources, folders, coverage, planItems] =
+  const [profile, spaces, spaceSources, folders, coverage, planItems, notesResult] =
     await Promise.all([
       loadProfile(token),
       listSpaces(token),
@@ -50,6 +52,7 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
       listSpaceFolders(token, spaceId),
       getSpaceCoverage(token, spaceId),
       getStudyPlan(token, spaceId),
+      listSpaceNotes(token, spaceId),
     ])
 
   const activeSpace = spaces.find(space => space.id === spaceId)
@@ -99,16 +102,28 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
             />
           </section>
 
+          <section id="space-notes" className={styles.section}>
+            <SpaceNotes
+              spaceId={spaceId}
+              plateNum="02"
+              initialNotes={notesResult.items}
+              loadError={notesResult.error}
+            />
+          </section>
+
           {planItems.length > 0 && (
             <section id="plan" className={styles.section}>
-              <Plate num="02" title="Suggested next topics" />
+              <Plate num="03" title="Suggested next topics" />
               <PlanCard items={planItems} />
             </section>
           )}
 
           {captures.length > 0 && (
             <section id="coverage" className={styles.section}>
-              <Plate num="03" title="Coverage" />
+              <Plate
+                num={planItems.length > 0 ? '04' : '03'}
+                title="Coverage"
+              />
               <CoverageCard coverage={coverage} />
             </section>
           )}

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
 import { isAllowedShareReturnPath } from '@/lib/sharing'
 import LoginForm from './LoginForm'
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
 
 interface LoginPageProps {
   searchParams: Promise<{ next?: string }>
@@ -27,6 +28,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         redirect('/onboarding')
       }
     } catch (error) {
+      if (isRedirectError(error)) {
+          throw error;
+      }
       console.error('Login page gate failure:', error)
     }
   }

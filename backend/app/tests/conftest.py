@@ -162,6 +162,79 @@ class FakeNoteRepo:
         return True
 
 
+class FakeSpaceNoteRepo:
+    """In-memory ``space_notes`` table, keyed by note id."""
+
+    def __init__(self) -> None:
+        self.notes: dict[str, dict] = {}
+
+    def list_by_space(self, *, space_id: str, user_id: str) -> list[dict]:
+        rows = [
+            row
+            for row in self.notes.values()
+            if row["space_id"] == space_id and row["user_id"] == user_id
+        ]
+        return sorted(
+            rows, key=lambda row: (row["sort_order"], row.get("created_at") or "")
+        )
+
+    def get(self, *, space_id: str, note_id: str, user_id: str) -> dict | None:
+        row = self.notes.get(note_id)
+        if not row or row["space_id"] != space_id or row["user_id"] != user_id:
+            return None
+        return row
+
+    def insert(
+        self,
+        *,
+        note_id: str,
+        space_id: str,
+        user_id: str,
+        title: str,
+        content: dict,
+        sort_order: int,
+    ) -> dict:
+        now = datetime.now(UTC).isoformat()
+        row = {
+            "id": note_id,
+            "space_id": space_id,
+            "user_id": user_id,
+            "title": title,
+            "content": content,
+            "sort_order": sort_order,
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.notes[note_id] = row
+        return row
+
+    def update(
+        self,
+        *,
+        space_id: str,
+        note_id: str,
+        user_id: str,
+        title: str | None = None,
+        content: dict | None = None,
+    ) -> dict | None:
+        row = self.get(space_id=space_id, note_id=note_id, user_id=user_id)
+        if not row:
+            return None
+        if title is not None:
+            row["title"] = title
+        if content is not None:
+            row["content"] = content
+        row["updated_at"] = datetime.now(UTC).isoformat()
+        return row
+
+    def delete(self, *, space_id: str, note_id: str, user_id: str) -> bool:
+        row = self.get(space_id=space_id, note_id=note_id, user_id=user_id)
+        if not row:
+            return False
+        del self.notes[note_id]
+        return True
+
+
 class FakeSpaceRepo:
     """In-memory stand-in for the ``spaces``/``sources`` tables.
 
@@ -882,6 +955,46 @@ class FakeLLMService:
     async def summarize(self, *, title: str, extract: str) -> str:  # noqa: ARG002
         return f"Summary of {title}"
 
+    async def summarize_document(self, *, title: str, extract: str) -> str:
+        summary, _sections = await self.summarize_document_bundle(title=title, extract=extract)
+        return summary
+
+    async def summarize_structured_document(
+        self, *, title: str, extract: str
+    ) -> StructuredSummary:
+        _summary, sections = await self.summarize_document_bundle(title=title, extract=extract)
+        return sections
+
+    async def summarize_document_bundle(
+        self, *, title: str, extract: str
+    ) -> tuple[str, StructuredSummary]:
+        from app.services.pipeline.windows import join_for_reduce, split_for_llm
+
+        windows = split_for_llm(extract)
+        if not windows:
+            summary = await self.summarize(title=title, extract="")
+            sections = await self.summarize_structured(title=title, extract="")
+            return summary, sections
+        if len(windows) == 1:
+            summary = await self.summarize(title=title, extract=windows[0])
+            sections = await self.summarize_structured(title=title, extract=windows[0])
+            return summary, sections
+
+        part_summaries: list[str] = []
+        total = len(windows)
+        for i, window in enumerate(windows):
+            part_summaries.append(
+                await self.summarize(
+                    title=f"{title} (part {i + 1}/{total})",
+                    extract=window,
+                )
+            )
+        combined = join_for_reduce(part_summaries)
+        # Fake reduce: one more summarize call on the combined parts.
+        summary = await self.summarize(title=title, extract=combined)
+        sections = await self.summarize_structured(title=title, extract=combined)
+        return summary, sections
+
     async def summarize_structured(
         self, *, title: str, extract: str  # noqa: ARG002
     ) -> StructuredSummary:
@@ -923,6 +1036,32 @@ class FakeLLMService:
             ExtractedConcept(label=label, weight=1.0 - (i * 0.3))
             for i, label in enumerate(labels)
         ]
+
+    async def extract_concepts_document(
+        self, *, title: str, extract: str, vocabulary: list[str]
+    ) -> list[ExtractedConcept]:
+        from app.services.llm_service import merge_extracted_concepts
+        from app.services.pipeline.windows import split_for_llm
+
+        windows = split_for_llm(extract)
+        if not windows:
+            return []
+        if len(windows) == 1:
+            return await self.extract_concepts(
+                title=title, extract=windows[0], vocabulary=vocabulary
+            )
+
+        mapped: list[ExtractedConcept] = []
+        total = len(windows)
+        for i, window in enumerate(windows):
+            mapped.extend(
+                await self.extract_concepts(
+                    title=f"{title} (part {i + 1}/{total})",
+                    extract=window,
+                    vocabulary=vocabulary,
+                )
+            )
+        return merge_extracted_concepts(mapped)
 
 
 class FakePipelineService:
@@ -1024,6 +1163,11 @@ def note_repo() -> FakeNoteRepo:
 
 
 @pytest.fixture
+def space_note_repo() -> FakeSpaceNoteRepo:
+    return FakeSpaceNoteRepo()
+
+
+@pytest.fixture
 def embedding_service() -> FakeEmbeddingService:
     return FakeEmbeddingService()
 
@@ -1050,6 +1194,7 @@ def client(
     collaborator_repo: FakeCollaboratorRepo,
     share_link_repo: FakeShareLinkRepo,
     note_repo: FakeNoteRepo,
+    space_note_repo: FakeSpaceNoteRepo,
     credits_repo: FakeCreditsRepo,
     review_repo: FakeReviewRepo,
     embedding_service: FakeEmbeddingService,
@@ -1108,7 +1253,9 @@ def client(
     chat_svc = SourceChatService(
         space_svc, extract_svc, llm_service, embedding_service, chunk_repo, credits_svc  # type: ignore[arg-type]
     )
-    note_svc = NoteService(note_repo, space_svc, storage, settings)  # type: ignore[arg-type]
+    note_svc = NoteService(
+        note_repo, space_note_repo, space_svc, storage, settings  # type: ignore[arg-type]
+    )
     profile_svc = ProfileService(
         profile_repo, profile_settings_repo, space_repo  # type: ignore[arg-type]
     )

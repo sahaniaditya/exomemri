@@ -7,6 +7,8 @@ import { Lockup } from '@/components/brand/Lockup'
 import LegalFinePrint from '@/components/auth/LegalFinePrint'
 import ThemeToggle from '@/components/dashboard/ThemeToggle'
 import styles from './signup.module.css'
+import { useRouter } from 'next/navigation'
+import { markSignupPending } from './actions'
 
 function ContourBg() {
   return (
@@ -73,6 +75,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null)
   const [loading, setLoading] = useState(false)
+   const router = useRouter()
 
   const supabase = createClient()
 
@@ -123,10 +126,12 @@ export default function SignupPage() {
         return
       }
 
-      setMessage({
-        text: 'Check your email for the verification link!',
-        type: 'success',
-      })
+      await markSignupPending(email)
+      router.refresh()
+      router.replace('/signup/verify')
+      return
+    
+
     } catch (error: any) {
       setMessage({ text: error.message, type: 'error' })
     } finally {

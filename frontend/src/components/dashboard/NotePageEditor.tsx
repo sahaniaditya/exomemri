@@ -13,8 +13,11 @@ import NoteImageView from './NoteImageView'
 import styles from './dashboard.module.css'
 import {
   EMPTY_NOTE_DOC,
+  notesApiBase,
+  notesArtifactUrlPath,
   type NoteImageUpload,
   type NotePage,
+  type NotesScope,
 } from '@/lib/notes'
 import { relativeTime } from '@/lib/dashboard-data'
 
@@ -42,11 +45,9 @@ const NoteImage = Image.extend({
   },
 })
 
-async function resolveImageSrc(sourceId: string, key: string): Promise<string | null> {
+async function resolveImageSrc(scope: NotesScope, key: string): Promise<string | null> {
   try {
-    const res = await fetch(
-      `/api/sources/${sourceId}/artifact-url?key=${encodeURIComponent(key)}`
-    )
+    const res = await fetch(notesArtifactUrlPath(scope, key))
     if (!res.ok) return null
     const data = (await res.json()) as { url: string }
     return data.url
@@ -57,7 +58,7 @@ async function resolveImageSrc(sourceId: string, key: string): Promise<string | 
 
 async function hydrateImageUrls(
   doc: Record<string, unknown>,
-  sourceId: string
+  scope: NotesScope
 ): Promise<Record<string, unknown>> {
   const clone = structuredClone(doc) as {
     content?: Array<{ type?: string; attrs?: { key?: string; src?: string }; content?: unknown[] }>
@@ -67,7 +68,7 @@ async function hydrateImageUrls(
     if (!nodes) return
     for (const node of nodes) {
       if (node.type === 'image' && node.attrs?.key) {
-        const url = await resolveImageSrc(sourceId, node.attrs.key)
+        const url = await resolveImageSrc(scope, node.attrs.key)
         if (url) node.attrs.src = url
       }
       if (Array.isArray(node.content)) {
@@ -81,7 +82,7 @@ async function hydrateImageUrls(
 }
 
 interface NotePageEditorProps {
-  sourceId: string
+  scope: NotesScope
   pageId: string
   initialContent: Record<string, unknown>
   savedContent: Record<string, unknown>
@@ -92,7 +93,7 @@ interface NotePageEditorProps {
 }
 
 export default function NotePageEditor({
-  sourceId,
+  scope,
   pageId,
   initialContent,
   savedContent,
@@ -101,6 +102,9 @@ export default function NotePageEditor({
   onDraft,
   onSaved,
 }: NotePageEditorProps) {
+  const apiBase = notesApiBase(scope)
+  const scopeKey =
+    scope.kind === 'source' ? `source:${scope.sourceId}` : `space:${scope.spaceId}`
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(savedAtProp)
@@ -131,7 +135,10 @@ export default function NotePageEditor({
       }),
       NoteImage.configure({ inline: false, allowBase64: false }),
       Placeholder.configure({
-        placeholder: 'Jot what you want to remember from this capture…',
+        placeholder:
+          scope.kind === 'space'
+            ? 'Jot what you want to remember about this space…'
+            : 'Jot what you want to remember from this capture…',
       }),
     ],
     content: EMPTY_NOTE_DOC,
@@ -157,7 +164,7 @@ export default function NotePageEditor({
     void (async () => {
       const hydrated = await hydrateImageUrls(
         initialContentRef.current || EMPTY_NOTE_DOC,
-        sourceId
+        scope
       )
       if (cancelled) return
       editor.commands.setContent(hydrated)
@@ -169,7 +176,7 @@ export default function NotePageEditor({
     return () => {
       cancelled = true
     }
-  }, [editor, sourceId])
+  }, [editor, scopeKey]) // eslint-disable-line react-hooks/exhaustive-deps -- scopeKey tracks scope identity
 
   useEffect(() => {
     if (!editor) return
@@ -195,7 +202,7 @@ export default function NotePageEditor({
     setError(null)
     try {
       const content = editor.getJSON() as Record<string, unknown>
-      const res = await fetch(`/api/sources/${sourceId}/notes/${pageId}`, {
+      const res = await fetch(`${apiBase}/notes/${pageId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
@@ -216,7 +223,7 @@ export default function NotePageEditor({
     } finally {
       setSaving(false)
     }
-  }, [editor, onDraft, onSaved, pageId, saving, sourceId])
+  }, [apiBase, editor, onDraft, onSaved, pageId, saving])
 
   const setLink = () => {
     if (!editor) return
@@ -242,7 +249,7 @@ export default function NotePageEditor({
     }
     setError(null)
     try {
-      const mint = await fetch(`/api/sources/${sourceId}/note-images`, {
+      const mint = await fetch(`${apiBase}/note-images`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content_type: file.type, filename: file.name }),
@@ -257,7 +264,7 @@ export default function NotePageEditor({
       if (!put.ok) throw Error(`upload ${put.status}`)
 
       const display =
-        (await resolveImageSrc(sourceId, signed.key)) ?? URL.createObjectURL(file)
+        (await resolveImageSrc(scope, signed.key)) ?? URL.createObjectURL(file)
       editor
         .chain()
         .focus()

@@ -76,7 +76,7 @@ class ConceptService:
         vocabulary = await anyio.to_thread.run_sync(
             partial(self._concepts.list_labels, space_id=space_id)
         )
-        extracted = await self._llm.extract_concepts(
+        extracted = await self._llm.extract_concepts_document(
             title=source["title"], extract=extract, vocabulary=vocabulary
         )
 

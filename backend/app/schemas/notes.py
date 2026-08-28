@@ -1,4 +1,4 @@
-"""Schemas for per-capture named note pages (TipTap JSON)."""
+"""Schemas for named note pages (TipTap JSON) on captures and spaces."""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 DEFAULT_NOTE_TITLE = "Untitled"
 MAX_NOTE_TITLE_LENGTH = 120
-MAX_PAGES_PER_SOURCE = 50
+MAX_PAGES_PER_SCOPE = 50
+# Alias kept for existing source-note callers / tests.
+MAX_PAGES_PER_SOURCE = MAX_PAGES_PER_SCOPE
 
 
 class NotePageResponse(BaseModel):
@@ -27,6 +29,23 @@ class NotePageListResponse(BaseModel):
     """All notebook pages on a capture, ordered by ``sort_order``."""
 
     items: list[NotePageResponse] = Field(default_factory=list)
+
+
+class SpaceNotePageResponse(BaseModel):
+    """One named notebook page on a learning space."""
+
+    id: UUID
+    space_id: UUID
+    title: str
+    content: dict[str, Any] = Field(default_factory=dict)
+    sort_order: int
+    updated_at: str | None = None
+
+
+class SpaceNotePageListResponse(BaseModel):
+    """All notebook pages on a space, ordered by ``sort_order``."""
+
+    items: list[SpaceNotePageResponse] = Field(default_factory=list)
 
 
 class CreateNotePageRequest(BaseModel):
