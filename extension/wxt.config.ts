@@ -29,8 +29,10 @@ export default defineConfig({
     },
     permissions: ["storage", "activeTab", "scripting"],
     host_permissions: [
-      // Backend capture endpoint (dev). In prod, add the deployed API origin.
+      // Backend capture endpoint. Keep localhost for `npm run dev`; the
+      // production origin is required in the store zip (`npm run zip`).
       "http://localhost:8000/*",
+      "https://atlas-ai-ni72.onrender.com/*",
       // Supabase Storage host for the direct client-side PDF PUT.
       "https://*.supabase.co/*",
       // The exomemri web app: the bridge content script (atlas-bridge.content.ts)
@@ -46,6 +48,8 @@ export default defineConfig({
       "http://127.0.0.1:3001/*",
       "https://localhost/*",
       "https://127.0.0.1/*",
+      "https://exomemri.com/*",
+      "https://www.exomemri.com/*",
       "https://atlas-ai-puce-xi.vercel.app/*",
       // YouTube transcript capture (youtube.content.ts + youtube-main.content.ts).
       // No extra install warning: the <all_urls> content script already asks for

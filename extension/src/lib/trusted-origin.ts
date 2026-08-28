@@ -18,10 +18,16 @@ export const WEB_APP_MATCH_PATTERNS = [
   "http://127.0.0.1:3001/*",
   "https://localhost/*",
   "https://127.0.0.1/*",
+  "https://exomemri.com/*",
+  "https://www.exomemri.com/*",
   "https://atlas-ai-puce-xi.vercel.app/*",
 ] as const
 
-const TRUSTED_WEB_ORIGINS = new Set(["https://atlas-ai-puce-xi.vercel.app"])
+const TRUSTED_WEB_ORIGINS = new Set([
+  "https://exomemri.com",
+  "https://www.exomemri.com",
+  "https://atlas-ai-puce-xi.vercel.app",
+])
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"])
 
 /**

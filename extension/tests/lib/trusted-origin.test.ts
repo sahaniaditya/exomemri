@@ -17,6 +17,9 @@ describe("isTrustedWebOrigin", () => {
   })
 
   it("accepts the production web origins", () => {
+    expect(isTrustedWebOrigin("https://exomemri.com")).toBe(true)
+    expect(isTrustedWebOrigin("https://exomemri.com/dashboard")).toBe(true)
+    expect(isTrustedWebOrigin("https://www.exomemri.com/login")).toBe(true)
     expect(isTrustedWebOrigin("https://atlas-ai-puce-xi.vercel.app")).toBe(true)
     expect(isTrustedWebOrigin("https://atlas-ai-puce-xi.vercel.app/dashboard")).toBe(true)
   })
