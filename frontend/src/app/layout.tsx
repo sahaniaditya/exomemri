@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "exomemri",
   description: "Your AI learning memory",
+  verification: {
+    google: "sJysUJwdKoJQREJOfF_Ddru4jg8TgxFLv8hL8u0oC1s",
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
