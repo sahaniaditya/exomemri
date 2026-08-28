@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { Lockup } from '@/components/brand/Lockup'
+import LegalFinePrint from '@/components/auth/LegalFinePrint'
 import ThemeToggle from '@/components/dashboard/ThemeToggle'
 import styles from './signup.module.css'
 
@@ -245,13 +246,7 @@ export default function SignupPage() {
             </button>
           </form>
 
-          {/* Fine print */}
-          <p className={styles.finePrint}>
-            By signing up you agree to our{' '}
-            <a href="#" className={styles.finePrintLink}>Terms</a>
-            {' '}and{' '}
-            <a href="#" className={styles.finePrintLink}>Privacy Policy</a>.
-          </p>
+          <LegalFinePrint />
 
           {/* Login link */}
           <p className={styles.footerText}>
