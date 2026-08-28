@@ -103,6 +103,19 @@
   color: var(--sage-light);
 }
 
+.pulseCta {
+  background: var(--ink);
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation-delay: 0.12s;
+  position: relative;
+  overflow: hidden;
+}
+
+.app .pulseCta {
+  color: var(--paper);
+}
+
 :global(.dark) .loading {
   background: #09090b;
   color: #a1a1aa;
