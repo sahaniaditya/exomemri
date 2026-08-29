@@ -1,8 +1,9 @@
 """Monthly credit quota.
 
-Capture consumes one credit per new source; Ask-this-capture consumes one
-credit every three user questions. The monthly allowance resets leftovers
-to zero. Payment later calls :meth:`grant` / :meth:`set_allowance`.
+Capture, coverage regen, and graph-rebuild batches consume one credit each;
+Ask-this-capture consumes one credit every three user questions. The monthly
+allowance resets leftovers to zero. Payment later calls :meth:`grant` /
+:meth:`set_allowance`.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 import calendar
 import logging
 from datetime import UTC, datetime
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 from app.errors import CreditsExhaustedError
 from app.repositories.credits_repo import CreditsRepo
@@ -22,9 +23,11 @@ from app.schemas.credits import (
 
 logger = logging.getLogger(__name__)
 
+CreditReason = Literal["capture", "coverage", "rebuild"]
+
 _EXHAUSTED_MESSAGE = (
-    "You're out of credits. Captures and Ask questions unlock when your "
-    "monthly allowance resets."
+    "You're out of credits. Captures, coverage, mapping, and Ask questions "
+    "unlock when your monthly allowance resets."
 )
 
 
@@ -65,17 +68,21 @@ class CreditsService:
         """Idempotent insert of the default monthly grant (onboarding + backfill)."""
         return self._to_balance(self._credits.ensure(user_id=user_id))
 
-    def consume_capture(self, user_id: str) -> None:
-        row = self._credits.consume(user_id=user_id, amount=1)
+    def consume(self, user_id: str, *, reason: CreditReason, amount: int = 1) -> None:
+        """Atomic debit. Raises if the user has fewer than ``amount`` credits."""
+        row = self._credits.consume(user_id=user_id, amount=amount)
         if not row["ok"]:
             raise CreditsExhaustedError(
                 _EXHAUSTED_MESSAGE,
-                detail={"balance": row["balance"], "needed": 1},
+                detail={"balance": row["balance"], "needed": amount},
             )
         logger.info(
             "credits_consumed",
-            extra={"user_id": user_id, "reason": "capture", "balance": row["balance"]},
+            extra={"user_id": user_id, "reason": reason, "balance": row["balance"]},
         )
+
+    def consume_capture(self, user_id: str) -> None:
+        self.consume(user_id, reason="capture")
 
     def consume_ask(self, user_id: str) -> AskCharge:
         """Meter one user question. Raises if the user has no credits left."""

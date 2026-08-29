@@ -24,6 +24,8 @@ from app.schemas.concepts import (
     SourceNode,
     SpaceGraphResponse,
 )
+from app.services.coverage_service import CoverageService
+from app.services.credits_service import CreditsService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
 from app.services.space_service import SpaceService, slugify
@@ -43,11 +45,15 @@ class ConceptService:
         spaces: SpaceService,
         extracts: ExtractService,
         llm: LLMService,
+        credits: CreditsService,
+        coverage: CoverageService,
     ) -> None:
         self._concepts = concepts
         self._spaces = spaces
         self._extracts = extracts
         self._llm = llm
+        self._credits = credits
+        self._coverage = coverage
 
     # --- reads ---
 
@@ -153,26 +159,42 @@ class ConceptService:
                 limit=BACKFILL_BATCH_SIZE,
             )
         )
+        if not sources:
+            remaining = await anyio.to_thread.run_sync(
+                partial(self._spaces.list_unextracted_sources, space_id=space_id, limit=1000)
+            )
+            return RebuildResponse(processed=0, failed=0, pending=len(remaining))
 
-        processed = 0
-        failed = 0
-        for source in sources:
-            try:
-                extract = await self._extracts.read_full_extract(source)
-                await self.extract_for_source(source=source, extract=extract)
-                processed += 1
-            except Exception:  # noqa: BLE001 - one bad source must not fail the batch
-                # A PDF with no text-extraction artifact is the common case here.
-                # Mark it done so the backfill loop can terminate instead of
-                # retrying the same unfixable source forever.
-                logger.warning("concept_backfill_source_failed", extra={"source_id": source["id"]})
-                await self._mark_done(source["id"])
-                failed += 1
-
-        remaining = await anyio.to_thread.run_sync(
-            partial(self._spaces.list_unextracted_sources, space_id=space_id, limit=1000)
+        await anyio.to_thread.run_sync(
+            partial(self._credits.consume, str(user.id), reason="rebuild")
         )
-        return RebuildResponse(processed=processed, failed=failed, pending=len(remaining))
+        try:
+            processed = 0
+            failed = 0
+            for source in sources:
+                try:
+                    extract = await self._extracts.read_full_extract(source)
+                    await self.extract_for_source(source=source, extract=extract)
+                    processed += 1
+                except Exception:  # noqa: BLE001 - one bad source must not fail the batch
+                    # A PDF with no text-extraction artifact is the common case here.
+                    # Mark it done so the backfill loop can terminate instead of
+                    # retrying the same unfixable source forever.
+                    logger.warning(
+                        "concept_backfill_source_failed", extra={"source_id": source["id"]}
+                    )
+                    await self._mark_done(source["id"])
+                    failed += 1
+
+            remaining = await anyio.to_thread.run_sync(
+                partial(self._spaces.list_unextracted_sources, space_id=space_id, limit=1000)
+            )
+            if processed + failed > 0:
+                await self._coverage.maybe_refresh(user, space_id)
+            return RebuildResponse(processed=processed, failed=failed, pending=len(remaining))
+        except Exception:
+            await anyio.to_thread.run_sync(partial(self._credits.refund, str(user.id)))
+            raise
 
     def prune_source(self, *, source_id: UUID, space_id: UUID) -> None:
         """Drop this source's concept edges and any concepts nobody mentions.

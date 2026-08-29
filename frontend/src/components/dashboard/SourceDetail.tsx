@@ -172,7 +172,7 @@ export default function SourceDetail({
             )}
           </div>
         </header>
-        {initialSummary ? (
+        {initialSummary?.sections ? (
           <SourceSummary sections={initialSummary.sections} />
         ) : (
           <div className={styles.captureEmptySummary}>
@@ -194,7 +194,7 @@ export default function SourceDetail({
                 ? 'Something went wrong while understanding this capture. Try capturing it again.'
                 : status === 'processing'
                   ? 'This capture is still being understood. Key points will appear here when processing finishes.'
-                  : 'Open this page again in a moment — the summary should be available shortly.'}
+                  : 'A summary appears after this capture has been processed. If processing failed, try capturing it again.'}
             </p>
           </div>
         )}

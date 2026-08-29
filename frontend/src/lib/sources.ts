@@ -8,8 +8,8 @@ export interface StructuredSummary {
 }
 
 export interface SummaryResponse {
-  summary: string
-  sections: StructuredSummary
+  summary: string | null
+  sections: StructuredSummary | null
   generated: boolean
   model: string | null
   summarized_at: string | null
@@ -29,7 +29,9 @@ export async function getSourceSummary(
   try {
     const res = await apiFetch(`/v1/sources/${sourceId}/summary`, {}, token)
     if (!res.ok) return null
-    return (await res.json()) as SummaryResponse
+    const body = (await res.json()) as SummaryResponse
+    if (!body.sections) return null
+    return body
   } catch (error) {
     console.error('Failed to load source summary:', error)
     return null

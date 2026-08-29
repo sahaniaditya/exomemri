@@ -86,11 +86,11 @@ class StructuredSummary(BaseModel):
 
 
 class SummaryResponse(BaseModel):
-    summary: str
-    sections: StructuredSummary
+    summary: str | None = None
+    sections: StructuredSummary | None = None
     generated: bool          # True if generated this call, False if cached
-    model: str | None
-    summarized_at: datetime | None
+    model: str | None = None
+    summarized_at: datetime | None = None
 
 class ChatMessage(BaseModel):
     id: UUID

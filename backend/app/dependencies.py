@@ -251,13 +251,32 @@ def get_source_chat_service(
 def get_concept_repo() -> ConceptRepo:
     return ConceptRepo(get_service_client())
 
+
+def get_coverage_repo() -> CoverageRepo:
+    return CoverageRepo(get_service_client())
+
+
+def get_coverage_service(
+    coverage: CoverageRepo = Depends(get_coverage_repo),
+    concepts: ConceptRepo = Depends(get_concept_repo),
+    spaces: SpaceService = Depends(get_space_service),
+    llm: LLMService = Depends(get_llm_service),
+    limiter: RateLimitService = Depends(get_rate_limiter),
+    settings: Settings = Depends(get_settings),
+    credits: CreditsService = Depends(get_credits_service),
+) -> CoverageService:
+    return CoverageService(coverage, concepts, spaces, llm, limiter, settings, credits)
+
+
 def get_concept_service(
     concepts: ConceptRepo = Depends(get_concept_repo),
     spaces: SpaceService = Depends(get_space_service),
     extracts: ExtractService = Depends(get_extract_service),
     llm: LLMService = Depends(get_llm_service),
+    credits: CreditsService = Depends(get_credits_service),
+    coverage: CoverageService = Depends(get_coverage_service),
 ) -> ConceptService:
-    return ConceptService(concepts, spaces, extracts, llm)
+    return ConceptService(concepts, spaces, extracts, llm, credits, coverage)
 
 
 def get_capture_service(
@@ -270,19 +289,6 @@ def get_capture_service(
 ) -> CaptureService:
     return CaptureService(settings, storage, space_service, streaks, concepts, credits)
 
-
-def get_coverage_repo() -> CoverageRepo:
-    return CoverageRepo(get_service_client())
-
-def get_coverage_service(
-    coverage: CoverageRepo = Depends(get_coverage_repo),
-    concepts: ConceptRepo = Depends(get_concept_repo),
-    spaces: SpaceService = Depends(get_space_service),
-    llm: LLMService = Depends(get_llm_service),
-    limiter: RateLimitService = Depends(get_rate_limiter),
-    settings: Settings = Depends(get_settings),
-) -> CoverageService:
-    return CoverageService(coverage, concepts, spaces, llm, limiter, settings)
 
 def get_plan_service(
     coverage: CoverageService = Depends(get_coverage_service),
@@ -297,5 +303,8 @@ def get_pipeline_service(
     llm: LLMService = Depends(get_llm_service),
     chunks: ChunkRepo = Depends(get_chunk_repo),
     space_service: SpaceService = Depends(get_space_service),
+    coverage: CoverageService = Depends(get_coverage_service),
 ) -> PipelineService:
-    return PipelineService(concepts, extracts, embeddings, llm, chunks, space_service)
+    return PipelineService(
+        concepts, extracts, embeddings, llm, chunks, space_service, coverage
+    )

@@ -22,7 +22,18 @@ async def get_space_coverage(
 ) -> CoverageResponse:
     """The space's inferred syllabus and how much of it is covered.
 
-    Generated on first read and cached; regenerated automatically once the
-    space's mapped concepts change since the last generation.
+    Cache-only: returns the last generated syllabus, or ``coverage_pct=None``
+    if none exists yet. Generation is ``POST`` on this path (1 credit) or the
+    capture pipeline's rate-limited refresh.
     """
     return await svc.get_coverage(user, space_id)
+
+
+@router.post("/{space_id}/coverage", response_model=CoverageResponse)
+async def regenerate_space_coverage(
+    space_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: CoverageService = Depends(get_coverage_service),
+) -> CoverageResponse:
+    """Infer (or refresh) the space syllabus. Consumes one credit."""
+    return await svc.regenerate(user, space_id)

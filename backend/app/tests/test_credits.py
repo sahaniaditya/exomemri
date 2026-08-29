@@ -160,3 +160,12 @@ def test_rollback_ask_restores_tally_and_credit() -> None:
     svc.rollback_ask(DEV_USER, charge)
     assert repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE
     assert repo.rows[DEV_USER]["ask_units"] == 2
+
+
+def test_consume_logs_reason_and_debits() -> None:
+    repo = FakeCreditsRepo()
+    svc = CreditsService(repo)  # type: ignore[arg-type]
+    svc.consume(DEV_USER, reason="coverage")
+    assert repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 1
+    svc.consume_capture(DEV_USER)
+    assert repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 2

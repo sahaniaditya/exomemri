@@ -3863,6 +3863,9 @@ button.chip {
   color: var(--muted);
   margin: 0;
 }
+.covempty + .maptoggle {
+  margin-top: 12px;
+}
 .covsection {
   margin-top: 14px;
 }

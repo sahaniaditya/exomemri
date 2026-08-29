@@ -12,11 +12,12 @@ from __future__ import annotations
 import logging
 from functools import partial
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import anyio
 from langgraph.graph import END, StateGraph
 
-from app.schemas.common import ProcessingStatus
+from app.schemas.common import ProcessingStatus, User
 from app.services.pipeline.chunking import chunk_text
 from app.services.pipeline.state import PipelineState
 
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
 
     from app.repositories.chunk_repo import ChunkRepo
     from app.services.concept_service import ConceptService
+    from app.services.coverage_service import CoverageService
     from app.services.embedding_service import EmbeddingService
     from app.services.extract_service import ExtractService
     from app.services.llm_service import LLMService
@@ -50,6 +52,7 @@ def build_pipeline(
     llm: LLMService,
     chunks: ChunkRepo,
     space_service: SpaceService,
+    coverage: CoverageService,
 ) -> CompiledStateGraph:
     async def fetch_extract(state: PipelineState) -> PipelineState:
         try:
@@ -158,6 +161,16 @@ def build_pipeline(
             count = await concepts.extract_for_source(
                 source=state["source"], extract=state["extract"]
             )
+            try:
+                await coverage.maybe_refresh(
+                    User(id=UUID(state["user_id"]), email=""),
+                    UUID(state["space_id"]),
+                )
+            except Exception:  # noqa: BLE001 - coverage must not fail the source
+                logger.warning(
+                    "pipeline_coverage_refresh_failed",
+                    extra={"space_id": state["space_id"]},
+                )
             return {**state, "concept_count": count}
         except Exception as exc:  # noqa: BLE001 - graph must never raise
             logger.error(

@@ -124,7 +124,7 @@ export default async function SpaceSourcesPage({ params }: SpaceSourcesPageProps
                 num={planItems.length > 0 ? '04' : '03'}
                 title="Coverage"
               />
-              <CoverageCard coverage={coverage} />
+              <CoverageCard coverage={coverage} spaceId={spaceId} />
             </section>
           )}
         </div>

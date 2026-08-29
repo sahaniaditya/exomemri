@@ -8,13 +8,18 @@ import pytest
 
 from app.schemas.common import User
 from app.services.concept_service import ConceptService
+from app.services.coverage_service import CoverageService
+from app.services.credits_service import CreditsService
 from app.services.pipeline_service import PipelineService
+from app.services.rate_limit_service import NoopRateLimiter
 from app.services.space_service import SpaceService
 from app.tests.conftest import (
     SEEDED_SPACE_ID,
     FakeChunkRepo,
     FakeCollaboratorRepo,
     FakeConceptRepo,
+    FakeCoverageRepo,
+    FakeCreditsRepo,
     FakeEmbeddingService,
     FakeLLMService,
     FakeSpaceRepo,
@@ -69,9 +74,25 @@ def _build_pipeline_service(
     chunks: FakeChunkRepo,
     concepts: FakeConceptRepo,
 ) -> PipelineService:
+    from app.config import get_settings
+
     space_svc = SpaceService(space_repo, FakeCollaboratorRepo())  # type: ignore[arg-type]
-    concept_svc = ConceptService(concepts, space_svc, extracts, llm)  # type: ignore[arg-type]
-    return PipelineService(concept_svc, extracts, embeddings, llm, chunks, space_svc)
+    credits = CreditsService(FakeCreditsRepo())  # type: ignore[arg-type]
+    coverage = CoverageService(
+        FakeCoverageRepo(),
+        concepts,
+        space_svc,
+        llm,
+        NoopRateLimiter(),
+        get_settings(),
+        credits,  # type: ignore[arg-type]
+    )
+    concept_svc = ConceptService(
+        concepts, space_svc, extracts, llm, credits, coverage  # type: ignore[arg-type]
+    )
+    return PipelineService(
+        concept_svc, extracts, embeddings, llm, chunks, space_svc, coverage
+    )
 
 
 async def test_pipeline_chunks_embeds_and_summarizes(

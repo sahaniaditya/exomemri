@@ -553,12 +553,17 @@ export interface paths {
          * Get Space Coverage
          * @description The space's inferred syllabus and how much of it is covered.
          *
-         *     Generated on first read and cached; regenerated automatically once the
-         *     space's mapped concepts change since the last generation.
+         *     Cache-only: returns the last generated syllabus, or ``coverage_pct=None``
+         *     if none exists yet. Generation is ``POST`` on this path (1 credit) or the
+         *     capture pipeline's rate-limited refresh.
          */
         get: operations["get_space_coverage_v1_spaces__space_id__coverage_get"];
         put?: never;
-        post?: never;
+        /**
+         * Regenerate Space Coverage
+         * @description Infer (or refresh) the space syllabus. Consumes one credit.
+         */
+        post: operations["regenerate_space_coverage_v1_spaces__space_id__coverage_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1572,12 +1577,12 @@ export interface components {
             /** Generated */
             generated: boolean;
             /** Model */
-            model: string | null;
-            sections: components["schemas"]["StructuredSummary"];
+            model?: string | null;
+            sections?: components["schemas"]["StructuredSummary"] | null;
             /** Summarized At */
-            summarized_at: string | null;
+            summarized_at?: string | null;
             /** Summary */
-            summary: string;
+            summary?: string | null;
         };
         /**
          * SyllabusTopic
@@ -3026,6 +3031,39 @@ export interface operations {
         };
     };
     get_space_coverage_v1_spaces__space_id__coverage_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    regenerate_space_coverage_v1_spaces__space_id__coverage_post: {
         parameters: {
             query?: never;
             header?: {

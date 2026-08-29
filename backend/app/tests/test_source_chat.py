@@ -115,27 +115,29 @@ def test_send_message_falls_back_to_full_extract_without_chunks(
     assert "[chunk" not in reply
 
 
-def test_get_summary_generates_and_caches(
-    client: TestClient, space_repo: FakeSpaceRepo, storage: FakeStorage
+def test_get_summary_miss_does_not_generate(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    storage: FakeStorage,
+    llm_service: FakeLLMService,
+    credits_repo: FakeCreditsRepo,
 ) -> None:
     source_id = _seed_note_source(
         space_repo, storage, note_text="note body", processing_status="failed"
     )
+    credits_repo.ensure(user_id=DEV_USER)
 
-    first = client.get(f"/v1/sources/{source_id}/summary")
-    assert first.status_code == 200
-    assert first.json()["generated"] is True
-    assert len(first.json()["sections"]["tldr"]) == 5
-
-    second = client.get(f"/v1/sources/{source_id}/summary")
-    assert second.status_code == 200
-    assert second.json()["generated"] is False
-    assert second.json()["summary"] == first.json()["summary"]
-    assert second.json()["sections"] == first.json()["sections"]
+    resp = client.get(f"/v1/sources/{source_id}/summary")
+    assert resp.status_code == 200
+    assert resp.json()["generated"] is False
+    assert resp.json()["summary"] is None
+    assert resp.json()["sections"] is None
+    assert space_repo.sources[source_id]["summary_text"] is None
+    assert llm_service.bundle_calls == 0
 
 
 def test_get_summary_skips_while_processing(
-    client: TestClient, space_repo: FakeSpaceRepo, storage: FakeStorage
+    client: TestClient, space_repo: FakeSpaceRepo, storage: FakeStorage, llm_service: FakeLLMService
 ) -> None:
     source_id = _seed_note_source(
         space_repo, storage, note_text="note body", processing_status="queued"
@@ -143,9 +145,11 @@ def test_get_summary_skips_while_processing(
 
     resp = client.get(f"/v1/sources/{source_id}/summary")
 
-    assert resp.status_code == 409
-    assert resp.json()["error"]["code"] == "conflict"
+    assert resp.status_code == 200
+    assert resp.json()["generated"] is False
+    assert resp.json()["sections"] is None
     assert space_repo.sources[source_id]["summary_text"] is None
+    assert llm_service.bundle_calls == 0
 
 
 def test_get_summary_cache_hit_while_extracting_does_not_call_llm(
@@ -170,12 +174,11 @@ def test_get_summary_cache_hit_while_extracting_does_not_call_llm(
     assert llm_service.bundle_calls == 0
 
 
-def test_get_summary_regenerates_sections_for_pre_migration_row(
-    client: TestClient, space_repo: FakeSpaceRepo, storage: FakeStorage
+def test_get_summary_pre_migration_row_is_a_miss(
+    client: TestClient, space_repo: FakeSpaceRepo, storage: FakeStorage, llm_service: FakeLLMService
 ) -> None:
     """A row with summary_text set but no summary_sections (captured before this
-    feature shipped) must regenerate structured sections, not crash on the missing
-    field."""
+    feature shipped) is a cache miss — GET does not regenerate."""
     source_id = _seed_note_source(space_repo, storage, note_text="note body")
     space_repo.sources[source_id]["summary_text"] = "Old prose summary"
     space_repo.sources[source_id]["summary_model"] = "old-model"
@@ -183,8 +186,9 @@ def test_get_summary_regenerates_sections_for_pre_migration_row(
     resp = client.get(f"/v1/sources/{source_id}/summary")
 
     assert resp.status_code == 200
-    assert resp.json()["generated"] is True
-    assert len(resp.json()["sections"]["tldr"]) == 5
+    assert resp.json()["generated"] is False
+    assert resp.json()["sections"] is None
+    assert llm_service.bundle_calls == 0
 
 
 def test_get_summary_collaborator_does_not_generate_on_miss(
@@ -210,30 +214,25 @@ def test_get_summary_collaborator_does_not_generate_on_miss(
 
     resp = client.get(f"/v1/sources/{source_id}/summary")
 
-    assert resp.status_code == 409
-    assert resp.json()["error"]["code"] == "conflict"
+    assert resp.status_code == 200
+    assert resp.json()["generated"] is False
+    assert resp.json()["sections"] is None
     assert space_repo.sources[source_id]["summary_text"] is None
 
 
-def test_ask_during_processing_returns_409_and_rolls_back_credits(
+def test_ask_without_summary_still_replies(
     client: TestClient,
     space_repo: FakeSpaceRepo,
     storage: FakeStorage,
-    credits_repo: FakeCreditsRepo,
 ) -> None:
     source_id = _seed_note_source(
         space_repo, storage, note_text="note body", processing_status="queued"
     )
-    credits_repo.ensure(user_id=DEV_USER)
-    before_units = credits_repo.rows[DEV_USER]["ask_units"]
-    before_balance = credits_repo.rows[DEV_USER]["balance"]
 
     resp = client.post(f"/v1/sources/{source_id}/messages", json={"content": "hello?"})
 
-    assert resp.status_code == 409
-    assert resp.json()["error"]["code"] == "conflict"
-    assert credits_repo.rows[DEV_USER]["ask_units"] == before_units
-    assert credits_repo.rows[DEV_USER]["balance"] == before_balance
+    assert resp.status_code == 200
+    assert space_repo.sources[source_id]["summary_text"] is None
 
 
 def test_ask_returns_402_when_out_of_credits(
@@ -248,3 +247,4 @@ def test_ask_returns_402_when_out_of_credits(
     resp = client.post(f"/v1/sources/{source_id}/messages", json={"content": "hello?"})
     assert resp.status_code == 402
     assert resp.json()["error"]["code"] == "credits_exhausted"
+    assert space_repo.sources[source_id]["summary_text"] is None

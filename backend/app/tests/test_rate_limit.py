@@ -15,6 +15,7 @@ from app.rate_limit import client_ip, get_rate_limiter
 from app.schemas.auth import AuthUser, LoginResponse
 from app.schemas.common import User
 from app.services.coverage_service import CoverageService
+from app.services.credits_service import CreditsService
 from app.services.rate_limit_service import RateLimitService
 from app.services.space_service import SpaceService
 from app.tests.conftest import (
@@ -22,6 +23,7 @@ from app.tests.conftest import (
     FakeCollaboratorRepo,
     FakeConceptRepo,
     FakeCoverageRepo,
+    FakeCreditsRepo,
     FakeLLMService,
     FakeSpaceRepo,
     FakeStorage,
@@ -267,8 +269,9 @@ async def test_coverage_regen_rate_limited_cache_hit_free(
     )
     limiter = RateLimitService()
     spaces = SpaceService(space_repo, FakeCollaboratorRepo())  # type: ignore[arg-type]
+    credits = CreditsService(FakeCreditsRepo())  # type: ignore[arg-type]
     svc = CoverageService(
-        coverage_repo, concept_repo, spaces, llm_service, limiter, settings  # type: ignore[arg-type]
+        coverage_repo, concept_repo, spaces, llm_service, limiter, settings, credits  # type: ignore[arg-type]
     )
     user = User(id=UUID(str(get_settings().dev_user_id)), email="dev@exomemri.com")
 
@@ -283,21 +286,12 @@ async def test_coverage_regen_rate_limited_cache_hit_free(
         }
 
     space_id = UUID(SEEDED_SPACE_ID)
-    first = await svc.get_coverage(user, space_id)
+    first = await svc.regenerate(user, space_id)
     assert first.coverage_pct is not None
 
-    # Cache hit — must not consume another token.
+    # GET is cache-only — must not consume the hourly token.
     second = await svc.get_coverage(user, space_id)
     assert second.coverage_pct == first.coverage_pct
 
-    # Force regen by bumping concept count, then expect 429.
-    row_id = str(uuid4())
-    concept_repo.concepts[row_id] = {
-        "id": row_id,
-        "space_id": SEEDED_SPACE_ID,
-        "user_id": str(user.id),
-        "label": "Gamma",
-        "slug": "gamma",
-    }
     with pytest.raises(RateLimitError):
-        await svc.get_coverage(user, space_id)
+        await svc.regenerate(user, space_id)

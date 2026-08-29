@@ -100,7 +100,7 @@ async def get_summary(
     user: User = Depends(get_authenticated_app_user),
     svc: SourceChatService = Depends(get_source_chat_service),
 ) -> SummaryResponse:
-    return await svc.get_or_create_summary(user=user, source_id=source_id)
+    return await svc.get_summary(user=user, source_id=source_id)
 
 @router.get("/{source_id}/messages", response_model=MessageListResponse)
 async def get_messages(

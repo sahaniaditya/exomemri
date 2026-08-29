@@ -1243,18 +1243,18 @@ def client(
     session_svc = SessionService(space_repo, space_svc)  # type: ignore[arg-type]
     streak_svc = StreakService(profile_repo)  # type: ignore[arg-type]
     extract_svc = ExtractService(storage)  # type: ignore[arg-type]
-    concept_svc = ConceptService(
-        concept_repo, space_svc, extract_svc, llm_service  # type: ignore[arg-type]
-    )
     credits_svc = CreditsService(credits_repo)  # type: ignore[arg-type]
-    capture_svc = CaptureService(
-        settings, storage, space_svc, streak_svc, concept_svc, credits_svc  # type: ignore[arg-type]
-    )
     # Hermetic suite must not trip production rate limits; dedicated
     # test_rate_limit.py builds its own app with a real limiter.
     rate_limiter = NoopRateLimiter()
     coverage_svc = CoverageService(
-        coverage_repo, concept_repo, space_svc, llm_service, rate_limiter, settings  # type: ignore[arg-type]
+        coverage_repo, concept_repo, space_svc, llm_service, rate_limiter, settings, credits_svc  # type: ignore[arg-type]
+    )
+    concept_svc = ConceptService(
+        concept_repo, space_svc, extract_svc, llm_service, credits_svc, coverage_svc  # type: ignore[arg-type]
+    )
+    capture_svc = CaptureService(
+        settings, storage, space_svc, streak_svc, concept_svc, credits_svc  # type: ignore[arg-type]
     )
     plan_svc = PlanService(coverage_svc, space_svc)  # type: ignore[arg-type]
     sharing_svc = SharingService(

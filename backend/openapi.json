@@ -1886,7 +1886,14 @@
             "title": "Model"
           },
           "sections": {
-            "$ref": "#/components/schemas/StructuredSummary"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StructuredSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "summarized_at": {
             "anyOf": [
@@ -1901,16 +1908,19 @@
             "title": "Summarized At"
           },
           "summary": {
-            "title": "Summary",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
           }
         },
         "required": [
-          "summary",
-          "sections",
-          "generated",
-          "model",
-          "summarized_at"
+          "generated"
         ],
         "title": "SummaryResponse",
         "type": "object"
@@ -4171,7 +4181,7 @@
     },
     "/v1/spaces/{space_id}/coverage": {
       "get": {
-        "description": "The space's inferred syllabus and how much of it is covered.\n\nGenerated on first read and cached; regenerated automatically once the\nspace's mapped concepts change since the last generation.",
+        "description": "The space's inferred syllabus and how much of it is covered.\n\nCache-only: returns the last generated syllabus, or ``coverage_pct=None``\nif none exists yet. Generation is ``POST`` on this path (1 credit) or the\ncapture pipeline's rate-limited refresh.",
         "operationId": "get_space_coverage_v1_spaces__space_id__coverage_get",
         "parameters": [
           {
@@ -4217,6 +4227,57 @@
           }
         },
         "summary": "Get Space Coverage",
+        "tags": [
+          "coverage"
+        ]
+      },
+      "post": {
+        "description": "Infer (or refresh) the space syllabus. Consumes one credit.",
+        "operationId": "regenerate_space_coverage_v1_spaces__space_id__coverage_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regenerate Space Coverage",
         "tags": [
           "coverage"
         ]
