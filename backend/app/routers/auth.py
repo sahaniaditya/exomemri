@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 
+from app.config import Settings, get_settings
 from app.dependencies import (
     get_auth_service,
     get_authenticated_user,
     get_bearer_token,
 )
+from app.rate_limit import check_login_rate_limits, get_rate_limiter
 from app.schemas.auth import (
     AuthUser,
     LoginResponse,
@@ -19,6 +21,7 @@ from app.schemas.auth import (
     UsernameAvailabilityResponse,
 )
 from app.services.auth_service import AuthService
+from app.services.rate_limit_service import RateLimitService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -26,8 +29,14 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=LoginResponse)
 def login(
     body: UserLogin,
+    request: Request,
     svc: AuthService = Depends(get_auth_service),
+    limiter: RateLimitService = Depends(get_rate_limiter),
+    settings: Settings = Depends(get_settings),
 ) -> LoginResponse:
+    check_login_rate_limits(
+        request=request, email=body.email, limiter=limiter, settings=settings
+    )
     return svc.login(body.email, body.password)
 
 

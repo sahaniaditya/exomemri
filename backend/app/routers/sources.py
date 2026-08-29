@@ -7,6 +7,8 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 
 from app.dependencies import (
+    enforce_capture_rate_limit,
+    enforce_chat_rate_limit,
     get_authenticated_app_user,
     get_capture_service,
     get_note_service,
@@ -52,7 +54,7 @@ router = APIRouter(prefix="/sources", tags=["sources"])
 async def capture_source(
     body: CaptureRequest,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_authenticated_app_user),
+    user: User = Depends(enforce_capture_rate_limit),
     svc: CaptureService = Depends(get_capture_service),
     pipeline: PipelineService = Depends(get_pipeline_service),
 ) -> CaptureResponse:
@@ -67,7 +69,7 @@ async def capture_source(
 @router.post("/upload-url", response_model=UploadUrlResponse)
 async def create_upload_url(
     body: UploadUrlRequest,
-    user: User = Depends(get_authenticated_app_user),
+    user: User = Depends(enforce_capture_rate_limit),
     svc: CaptureService = Depends(get_capture_service),
 ) -> UploadUrlResponse:
     return await svc.create_upload_url(user=user, payload=body)
@@ -112,7 +114,7 @@ async def get_messages(
 async def post_message(
     source_id: UUID,
     body: SendMessageRequest,
-    user: User = Depends(get_authenticated_app_user),
+    user: User = Depends(enforce_chat_rate_limit),
     svc: SourceChatService = Depends(get_source_chat_service),
 ) -> SendMessageResponse:
     return await svc.send_message(user=user, source_id=source_id, content=body.content)

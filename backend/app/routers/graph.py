@@ -6,7 +6,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies import get_authenticated_app_user, get_concept_service
+from app.dependencies import (
+    enforce_rebuild_rate_limit,
+    get_authenticated_app_user,
+    get_concept_service,
+)
 from app.schemas.common import User
 from app.schemas.concepts import RebuildResponse, SpaceGraphResponse
 from app.services.concept_service import ConceptService
@@ -27,7 +31,7 @@ def get_space_graph(
 @router.post("/{space_id}/graph/rebuild", response_model=RebuildResponse)
 async def rebuild_space_graph(
     space_id: UUID,
-    user: User = Depends(get_authenticated_app_user),
+    user: User = Depends(enforce_rebuild_rate_limit),
     svc: ConceptService = Depends(get_concept_service),
 ) -> RebuildResponse:
     """Extract concepts for one bounded batch of not-yet-mapped sources.

@@ -16,11 +16,13 @@ from uuid import UUID
 
 import anyio
 
+from app.config import Settings
 from app.repositories.concept_repo import ConceptRepo
 from app.repositories.coverage_repo import CoverageRepo
 from app.schemas.common import User
 from app.schemas.coverage import CoverageResponse, SyllabusTopic
 from app.services.llm_service import LLMService
+from app.services.rate_limit_service import RateLimitService
 from app.services.space_service import SpaceService
 
 logger = logging.getLogger(__name__)
@@ -28,12 +30,20 @@ logger = logging.getLogger(__name__)
 
 class CoverageService:
     def __init__(
-        self, coverage: CoverageRepo, concepts: ConceptRepo, spaces: SpaceService, llm: LLMService
+        self,
+        coverage: CoverageRepo,
+        concepts: ConceptRepo,
+        spaces: SpaceService,
+        llm: LLMService,
+        limiter: RateLimitService,
+        settings: Settings,
     ) -> None:
         self._coverage = coverage
         self._concepts = concepts
         self._spaces = spaces
         self._llm = llm
+        self._limiter = limiter
+        self._settings = settings
 
     async def get_coverage(self, user: User, space_id: UUID) -> CoverageResponse:
         space = self._spaces.require_owned_space(user, space_id)
@@ -53,6 +63,13 @@ class CoverageService:
             return CoverageResponse(
                 space_id=space_id, coverage_pct=None, topics=[], generated_at=None
             )
+
+        # Throttle LLM regen only — cache hits above stay unlimited.
+        self._limiter.check(
+            f"coverage:space:{space_id}",
+            limit=self._settings.rate_limit_coverage_max,
+            window_seconds=self._settings.rate_limit_coverage_window_seconds,
+        )
 
         topics = await self._llm.infer_syllabus_coverage(
             space_name=space["name"],

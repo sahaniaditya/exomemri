@@ -62,6 +62,23 @@ class Settings(BaseSettings):
 
     env: str = "dev"
 
+    # --- App-level rate limits (in-process; single-instance deploy) ---
+    # Login: per IP and per email (both must pass).
+    rate_limit_login_max: int = 5
+    rate_limit_login_window_seconds: int = 900  # 15 minutes
+    # Capture + upload-url: per authenticated user.
+    rate_limit_capture_max: int = 10
+    rate_limit_capture_window_seconds: int = 60
+    # Chat asks: per authenticated user.
+    rate_limit_chat_max: int = 20
+    rate_limit_chat_window_seconds: int = 60
+    # Coverage LLM regen (not cache hits): per space.
+    rate_limit_coverage_max: int = 1
+    rate_limit_coverage_window_seconds: int = 3600  # 1 hour
+    # Graph rebuild batches: per space.
+    rate_limit_rebuild_max: int = 2
+    rate_limit_rebuild_window_seconds: int = 3600  # 1 hour
+
     @field_validator("cors_extension_origins", "cors_web_origins", mode="before")
     @classmethod
     def _split_csv(cls, v: object) -> object:
