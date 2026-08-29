@@ -22,6 +22,12 @@ import {
 import { relativeTime } from '@/lib/dashboard-data'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+])
 
 const EMOJIS = [
   '✨', '💡', '🔥', '✅', '❓', '📌', '🧠', '📎', '🔗', '📝',
@@ -54,6 +60,31 @@ async function resolveImageSrc(scope: NotesScope, key: string): Promise<string |
   } catch {
     return null
   }
+}
+
+function imageFilesFromPaste(event: ClipboardEvent): File[] {
+  const data = event.clipboardData
+  if (!data) return []
+  const files: File[] = []
+  for (const item of Array.from(data.items)) {
+    if (item.kind === 'file' && item.type.startsWith('image/')) {
+      const file = item.getAsFile()
+      if (file) files.push(file)
+    }
+  }
+  if (files.length) return files
+  for (const file of Array.from(data.files)) {
+    if (file.type.startsWith('image/')) files.push(file)
+  }
+  return files
+}
+
+function imageFilename(file: File): string {
+  const name = file.name.trim()
+  if (name) return name
+  const subtype = file.type.split('/')[1]?.toLowerCase() ?? 'png'
+  const ext = subtype === 'jpeg' ? 'jpg' : subtype
+  return `pasted-image.${ext}`
 }
 
 async function hydrateImageUrls(
@@ -107,6 +138,7 @@ export default function NotePageEditor({
     scope.kind === 'source' ? `source:${scope.sourceId}` : `space:${scope.spaceId}`
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(savedAtProp)
   const [error, setError] = useState<string | null>(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
@@ -117,6 +149,9 @@ export default function NotePageEditor({
   const savedContentRef = useRef(savedContent)
   const readyRef = useRef(false)
   const dirtyRef = useRef(false)
+  const editableRef = useRef(editable)
+  const uploadCountRef = useRef(0)
+  const uploadImageRef = useRef<(file: File) => Promise<void>>(async () => {})
 
   useEffect(() => {
     readyRef.current = ready
@@ -125,6 +160,10 @@ export default function NotePageEditor({
   useEffect(() => {
     dirtyRef.current = dirty
   }, [dirty])
+
+  useEffect(() => {
+    editableRef.current = editable
+  }, [editable])
 
   const editor = useEditor({
     extensions: [
@@ -145,11 +184,23 @@ export default function NotePageEditor({
     immediatelyRender: false,
     editable: false,
     onUpdate: () => {
-      if (editable) setDirty(true)
+      if (editableRef.current) setDirty(true)
     },
     editorProps: {
       attributes: {
         class: styles.notesEditor,
+      },
+      handlePaste(_view, event) {
+        if (!editableRef.current || !readyRef.current) return false
+        const files = imageFilesFromPaste(event)
+        if (!files.length) return false
+        event.preventDefault()
+        void (async () => {
+          for (const file of files) {
+            await uploadImageRef.current(file)
+          }
+        })()
+        return true
       },
     },
   })
@@ -237,48 +288,64 @@ export default function NotePageEditor({
     editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
   }
 
-  const uploadImage = async (file: File) => {
-    if (!editor) return
-    if (!file.type.startsWith('image/')) {
-      setError('Only image files are supported.')
-      return
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError('Image must be under 5 MB.')
-      return
-    }
-    setError(null)
-    try {
-      const mint = await fetch(`${apiBase}/note-images`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_type: file.type, filename: file.name }),
-      })
-      if (!mint.ok) throw Error(`mint ${mint.status}`)
-      const signed = (await mint.json()) as NoteImageUpload
-      const put = await fetch(signed.upload_url, {
-        method: 'PUT',
-        headers: { 'x-upsert': 'true', 'content-type': file.type },
-        body: file,
-      })
-      if (!put.ok) throw Error(`upload ${put.status}`)
-
-      const display =
-        (await resolveImageSrc(scope, signed.key)) ?? URL.createObjectURL(file)
-      editor
-        .chain()
-        .focus()
-        .insertContent({
-          type: 'image',
-          attrs: { src: display, alt: file.name, key: signed.key },
+  const uploadImage = useCallback(
+    async (file: File) => {
+      if (!editor) return
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+        setError('Only image files are supported.')
+        return
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        setError('Image must be under 5 MB.')
+        return
+      }
+      const filename = imageFilename(file)
+      setError(null)
+      uploadCountRef.current += 1
+      setUploading(true)
+      try {
+        const mint = await fetch(`${apiBase}/note-images`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content_type: file.type, filename }),
         })
-        .run()
-      setDirty(true)
-    } catch (caught) {
-      console.error('Note image upload failed:', caught)
-      setError('Image upload failed — try again.')
-    }
-  }
+        if (!mint.ok) throw Error(`mint ${mint.status}`)
+        const signed = (await mint.json()) as NoteImageUpload
+        const put = await fetch(signed.upload_url, {
+          method: 'PUT',
+          headers: { 'x-upsert': 'true', 'content-type': file.type },
+          body: file,
+        })
+        if (!put.ok) throw Error(`upload ${put.status}`)
+
+        const display =
+          (await resolveImageSrc(scope, signed.key)) ?? URL.createObjectURL(file)
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: 'image',
+            attrs: { src: display, alt: filename, key: signed.key },
+          })
+          .run()
+        setDirty(true)
+      } catch (caught) {
+        console.error('Note image upload failed:', caught)
+        setError('Image upload failed — try again.')
+      } finally {
+        uploadCountRef.current -= 1
+        if (uploadCountRef.current <= 0) {
+          uploadCountRef.current = 0
+          setUploading(false)
+        }
+      }
+    },
+    [apiBase, editor, scope]
+  )
+
+  useEffect(() => {
+    uploadImageRef.current = uploadImage
+  }, [uploadImage])
 
   const isEmpty = !savedAt && !dirty && ready && editor?.isEmpty
 
@@ -348,7 +415,7 @@ export default function NotePageEditor({
           <button
             type="button"
             className={styles.notesTool}
-            disabled={!editor || !ready}
+            disabled={!editor || !ready || uploading}
             onClick={() => fileRef.current?.click()}
             aria-label="Upload image"
           >
@@ -369,6 +436,8 @@ export default function NotePageEditor({
           <span className={styles.notesSaveMeta}>
             {error ? (
               <span className={styles.notesError}>{error}</span>
+            ) : uploading ? (
+              'Uploading image…'
             ) : dirty ? (
               'Unsaved changes'
             ) : savedAt ? (
