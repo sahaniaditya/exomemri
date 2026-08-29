@@ -27,6 +27,9 @@ from app.schemas.sharing import (
 from app.services.space_service import SpaceService
 
 _SHARE_PATH_PREFIX = "/s/"
+# Failed invites share this 404 with no username in `detail`, so the
+# response cannot confirm whether a handle is registered.
+_INVITE_UNAVAILABLE = "Unable to invite that user."
 
 
 def _share_path(token: str) -> str:
@@ -51,9 +54,7 @@ class SharingService:
 
         profile = self._profiles.get_by_username(username.strip().lower())
         if not profile:
-            raise NotFoundError(
-                "No exomemri user with that username.", detail={"username": username}
-            )
+            raise NotFoundError(_INVITE_UNAVAILABLE)
         if profile["id"] == str(owner.id):
             raise ValidationError("You already own this capture.")
 

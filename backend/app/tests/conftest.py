@@ -701,7 +701,7 @@ class FakeProfileSettingsRepo:
 
 
 class FakeCreditsRepo:
-    """In-memory stand-in for ``user_credits`` + the ensure/consume/grant RPCs.
+    """In-memory stand-in for ``user_credits`` + the ensure/consume/ask/grant RPCs.
 
     Auto-inserts the default monthly grant so existing capture/chat tests stay
     green without seeding a row.
@@ -750,6 +750,37 @@ class FakeCreditsRepo:
         self.rows[user_id]["balance"] = row["balance"] - amount
         self.rows[user_id]["updated_at"] = self._now().isoformat()
         return {"ok": True, **dict(self.rows[user_id])}
+
+    def consume_ask(self, *, user_id: str) -> dict:
+        from app.schemas.credits import ASKS_PER_CREDIT
+
+        row = self.ensure(user_id=user_id)
+        previous = int(row["ask_units"])
+        if row["balance"] < 1:
+            return {
+                "ok": False,
+                "consumed_credit": False,
+                "previous_ask_units": previous,
+                **row,
+            }
+        if previous >= ASKS_PER_CREDIT - 1:
+            self.rows[user_id]["balance"] = row["balance"] - 1
+            self.rows[user_id]["ask_units"] = 0
+            self.rows[user_id]["updated_at"] = self._now().isoformat()
+            return {
+                "ok": True,
+                "consumed_credit": True,
+                "previous_ask_units": previous,
+                **dict(self.rows[user_id]),
+            }
+        self.rows[user_id]["ask_units"] = previous + 1
+        self.rows[user_id]["updated_at"] = self._now().isoformat()
+        return {
+            "ok": True,
+            "consumed_credit": False,
+            "previous_ask_units": previous,
+            **dict(self.rows[user_id]),
+        }
 
     def grant(self, *, user_id: str, amount: int) -> dict:
         row = self.ensure(user_id=user_id)

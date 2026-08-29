@@ -196,6 +196,7 @@ def test_get_summary_collaborator_does_not_generate_on_miss(
     space_repo: FakeSpaceRepo,
     storage: FakeStorage,
     collaborator_repo: FakeCollaboratorRepo,
+    llm_service: FakeLLMService,
 ) -> None:
     source_id = _seed_note_source(
         space_repo,
@@ -218,6 +219,7 @@ def test_get_summary_collaborator_does_not_generate_on_miss(
     assert resp.json()["generated"] is False
     assert resp.json()["sections"] is None
     assert space_repo.sources[source_id]["summary_text"] is None
+    assert llm_service.bundle_calls == 0
 
 
 def test_ask_without_summary_still_replies(

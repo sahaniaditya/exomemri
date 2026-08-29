@@ -1,8 +1,9 @@
 """Data access for the ``user_credits`` table and credit RPCs.
 
 Uses the service-role client, so every call carries an explicit ``user_id``
-as its authorization boundary. Consume/grant go through Postgres functions
-so two concurrent captures cannot both pass a read-then-decrement check.
+as its authorization boundary. Consume/grant/ask go through Postgres functions
+so two concurrent captures or chat turns cannot both pass a read-then-write
+check.
 """
 
 from __future__ import annotations
@@ -23,6 +24,10 @@ class CreditsRepo:
         return self._rpc_row(
             "consume_credits", {"p_user": user_id, "p_amount": amount}
         )
+
+    def consume_ask(self, *, user_id: str) -> dict:
+        """Atomic ask tally. Returned dict includes ``ok`` and ``consumed_credit``."""
+        return self._rpc_row("consume_ask", {"p_user": user_id})
 
     def grant(self, *, user_id: str, amount: int) -> dict:
         """Add ``amount`` to balance (refunds and the payment hook)."""

@@ -4,7 +4,7 @@
  * TipTap editor for one named note page. Mounted only while the page is open.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react'
+import { useEditor, EditorContent, ReactNodeViewRenderer, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
@@ -62,21 +62,48 @@ async function resolveImageSrc(scope: NotesScope, key: string): Promise<string |
   }
 }
 
-function imageFilesFromPaste(event: ClipboardEvent): File[] {
+function isUploadableImage(file: File): boolean {
+  return ALLOWED_IMAGE_TYPES.has(file.type) && file.size > 0 && file.size <= MAX_IMAGE_BYTES
+}
+
+function isProbablyUrl(text: string): boolean {
+  return /^https?:\/\//i.test(text) && !/\s/.test(text)
+}
+
+function isImageOnlyHtml(html: string): boolean {
+  const leftover = html
+    .replace(/<img\b[^>]*>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?(html|head|body|meta|link|span|div|br|p|a|fragment)[^>]*>/gi, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return leftover.length === 0
+}
+
+function isImageOnlyClipboard(data: DataTransfer): boolean {
+  const text = data.getData('text/plain').trim()
+  if (text && !isProbablyUrl(text)) return false
+  const html = data.getData('text/html')
+  if (!html.trim()) return true
+  return isImageOnlyHtml(html)
+}
+
+function collectClipboardImages(event: ClipboardEvent): File[] {
   const data = event.clipboardData
   if (!data) return []
   const files: File[] = []
+  const seen = new Set<File>()
   for (const item of Array.from(data.items)) {
-    if (item.kind === 'file' && item.type.startsWith('image/')) {
-      const file = item.getAsFile()
-      if (file) files.push(file)
+    if (item.kind !== 'file' || !item.type.startsWith('image/')) continue
+    const file = item.getAsFile()
+    if (file && !seen.has(file)) {
+      seen.add(file)
+      files.push(file)
     }
   }
   if (files.length) return files
-  for (const file of Array.from(data.files)) {
-    if (file.type.startsWith('image/')) files.push(file)
-  }
-  return files
+  return Array.from(data.files).filter(file => file.type.startsWith('image/'))
 }
 
 function imageFilename(file: File): string {
@@ -86,6 +113,12 @@ function imageFilename(file: File): string {
   const ext = subtype === 'jpeg' ? 'jpg' : subtype
   return `pasted-image.${ext}`
 }
+
+function clampInsertPos(editor: Editor, pos: number): number {
+  return Math.max(0, Math.min(pos, editor.state.doc.content.size))
+}
+
+type UploadImageFn = (file: File, insertAt?: () => number) => Promise<void>
 
 async function hydrateImageUrls(
   doc: Record<string, unknown>,
@@ -151,7 +184,21 @@ export default function NotePageEditor({
   const dirtyRef = useRef(false)
   const editableRef = useRef(editable)
   const uploadCountRef = useRef(0)
-  const uploadImageRef = useRef<(file: File) => Promise<void>>(async () => {})
+  const uploadImageRef = useRef<UploadImageFn>(async () => {})
+  const editorRef = useRef<Editor | null>(null)
+  const aliveRef = useRef(true)
+  const setErrorRef = useRef(setError)
+
+  useEffect(() => {
+    aliveRef.current = true
+    return () => {
+      aliveRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    setErrorRef.current = setError
+  }, [])
 
   useEffect(() => {
     readyRef.current = ready
@@ -190,20 +237,48 @@ export default function NotePageEditor({
       attributes: {
         class: styles.notesEditor,
       },
-      handlePaste(_view, event) {
+      handlePaste(view, event) {
         if (!editableRef.current || !readyRef.current) return false
-        const files = imageFilesFromPaste(event)
-        if (!files.length) return false
+        const data = event.clipboardData
+        if (!data) return false
+        const images = collectClipboardImages(event)
+        const uploadable = images.filter(isUploadableImage)
+        if (!uploadable.length) {
+          if (!images.length || !isImageOnlyClipboard(data)) return false
+          const tooBig = images.some(
+            file => ALLOWED_IMAGE_TYPES.has(file.type) && file.size > MAX_IMAGE_BYTES
+          )
+          setErrorRef.current(
+            tooBig ? 'Image must be under 5 MB.' : 'Only image files are supported.'
+          )
+          event.preventDefault()
+          return true
+        }
+        if (!isImageOnlyClipboard(data)) return false
         event.preventDefault()
+        const editorInstance = editorRef.current
+        const posRef = { current: view.state.selection.from }
+        const onTransaction = ({ transaction }: { transaction: { mapping: { map: (p: number) => number } } }) => {
+          posRef.current = transaction.mapping.map(posRef.current)
+        }
+        editorInstance?.on('transaction', onTransaction)
         void (async () => {
-          for (const file of files) {
-            await uploadImageRef.current(file)
+          try {
+            for (const file of uploadable) {
+              await uploadImageRef.current(file, () => posRef.current)
+            }
+          } finally {
+            editorInstance?.off('transaction', onTransaction)
           }
         })()
         return true
       },
     },
   })
+
+  useEffect(() => {
+    editorRef.current = editor ?? null
+  }, [editor])
 
   useEffect(() => {
     editor?.setEditable(Boolean(editable && ready))
@@ -289,7 +364,7 @@ export default function NotePageEditor({
   }
 
   const uploadImage = useCallback(
-    async (file: File) => {
+    async (file: File, insertAt?: () => number) => {
       if (!editor) return
       if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
         setError('Only image files are supported.')
@@ -309,6 +384,11 @@ export default function NotePageEditor({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content_type: file.type, filename }),
         })
+        if (!aliveRef.current || editor.isDestroyed) return
+        if (mint.status === 401) {
+          setError('Your session has expired. Please log in again.')
+          return
+        }
         if (!mint.ok) throw Error(`mint ${mint.status}`)
         const signed = (await mint.json()) as NoteImageUpload
         const put = await fetch(signed.upload_url, {
@@ -316,27 +396,33 @@ export default function NotePageEditor({
           headers: { 'x-upsert': 'true', 'content-type': file.type },
           body: file,
         })
+        if (!aliveRef.current || editor.isDestroyed) return
         if (!put.ok) throw Error(`upload ${put.status}`)
 
         const display =
           (await resolveImageSrc(scope, signed.key)) ?? URL.createObjectURL(file)
-        editor
-          .chain()
-          .focus()
-          .insertContent({
-            type: 'image',
-            attrs: { src: display, alt: filename, key: signed.key },
-          })
-          .run()
+        if (!aliveRef.current || editor.isDestroyed) return
+        const node = {
+          type: 'image',
+          attrs: { src: display, alt: filename, key: signed.key },
+        }
+        if (insertAt) {
+          editor
+            .chain()
+            .insertContentAt(clampInsertPos(editor, insertAt()), node)
+            .run()
+        } else {
+          editor.chain().focus().insertContent(node).run()
+        }
         setDirty(true)
       } catch (caught) {
         console.error('Note image upload failed:', caught)
-        setError('Image upload failed — try again.')
+        if (aliveRef.current) setError('Image upload failed — try again.')
       } finally {
         uploadCountRef.current -= 1
         if (uploadCountRef.current <= 0) {
           uploadCountRef.current = 0
-          setUploading(false)
+          if (aliveRef.current) setUploading(false)
         }
       }
     },
@@ -451,7 +537,7 @@ export default function NotePageEditor({
           <button
             type="button"
             className={styles.notesSave}
-            disabled={!editor || !ready || !dirty || saving}
+            disabled={!editor || !ready || !dirty || saving || uploading}
             onClick={() => void handleSave()}
           >
             {saving ? 'Saving…' : 'Save'}

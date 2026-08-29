@@ -16,7 +16,6 @@ from typing import Literal, NamedTuple
 from app.errors import CreditsExhaustedError
 from app.repositories.credits_repo import CreditsRepo
 from app.schemas.credits import (
-    ASKS_PER_CREDIT,
     DEFAULT_MONTHLY_ALLOWANCE,
     CreditsBalance,
 )
@@ -86,32 +85,26 @@ class CreditsService:
 
     def consume_ask(self, user_id: str) -> AskCharge:
         """Meter one user question. Raises if the user has no credits left."""
-        row = self._credits.ensure(user_id=user_id)
-        if row["balance"] <= 0:
+        row = self._credits.consume_ask(user_id=user_id)
+        if not row["ok"]:
             raise CreditsExhaustedError(
                 _EXHAUSTED_MESSAGE,
                 detail={"balance": row["balance"], "needed": 1},
             )
-        previous = int(row["ask_units"])
-        if previous >= ASKS_PER_CREDIT - 1:
-            consumed = self._credits.consume(user_id=user_id, amount=1)
-            if not consumed["ok"]:
-                raise CreditsExhaustedError(
-                    _EXHAUSTED_MESSAGE,
-                    detail={"balance": consumed["balance"], "needed": 1},
-                )
-            self._credits.set_ask_units(user_id=user_id, ask_units=0)
+        consumed = bool(row["consumed_credit"])
+        if consumed:
             logger.info(
                 "credits_consumed",
                 extra={
                     "user_id": user_id,
                     "reason": "ask",
-                    "balance": consumed["balance"],
+                    "balance": row["balance"],
                 },
             )
-            return AskCharge(consumed_credit=True, previous_ask_units=previous)
-        self._credits.set_ask_units(user_id=user_id, ask_units=previous + 1)
-        return AskCharge(consumed_credit=False, previous_ask_units=previous)
+        return AskCharge(
+            consumed_credit=consumed,
+            previous_ask_units=int(row["previous_ask_units"]),
+        )
 
     def rollback_ask(self, user_id: str, charge: AskCharge) -> None:
         """Undo a :meth:`consume_ask` after the LLM/persist step fails."""

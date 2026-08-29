@@ -137,6 +137,26 @@ def test_consume_ask_charges_on_the_third_question() -> None:
     assert repo.rows[DEV_USER]["ask_units"] == 0
 
 
+def test_consume_ask_debits_and_resets_units_together() -> None:
+    """Third ask must mutate balance and ask_units in one repo call (H4)."""
+    repo = FakeCreditsRepo()
+    svc = CreditsService(repo)  # type: ignore[arg-type]
+    svc.ensure_for_user(DEV_USER)
+    repo.rows[DEV_USER]["ask_units"] = 2
+
+    def _must_not_split(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("consume_ask must not call consume or set_ask_units")
+
+    repo.consume = _must_not_split  # type: ignore[method-assign]
+    repo.set_ask_units = _must_not_split  # type: ignore[method-assign]
+
+    charge = svc.consume_ask(DEV_USER)
+    assert charge.consumed_credit is True
+    assert charge.previous_ask_units == 2
+    assert repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 1
+    assert repo.rows[DEV_USER]["ask_units"] == 0
+
+
 def test_consume_ask_at_zero_balance_raises() -> None:
     repo = FakeCreditsRepo()
     svc = CreditsService(repo)  # type: ignore[arg-type]

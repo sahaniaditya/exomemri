@@ -101,14 +101,24 @@ def _build_services(
 # --- owner-side HTTP: invite/list/revoke ---
 
 
-def test_invite_unknown_username_is_not_found(
+def test_invite_unknown_username_is_generic_not_found(
     client: TestClient, space_repo: FakeSpaceRepo
 ) -> None:
+    """Missing usernames share one 404 envelope — no copy or detail that
+    distinguishes 'nobody' from 'alsomissing' (username enumeration)."""
     source = _seed_source(space_repo, space_id=SEEDED_SPACE_ID, user_id=DEV_USER_ID)
-    res = client.post(
+    first = client.post(
         f"/v1/sources/{source['id']}/collaborators", json={"username": "nobody"}
     )
-    assert res.status_code == 404
+    second = client.post(
+        f"/v1/sources/{source['id']}/collaborators", json={"username": "alsomissing"}
+    )
+    assert first.status_code == 404
+    assert second.status_code == 404
+    assert first.json() == second.json()
+    error = first.json()["error"]
+    assert error["message"] == "Unable to invite that user."
+    assert "detail" not in error
 
 
 def test_invite_into_unowned_source_is_not_found(
