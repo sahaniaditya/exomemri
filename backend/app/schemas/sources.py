@@ -15,6 +15,13 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from app.schemas.common import ProcessingStatus, SourceType
 
+# Caps on POST /v1/sources so a JWT holder cannot POST multi-MB bodies that
+# hit Storage and the Haiku pipeline. raw_html is storage-only; content is
+# what map-reduce actually processes. Reject, do not truncate (truncation
+# would change the content hash).
+MAX_CAPTURE_CONTENT_CHARS = 500_000
+MAX_CAPTURE_RAW_HTML_CHARS = 2_000_000
+
 
 class CaptureRequest(BaseModel):
     """Payload the extension background worker POSTs to ``/v1/sources``.
@@ -32,8 +39,8 @@ class CaptureRequest(BaseModel):
     url: HttpUrl | None = None
     title: str = Field(min_length=1, max_length=500)
     author: str | None = Field(default=None, max_length=500)
-    content: str | None = None
-    raw_html: str | None = None
+    content: str | None = Field(default=None, max_length=MAX_CAPTURE_CONTENT_CHARS)
+    raw_html: str | None = Field(default=None, max_length=MAX_CAPTURE_RAW_HTML_CHARS)
     anchor: dict | None = None
     # Optional client-computed hash; the server always recomputes the
     # authoritative value and only uses this to detect drift.

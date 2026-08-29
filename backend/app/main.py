@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import Settings, get_settings
 from app.errors import register_exception_handlers
 from app.logging import RequestIdMiddleware, configure_logging
+from app.request_limits import MaxBodySizeMiddleware
 from app.routers import auth as auth_router
 from app.routers import coverage as coverage_router
 from app.routers import credits as credits_router
@@ -52,6 +53,8 @@ def create_app() -> FastAPI:
 
     app.add_middleware(RequestIdMiddleware)
     _configure_cors(app, settings)
+    # Last registered = outermost: reject huge bodies before CORS / Request-Id.
+    app.add_middleware(MaxBodySizeMiddleware)
     register_exception_handlers(app)
 
     app.include_router(auth_router.router, prefix=API_PREFIX)

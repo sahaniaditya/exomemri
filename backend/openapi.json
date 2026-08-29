@@ -68,6 +68,7 @@
           "content": {
             "anyOf": [
               {
+                "maxLength": 500000,
                 "type": "string"
               },
               {
@@ -91,6 +92,7 @@
           "raw_html": {
             "anyOf": [
               {
+                "maxLength": 2000000,
                 "type": "string"
               },
               {

@@ -59,6 +59,16 @@ class CreditsExhaustedError(AppError):
     code = "credits_exhausted"
 
 
+class PayloadTooLargeError(AppError):
+    http_status = 413
+    code = "payload_too_large"
+
+    def __init__(
+        self, message: str = "Request body is too large.", *, detail: dict | None = None
+    ) -> None:
+        super().__init__(message, detail=detail)
+
+
 class RateLimitError(AppError):
     http_status = 429
     code = "rate_limited"

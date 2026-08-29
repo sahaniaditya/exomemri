@@ -13,6 +13,15 @@ import { contentHash } from "../lib/hash"
 import { sendMessage, type CaptureResult, type PdfCaptureInput } from "../lib/messaging"
 import { requireActiveSpaceId } from "./session"
 
+const OVERSIZE_CAPTURE_MESSAGE = "This page is too large to capture."
+
+function isOversizedPayload(err: ApiError): boolean {
+  if (err.status === 413 || err.code === "payload_too_large") return true
+  if (err.status !== 422 || err.code !== "validation") return false
+  const errors = (err.detail as { errors?: Array<{ type?: string }> } | undefined)?.errors
+  return Array.isArray(errors) && errors.some((e) => e.type === "string_too_long")
+}
+
 /** Turn a backend error into user-facing copy, calling out expired sessions. */
 function captureErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError && err.status === 401) {
@@ -20,6 +29,9 @@ function captureErrorMessage(err: unknown, fallback: string): string {
   }
   if (err instanceof ApiError && err.code === "credits_exhausted") {
     return err.message
+  }
+  if (err instanceof ApiError && isOversizedPayload(err)) {
+    return OVERSIZE_CAPTURE_MESSAGE
   }
   return err instanceof Error ? err.message : fallback
 }

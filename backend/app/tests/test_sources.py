@@ -5,8 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError as PydanticValidationError
 
+from app.schemas.sources import (
+    MAX_CAPTURE_CONTENT_CHARS,
+    MAX_CAPTURE_RAW_HTML_CHARS,
+    CaptureRequest,
+)
 from app.tests.conftest import (
     OTHER_USER_SPACE_ID,
     SEEDED_SPACE_ID,
@@ -109,6 +116,37 @@ def test_capture_rejects_missing_title(client: TestClient) -> None:
         json={"space_id": SPACE, "type": "article", "content": "x"},
     )
     assert resp.status_code == 422
+
+
+def test_capture_rejects_oversized_content(
+    client: TestClient, storage: FakeStorage
+) -> None:
+    resp = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/post",
+            "title": "Post",
+            "content": "x" * (MAX_CAPTURE_CONTENT_CHARS + 1),
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "validation"
+    assert storage.uploads == {}
+
+
+def test_capture_request_rejects_oversized_raw_html() -> None:
+    with pytest.raises(PydanticValidationError) as exc_info:
+        CaptureRequest.model_validate(
+            {
+                "space_id": SPACE,
+                "type": "article",
+                "title": "Post",
+                "raw_html": "x" * (MAX_CAPTURE_RAW_HTML_CHARS + 1),
+            }
+        )
+    assert any(err["type"] == "string_too_long" for err in exc_info.value.errors())
 
 
 def test_capture_records_a_source_row(
