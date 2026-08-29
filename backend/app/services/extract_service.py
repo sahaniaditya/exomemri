@@ -15,9 +15,10 @@ EXTRACT_KEY_BY_TYPE = {
     SourceType.pdf: "raw/extracted.txt",
 }
 
-# Keeps a single inline LLM prompt within a safe context budget. The capture
-# pipeline uses ``split_for_llm`` / map-reduce for longer documents; chat and
-# lazy summary still take the first window via ``read_extract``.
+# Keeps a single inline LLM prompt within a safe context budget. Map-reduce
+# stages (pipeline summarize, lazy GET /summary fallback) use
+# ``read_full_extract`` and window internally. Chat's extract fallback still
+# takes the first window via ``read_extract``.
 MAX_EXTRACT_CHARS = 40_000
 
 

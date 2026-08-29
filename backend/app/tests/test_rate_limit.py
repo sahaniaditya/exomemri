@@ -208,7 +208,7 @@ def test_chat_rate_limited(
         "author": None,
         "storage_prefix": prefix,
         "content_hash": "hash",
-        "processing_status": "queued",
+            "processing_status": "ready",
         "captured_at": "2026-08-18T00:00:00+00:00",
         "summary_text": None,
         "summary_sections": None,

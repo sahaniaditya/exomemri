@@ -951,6 +951,10 @@ class FakeLLMService:
     """Canned summarize/chat replies — no Anthropic call."""
 
     model_name = "fake-llm"
+    bundle_calls = 0
+
+    def __init__(self) -> None:
+        self.bundle_calls = 0
 
     async def summarize(self, *, title: str, extract: str) -> str:  # noqa: ARG002
         return f"Summary of {title}"
@@ -970,6 +974,7 @@ class FakeLLMService:
     ) -> tuple[str, StructuredSummary]:
         from app.services.pipeline.windows import join_for_reduce, split_for_llm
 
+        self.bundle_calls += 1
         windows = split_for_llm(extract)
         if not windows:
             summary = await self.summarize(title=title, extract="")

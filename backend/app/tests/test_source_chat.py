@@ -10,15 +10,26 @@ from pydantic import ValidationError
 
 from app.schemas.sources import StructuredSummary
 from app.tests.conftest import (
+    OTHER_USER_SPACE_ID,
     SEEDED_SPACE_ID,
     FakeChunkRepo,
+    FakeCollaboratorRepo,
     FakeCreditsRepo,
+    FakeLLMService,
     FakeSpaceRepo,
     FakeStorage,
 )
 
 DEV_USER = "00000000-0000-0000-0000-0000000000a1"
+OTHER_USER = "00000000-0000-0000-0000-0000000000ff"
 SPACE = SEEDED_SPACE_ID
+
+_CACHED_SECTIONS = {
+    "tldr": [f"point {i}" for i in range(5)],
+    "key_concepts": ["a concept"],
+    "examples": ["an example"],
+    "interview_points": ["a question"],
+}
 
 
 @pytest.mark.parametrize("bullet_count", [4, 6])
@@ -32,20 +43,28 @@ def test_structured_summary_rejects_wrong_tldr_bullet_count(bullet_count: int) -
         )
 
 
-def _seed_note_source(space_repo: FakeSpaceRepo, storage: FakeStorage, *, note_text: str) -> str:
+def _seed_note_source(
+    space_repo: FakeSpaceRepo,
+    storage: FakeStorage,
+    *,
+    note_text: str,
+    processing_status: str = "ready",
+    user_id: str = DEV_USER,
+    space_id: str = SPACE,
+) -> str:
     source_id = str(uuid4())
-    prefix = f"users/{DEV_USER}/spaces/{SPACE}/sources/{source_id}"
+    prefix = f"users/{user_id}/spaces/{space_id}/sources/{source_id}"
     space_repo.sources[source_id] = {
         "id": source_id,
-        "space_id": SPACE,
-        "user_id": DEV_USER,
+        "space_id": space_id,
+        "user_id": user_id,
         "type": "note",
         "title": "My note",
         "url": None,
         "author": None,
         "storage_prefix": prefix,
         "content_hash": "hash",
-        "processing_status": "queued",
+        "processing_status": processing_status,
         "captured_at": "2026-08-18T00:00:00+00:00",
         "summary_text": None,
         "summary_sections": None,
@@ -99,7 +118,9 @@ def test_send_message_falls_back_to_full_extract_without_chunks(
 def test_get_summary_generates_and_caches(
     client: TestClient, space_repo: FakeSpaceRepo, storage: FakeStorage
 ) -> None:
-    source_id = _seed_note_source(space_repo, storage, note_text="note body")
+    source_id = _seed_note_source(
+        space_repo, storage, note_text="note body", processing_status="failed"
+    )
 
     first = client.get(f"/v1/sources/{source_id}/summary")
     assert first.status_code == 200
@@ -111,6 +132,42 @@ def test_get_summary_generates_and_caches(
     assert second.json()["generated"] is False
     assert second.json()["summary"] == first.json()["summary"]
     assert second.json()["sections"] == first.json()["sections"]
+
+
+def test_get_summary_skips_while_processing(
+    client: TestClient, space_repo: FakeSpaceRepo, storage: FakeStorage
+) -> None:
+    source_id = _seed_note_source(
+        space_repo, storage, note_text="note body", processing_status="queued"
+    )
+
+    resp = client.get(f"/v1/sources/{source_id}/summary")
+
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "conflict"
+    assert space_repo.sources[source_id]["summary_text"] is None
+
+
+def test_get_summary_cache_hit_while_extracting_does_not_call_llm(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    storage: FakeStorage,
+    llm_service: FakeLLMService,
+) -> None:
+    source_id = _seed_note_source(
+        space_repo, storage, note_text="note body", processing_status="extracting"
+    )
+    space_repo.sources[source_id]["summary_text"] = "Pipeline summary"
+    space_repo.sources[source_id]["summary_sections"] = _CACHED_SECTIONS
+    space_repo.sources[source_id]["summary_model"] = "fake-llm"
+    space_repo.sources[source_id]["summarized_at"] = "2026-08-18T00:00:00+00:00"
+
+    resp = client.get(f"/v1/sources/{source_id}/summary")
+
+    assert resp.status_code == 200
+    assert resp.json()["generated"] is False
+    assert resp.json()["summary"] == "Pipeline summary"
+    assert llm_service.bundle_calls == 0
 
 
 def test_get_summary_regenerates_sections_for_pre_migration_row(
@@ -128,6 +185,55 @@ def test_get_summary_regenerates_sections_for_pre_migration_row(
     assert resp.status_code == 200
     assert resp.json()["generated"] is True
     assert len(resp.json()["sections"]["tldr"]) == 5
+
+
+def test_get_summary_collaborator_does_not_generate_on_miss(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    storage: FakeStorage,
+    collaborator_repo: FakeCollaboratorRepo,
+) -> None:
+    source_id = _seed_note_source(
+        space_repo,
+        storage,
+        note_text="note body",
+        processing_status="failed",
+        user_id=OTHER_USER,
+        space_id=OTHER_USER_SPACE_ID,
+    )
+    collaborator_repo.add(
+        source_id=source_id,
+        space_id=OTHER_USER_SPACE_ID,
+        user_id=DEV_USER,
+        invited_by=OTHER_USER,
+    )
+
+    resp = client.get(f"/v1/sources/{source_id}/summary")
+
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "conflict"
+    assert space_repo.sources[source_id]["summary_text"] is None
+
+
+def test_ask_during_processing_returns_409_and_rolls_back_credits(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    storage: FakeStorage,
+    credits_repo: FakeCreditsRepo,
+) -> None:
+    source_id = _seed_note_source(
+        space_repo, storage, note_text="note body", processing_status="queued"
+    )
+    credits_repo.ensure(user_id=DEV_USER)
+    before_units = credits_repo.rows[DEV_USER]["ask_units"]
+    before_balance = credits_repo.rows[DEV_USER]["balance"]
+
+    resp = client.post(f"/v1/sources/{source_id}/messages", json={"content": "hello?"})
+
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "conflict"
+    assert credits_repo.rows[DEV_USER]["ask_units"] == before_units
+    assert credits_repo.rows[DEV_USER]["balance"] == before_balance
 
 
 def test_ask_returns_402_when_out_of_credits(
