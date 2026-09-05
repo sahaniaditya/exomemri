@@ -1792,7 +1792,7 @@
         "type": "object"
       },
       "StructuredSummary": {
-        "description": "The 4-part per-source summary, as a structured-output envelope.",
+        "description": "Per-source LLM output: topics with descriptions, plus supporting sections.\n\n``topics`` is empty on rows summarized before this shape existed.",
         "properties": {
           "examples": {
             "items": {
@@ -1801,15 +1801,6 @@
             "maxItems": 8,
             "minItems": 1,
             "title": "Examples",
-            "type": "array"
-          },
-          "interview_points": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 8,
-            "minItems": 1,
-            "title": "Interview Points",
             "type": "array"
           },
           "key_concepts": {
@@ -1829,13 +1820,20 @@
             "minItems": 5,
             "title": "Tldr",
             "type": "array"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/TopicDescription"
+            },
+            "maxItems": 24,
+            "title": "Topics",
+            "type": "array"
           }
         },
         "required": [
           "tldr",
           "key_concepts",
-          "examples",
-          "interview_points"
+          "examples"
         ],
         "title": "StructuredSummary",
         "type": "object"
@@ -1866,6 +1864,31 @@
           "generated_at"
         ],
         "title": "StudyPlanResponse",
+        "type": "object"
+      },
+      "SubtopicDescription": {
+        "description": "A named subtopic covered inside a major topic.",
+        "properties": {
+          "description": {
+            "description": "Summarized description of this subtopic: definition, how it works, key facts, numbers, and caveats. Not a headline.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "description": "Short specific noun phrase for the subtopic.",
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ],
+        "title": "SubtopicDescription",
         "type": "object"
       },
       "SummaryResponse": {
@@ -1958,6 +1981,40 @@
           }
         },
         "title": "TopReviewsResponse",
+        "type": "object"
+      },
+      "TopicDescription": {
+        "description": "One major topic the source teaches, with a summarized description and subtopics.",
+        "properties": {
+          "description": {
+            "description": "Summarized description of what the source taught about this topic: definitions, how it works, key facts, steps, numbers, names, and caveats. Not a headline or a one-sentence summary.",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "description": "Short specific noun phrase copied from the source. Never invent a name.",
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "subtopics": {
+            "description": "Named subtopics covered inside this topic.",
+            "items": {
+              "$ref": "#/components/schemas/SubtopicDescription"
+            },
+            "maxItems": 8,
+            "title": "Subtopics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ],
+        "title": "TopicDescription",
         "type": "object"
       },
       "UpdateNotePageRequest": {
@@ -4174,6 +4231,51 @@
           }
         },
         "summary": "Create Space",
+        "tags": [
+          "spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}": {
+      "delete": {
+        "operationId": "delete_space_v1_spaces__space_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Space",
         "tags": [
           "spaces"
         ]

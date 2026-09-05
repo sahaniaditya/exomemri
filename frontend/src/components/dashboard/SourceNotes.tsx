@@ -18,7 +18,7 @@ interface SourceNotesProps {
   initialNotes: NotePage[]
   loadError?: boolean
   editable?: boolean
-  /** Plate number shown in the section header (source detail uses 05, or 06 with a prose summary). */
+  /** Plate number shown in the section header (source detail uses 04, or 05 with a prose summary). */
   plateNum?: string
   /** When false, omit the inner plate (parent section already has a Plate). */
   showHeader?: boolean
@@ -29,7 +29,7 @@ export default function SourceNotes({
   initialNotes,
   loadError = false,
   editable = true,
-  plateNum = '05',
+  plateNum = '04',
   showHeader = true,
 }: SourceNotesProps) {
   const apiBase = notesApiBase(scope)

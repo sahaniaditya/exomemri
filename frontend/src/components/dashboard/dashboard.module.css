@@ -619,6 +619,9 @@
   letter-spacing: 0.04em;
   color: var(--sage);
 }
+.spaceHeroActions {
+  margin-top: 18px;
+}
 .spacePulse {
   display: grid;
   grid-template-columns: 0.9fr 1.2fr 1.1fr;
@@ -2218,7 +2221,8 @@ button.chip {
   transform: none;
   box-shadow: none;
 }
-.captureDeleteBtn {
+.captureDeleteBtn,
+.spaceDeleteBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2235,21 +2239,25 @@ button.chip {
   transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease,
     color 0.18s ease;
 }
-.captureDeleteBtn svg {
+.captureDeleteBtn svg,
+.spaceDeleteBtn svg {
   width: 16px;
   height: 16px;
   stroke: currentColor;
 }
-.captureDeleteBtn:hover:enabled {
+.captureDeleteBtn:hover:enabled,
+.spaceDeleteBtn:hover:enabled {
   background: var(--clay);
   border-color: var(--clay);
   color: var(--on-accent);
   transform: translateY(-2px);
 }
-.captureDeleteBtn:active:enabled {
+.captureDeleteBtn:active:enabled,
+.spaceDeleteBtn:active:enabled {
   transform: translateY(0);
 }
-.captureDeleteBtn:disabled {
+.captureDeleteBtn:disabled,
+.spaceDeleteBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none;
@@ -2366,6 +2374,29 @@ button.chip {
 .captureProse p:last-child {
   margin-bottom: 0;
 }
+.captureTopicClosed .folderHead {
+  border-bottom: none;
+}
+.captureTopicBody {
+  padding: 4px 16px 16px;
+}
+.captureTopicDescription {
+  margin: 0 0 1em;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.captureTopicDescription:last-child {
+  margin-bottom: 0;
+}
+.captureSubtopics {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
 .capturePoints {
   list-style: none;
   margin: 0;
@@ -2466,13 +2497,7 @@ button.chip {
   box-shadow: 0 0 0 4px rgba(44, 93, 79, 0.12);
   flex: none;
 }
-.captureSplit {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 28px 24px;
-}
-.captureExamples,
-.captureInterview {
+.captureExamples {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2480,8 +2505,7 @@ button.chip {
   flex-direction: column;
   gap: 10px;
 }
-.captureExamples li,
-.captureInterview li {
+.captureExamples li {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 12px;
@@ -2497,17 +2521,14 @@ button.chip {
   animation: captureCardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-:global(.dark) .captureExamples li,
-:global(.dark) .captureInterview li {
+:global(.dark) .captureExamples li {
   border: 1px solid var(--line);
 }
-.captureExamples li:hover,
-.captureInterview li:hover {
+.captureExamples li:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px -18px rgba(27, 26, 22, 0.4);
 }
-:global(.dark) .captureExamples li:hover,
-:global(.dark) .captureInterview li:hover {
+:global(.dark) .captureExamples li:hover {
   box-shadow: 0 12px 24px -18px rgba(0, 0, 0, 0.6);
 }
 .captureExampleMark {
@@ -2525,23 +2546,6 @@ button.chip {
   width: 13px;
   height: 13px;
   stroke: currentColor;
-}
-.captureInterviewQ {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-ibm-plex-mono), monospace;
-  font-size: 11px;
-  color: var(--clay);
-  background: rgba(181, 98, 60, 0.1);
-  border: 1px solid rgba(181, 98, 60, 0.22);
-  flex: none;
-}
-.captureInterview li {
-  color: var(--ink);
 }
 /* ---- Capture notes (user notebook) ---- */
 .notesSection {
@@ -3450,8 +3454,7 @@ button.chip {
     flex-wrap: wrap;
     min-width: 0;
   }
-  .capturePoints,
-  .captureSplit {
+  .capturePoints {
     grid-template-columns: 1fr;
   }
   .captureTitle {

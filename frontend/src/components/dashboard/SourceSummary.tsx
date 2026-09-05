@@ -1,9 +1,13 @@
-import type { ReactNode } from 'react'
+'use client'
+
+import { useState, type ReactNode } from 'react'
 import styles from './dashboard.module.css'
 import {
   captureSectionPlate,
   splitSummaryParagraphs,
+  topicCardsFromSummary,
   type StructuredSummary,
+  type TopicDescription,
 } from '@/lib/sources'
 
 interface SourceSummaryProps {
@@ -48,15 +52,6 @@ function IconFlask() {
   )
 }
 
-function IconMic() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" aria-hidden="true">
-      <rect x="9" y="3" width="6" height="11" rx="3" />
-      <path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" />
-    </svg>
-  )
-}
-
 function SectionHead({
   index,
   title,
@@ -78,22 +73,110 @@ function SectionHead({
   )
 }
 
+function TopicCards({ topics }: { topics: TopicDescription[] }) {
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set())
+
+  function toggle(id: string) {
+    setOpenIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  return (
+    <div className={styles.notesPages}>
+      {topics.map((topic, i) => {
+        const topicId = `topic-${i}`
+        const open = openIds.has(topicId)
+        const bodyId = `topic-body-${i}`
+        const subtopics = topic.subtopics ?? []
+        return (
+          <div
+            key={`${topic.name}-${i}`}
+            className={`${styles.folderGroup}${open ? '' : ` ${styles.captureTopicClosed}`}`}
+          >
+            <div className={styles.folderHead}>
+              <button
+                type="button"
+                className={styles.folderToggle}
+                aria-expanded={open}
+                aria-controls={bodyId}
+                onClick={() => toggle(topicId)}
+              >
+                <span className={styles.folderChevron} aria-hidden="true">
+                  {open ? '▾' : '▸'}
+                </span>
+                <span className={styles.folderTitle}>{topic.name}</span>
+              </button>
+            </div>
+            {open ? (
+              <div id={bodyId} className={styles.captureTopicBody}>
+                {splitSummaryParagraphs(topic.description).map((paragraph, j) => (
+                  <p key={j} className={styles.captureTopicDescription}>
+                    {paragraph}
+                  </p>
+                ))}
+                {subtopics.length > 0 ? (
+                  <div className={styles.captureSubtopics}>
+                    {subtopics.map((sub, s) => {
+                      const subId = `${topicId}-sub-${s}`
+                      const subOpen = openIds.has(subId)
+                      const subBodyId = `topic-${i}-sub-body-${s}`
+                      return (
+                        <div
+                          key={`${sub.name}-${s}`}
+                          className={`${styles.folderGroup}${subOpen ? '' : ` ${styles.captureTopicClosed}`}`}
+                        >
+                          <div className={styles.folderHead}>
+                            <button
+                              type="button"
+                              className={styles.folderToggle}
+                              aria-expanded={subOpen}
+                              aria-controls={subBodyId}
+                              onClick={() => toggle(subId)}
+                            >
+                              <span className={styles.folderChevron} aria-hidden="true">
+                                {subOpen ? '▾' : '▸'}
+                              </span>
+                              <span className={styles.folderTitle}>{sub.name}</span>
+                            </button>
+                          </div>
+                          {subOpen ? (
+                            <div id={subBodyId} className={styles.captureTopicBody}>
+                              {splitSummaryParagraphs(sub.description).map((paragraph, j) => (
+                                <p key={j} className={styles.captureTopicDescription}>
+                                  {paragraph}
+                                </p>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function SourceSummary({ summary, sections }: SourceSummaryProps) {
   const hasExamples = sections.examples.length > 0
-  const hasInterview = sections.interview_points.length > 0
-  const paragraphs = splitSummaryParagraphs(summary)
-  const plate = (n: number) => captureSectionPlate(n, summary)
+  const topics = topicCardsFromSummary(sections, summary)
+  const plate = (n: number) => captureSectionPlate(n, summary, sections)
 
   return (
     <div className={styles.captureBody}>
-      {paragraphs.length > 0 ? (
+      {topics.length > 0 ? (
         <section className={styles.captureSection} style={{ animationDelay: '20ms' }}>
           <SectionHead index="01" title="Summary" icon={<IconDoc />} />
-          <div className={styles.captureProse}>
-            {paragraphs.map((paragraph, i) => (
-              <p key={i}>{paragraph}</p>
-            ))}
-          </div>
+          <TopicCards topics={topics} />
         </section>
       ) : null}
 
@@ -127,42 +210,22 @@ export default function SourceSummary({ summary, sections }: SourceSummaryProps)
         </ul>
       </section>
 
-      {hasExamples || hasInterview ? (
-        <div className={styles.captureSplit}>
-          {hasExamples ? (
-            <section className={styles.captureSection} style={{ animationDelay: '200ms' }}>
-              <SectionHead index={plate(3)} title="Examples" icon={<IconFlask />} />
-              <ul className={styles.captureExamples}>
-                {sections.examples.map((example, i) => (
-                  <li key={i} style={{ animationDelay: `${220 + i * 45}ms` }}>
-                    <span className={styles.captureExampleMark} aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
-                        <path d="M7 12h10M12 7v10" />
-                      </svg>
-                    </span>
-                    <span>{example}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
-          {hasInterview ? (
-            <section className={styles.captureSection} style={{ animationDelay: '240ms' }}>
-              <SectionHead index={plate(4)} title="Interview points" icon={<IconMic />} />
-              <ul className={styles.captureInterview}>
-                {sections.interview_points.map((point, i) => (
-                  <li key={i} style={{ animationDelay: `${260 + i * 45}ms` }}>
-                    <span className={styles.captureInterviewQ} aria-hidden="true">
-                      Q
-                    </span>
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </div>
+      {hasExamples ? (
+        <section className={styles.captureSection} style={{ animationDelay: '200ms' }}>
+          <SectionHead index={plate(3)} title="Examples" icon={<IconFlask />} />
+          <ul className={styles.captureExamples}>
+            {sections.examples.map((example, i) => (
+              <li key={i} style={{ animationDelay: `${220 + i * 45}ms` }}>
+                <span className={styles.captureExampleMark} aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8">
+                    <path d="M7 12h10M12 7v10" />
+                  </svg>
+                </span>
+                <span>{example}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
     </div>
   )

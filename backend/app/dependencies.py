@@ -61,8 +61,9 @@ def get_share_link_repo() -> ShareLinkRepo:
 def get_space_service(
     spaces: SpaceRepo = Depends(get_space_repo),
     collaborators: CollaboratorRepo = Depends(get_collaborator_repo),
+    storage: StorageRepo = Depends(get_storage_repo),
 ) -> SpaceService:
-    return SpaceService(spaces, collaborators)
+    return SpaceService(spaces, collaborators, storage)
 
 
 def get_session_service(

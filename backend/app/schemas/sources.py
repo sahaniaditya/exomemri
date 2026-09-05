@@ -76,13 +76,111 @@ class UploadUrlResponse(BaseModel):
     token: str
     path: str
 
-class StructuredSummary(BaseModel):
-    """The 4-part per-source summary, as a structured-output envelope."""
 
+MAX_TOPICS_PER_SOURCE = 24
+MAX_SUBTOPICS_PER_TOPIC = 8
+MAX_TOPIC_NAME_LENGTH = 160
+MAX_TOPIC_DESCRIPTION_LENGTH = 8000
+MAX_SUBTOPIC_DESCRIPTION_LENGTH = 4000
+# Any real article/note above this length must split into several topics rather
+# than one card named after the source title. 2500 was too high: short blogs
+# and abstracts never hit the detailed parse envelope.
+DETAILED_SUMMARY_MIN_TOPICS = 4
+DETAILED_SUMMARY_EXTRACT_CHARS = 400
+
+
+class SubtopicDescription(BaseModel):
+    """A named subtopic covered inside a major topic."""
+
+    name: str = Field(
+        min_length=2,
+        max_length=MAX_TOPIC_NAME_LENGTH,
+        description="Short specific noun phrase for the subtopic.",
+    )
+    description: str = Field(
+        min_length=1,
+        max_length=MAX_SUBTOPIC_DESCRIPTION_LENGTH,
+        description=(
+            "Summarized description of this subtopic: definition, how it works, "
+            "key facts, numbers, and caveats. Not a headline."
+        ),
+    )
+
+
+class TopicDescription(BaseModel):
+    """One major topic the source teaches, with a summarized description and subtopics."""
+
+    name: str = Field(
+        min_length=2,
+        max_length=MAX_TOPIC_NAME_LENGTH,
+        description="Short specific noun phrase copied from the source. Never invent a name.",
+    )
+    description: str = Field(
+        min_length=1,
+        max_length=MAX_TOPIC_DESCRIPTION_LENGTH,
+        description=(
+            "Summarized description of what the source taught about this topic: "
+            "definitions, how it works, key facts, steps, numbers, names, and caveats. "
+            "Not a headline or a one-sentence summary."
+        ),
+    )
+    subtopics: list[SubtopicDescription] = Field(
+        default_factory=list,
+        max_length=MAX_SUBTOPICS_PER_TOPIC,
+        description="Named subtopics covered inside this topic.",
+    )
+
+
+class TopicDescriptionOutput(TopicDescription):
+    """LLM parse envelope: a real writeup, not a one-liner."""
+
+    description: str = Field(
+        min_length=200,
+        max_length=MAX_TOPIC_DESCRIPTION_LENGTH,
+        description=(
+            "Summarized description of what the source taught about this topic: "
+            "definitions, how it works, key facts, steps, numbers, names, and caveats. "
+            "Not a headline or a one-sentence summary."
+        ),
+    )
+
+
+class StructuredSummary(BaseModel):
+    """Per-source LLM output: topics with descriptions, plus supporting sections.
+
+    ``topics`` is empty on rows summarized before this shape existed.
+    """
+
+    topics: list[TopicDescription] = Field(default_factory=list, max_length=MAX_TOPICS_PER_SOURCE)
     tldr: list[str] = Field(min_length=5, max_length=10)
     key_concepts: list[str] = Field(min_length=1, max_length=10)
     examples: list[str] = Field(min_length=1, max_length=8)
-    interview_points: list[str] = Field(min_length=1, max_length=8)
+
+    def as_prose(self) -> str:
+        """Flat text for chat context and ``summary_text`` storage."""
+        if not self.topics:
+            return "\n".join(self.tldr)
+        blocks: list[str] = []
+        for topic in self.topics:
+            blocks.append(f"{topic.name} — {topic.description}")
+            for sub in topic.subtopics:
+                blocks.append(f"{topic.name} / {sub.name} — {sub.description}")
+        return "\n\n".join(blocks)
+
+
+class StructuredSummaryOutput(StructuredSummary):
+    """LLM parse envelope: at least one topic so the model cannot omit descriptions."""
+
+    topics: list[TopicDescription] = Field(min_length=1, max_length=MAX_TOPICS_PER_SOURCE)
+
+
+class DetailedStructuredSummaryOutput(StructuredSummary):
+    """LLM parse envelope for long sources: several topics, not one title card."""
+
+    topics: list[TopicDescriptionOutput] = Field(
+        min_length=DETAILED_SUMMARY_MIN_TOPICS,
+        max_length=MAX_TOPICS_PER_SOURCE,
+    )
 
 
 class SummaryResponse(BaseModel):

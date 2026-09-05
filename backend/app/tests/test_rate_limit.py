@@ -268,7 +268,7 @@ async def test_coverage_regen_rate_limited_cache_hit_free(
         }
     )
     limiter = RateLimitService()
-    spaces = SpaceService(space_repo, FakeCollaboratorRepo())  # type: ignore[arg-type]
+    spaces = SpaceService(space_repo, FakeCollaboratorRepo(), FakeStorage())  # type: ignore[arg-type]
     credits = CreditsService(FakeCreditsRepo())  # type: ignore[arg-type]
     svc = CoverageService(
         coverage_repo, concept_repo, spaces, llm_service, limiter, settings, credits  # type: ignore[arg-type]

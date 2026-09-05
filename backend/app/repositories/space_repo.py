@@ -92,6 +92,10 @@ class SpaceRepo:
         )
         return len(res.data or [])
 
+    def delete_space(self, *, space_id: str) -> None:
+        """Drop the space row. Dependents cascade in Postgres."""
+        self._client.table("spaces").delete().eq("id", space_id).execute()
+
     # --- active space (a column on profiles) ---
 
     def get_active_space_id(self, user_id: str) -> str | None:
@@ -115,15 +119,15 @@ class SpaceRepo:
     # --- sources ---
 
     def upsert_source(self, row: dict) -> dict:
-        """Insert a source, or update it when the same content lands twice.
+        """Insert a source, or update it when the caller reuses the row id.
 
-        Conflict target is the ``(space_id, content_hash)`` unique index, so a
-        re-capture of the same page into the same space refreshes the existing
-        row instead of duplicating it.
+        Conflict target is the primary key. Recapture of the same page (same
+        hash or same identity URL) passes the existing id so title, url, hash,
+        and status refresh in place without minting a duplicate.
         """
         res = (
             self._client.table("sources")
-            .upsert(row, on_conflict="space_id,content_hash")
+            .upsert(row, on_conflict="id")
             .execute()
         )
         return res.data[0]
@@ -139,6 +143,22 @@ class SpaceRepo:
             .execute()
         )
         return res.data if res else None
+
+    def get_source_by_url(self, *, space_id: str, urls: list[str]) -> dict | None:
+        """Oldest capture in this space whose url is one of ``urls``."""
+        if not urls:
+            return None
+        res = (
+            self._client.table("sources")
+            .select("*")
+            .eq("space_id", space_id)
+            .in_("url", urls)
+            .order("captured_at")
+            .limit(1)
+            .execute()
+        )
+        rows = res.data or []
+        return rows[0] if rows else None
 
     def list_sources(
         self, *, user_id: str, space_id: str | None = None, limit: int = 20

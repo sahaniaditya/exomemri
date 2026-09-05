@@ -28,7 +28,7 @@ from app.repositories.storage_repo import get_storage_repo  # noqa: E402
 from app.schemas.common import User  # noqa: E402
 from app.schemas.concepts import ExtractedConcept  # noqa: E402
 from app.schemas.coverage import SyllabusTopic  # noqa: E402
-from app.schemas.sources import StructuredSummary  # noqa: E402
+from app.schemas.sources import StructuredSummary, TopicDescription  # noqa: E402
 from app.services.capture_service import CaptureService  # noqa: E402
 from app.services.concept_service import ConceptService  # noqa: E402
 from app.services.session_service import SessionService  # noqa: E402
@@ -78,9 +78,10 @@ class FakeStorage:
 
     async def delete_prefix(self, prefix: str) -> None:
         from app.errors import StorageError
+        from app.repositories.storage_repo import is_allowed_delete_prefix
 
         clean = prefix.strip().strip("/")
-        if not clean or ".." in clean or "/sources/" not in f"/{clean}/":
+        if not is_allowed_delete_prefix(clean):
             raise StorageError("Refusing to delete an invalid storage prefix")
         rooted = f"{clean}/"
         for path in [p for p in self.uploads if p == clean or p.startswith(rooted)]:
@@ -240,7 +241,8 @@ class FakeSpaceRepo:
 
     Mirrors SpaceRepo's contract, including the two unique indexes the service
     layer relies on: ``(user_id, lower(name))`` on spaces and
-    ``(space_id, content_hash)`` on sources.
+    ``(space_id, content_hash)`` on sources. Recapture of the same page reuses
+    the row id and upserts on ``id`` so a changed hash still updates in place.
     """
 
     def __init__(self, dev_user_id: str) -> None:
@@ -331,6 +333,22 @@ class FakeSpaceRepo:
     def count_spaces(self, user_id: str) -> int:
         return sum(1 for r in self.spaces.values() if r["user_id"] == user_id)
 
+    def delete_space(self, *, space_id: str) -> None:
+        """Drop the space and in-memory dependents, mirroring Postgres cascade."""
+        self.spaces.pop(space_id, None)
+        gone = [sid for sid, row in self.sources.items() if row["space_id"] == space_id]
+        for source_id in gone:
+            self.sources.pop(source_id, None)
+        self.messages = {
+            k: v for k, v in self.messages.items() if v["space_id"] != space_id
+        }
+        self.folders = {
+            k: v for k, v in self.folders.items() if v["space_id"] != space_id
+        }
+        for user_id, active_id in list(self.active.items()):
+            if active_id == space_id:
+                self.active[user_id] = None
+
     # --- active space ---
 
     def get_active_space_id(self, user_id: str) -> str | None:
@@ -342,11 +360,10 @@ class FakeSpaceRepo:
     # --- sources ---
 
     def upsert_source(self, row: dict) -> dict:
-        existing = self.get_source_by_hash(
-            space_id=row["space_id"], content_hash=row["content_hash"]
-        )
+        existing = self.sources.get(row["id"])
         if existing:
-            self.sources.pop(existing["id"], None)
+            existing.update(row)
+            return existing
         self.sources[row["id"]] = dict(row)
         return self.sources[row["id"]]
 
@@ -355,6 +372,16 @@ class FakeSpaceRepo:
             if row["space_id"] == space_id and row["content_hash"] == content_hash:
                 return row
         return None
+
+    def get_source_by_url(self, *, space_id: str, urls: list[str]) -> dict | None:
+        wanted = set(urls)
+        matches = [
+            row
+            for row in self.sources.values()
+            if row["space_id"] == space_id and row.get("url") in wanted
+        ]
+        matches.sort(key=lambda row: row.get("captured_at") or "")
+        return matches[0] if matches else None
 
     def list_sources(
         self, *, user_id: str, space_id: str | None = None, limit: int = 20
@@ -987,8 +1014,9 @@ class FakeLLMService:
     def __init__(self) -> None:
         self.bundle_calls = 0
 
-    async def summarize(self, *, title: str, extract: str) -> str:  # noqa: ARG002
-        return f"Summary of {title}"
+    async def summarize(self, *, title: str, extract: str) -> str:
+        sections = await self.summarize_structured(title=title, extract=extract)
+        return sections.as_prose()
 
     async def summarize_document(self, *, title: str, extract: str) -> str:
         summary, _sections = await self.summarize_document_bundle(title=title, extract=extract)
@@ -1003,42 +1031,36 @@ class FakeLLMService:
     async def summarize_document_bundle(
         self, *, title: str, extract: str
     ) -> tuple[str, StructuredSummary]:
-        from app.services.pipeline.windows import join_for_reduce, split_for_llm
+        from app.services.llm_service import merge_structured_summaries
+        from app.services.pipeline.windows import split_for_llm
 
         self.bundle_calls += 1
         windows = split_for_llm(extract)
         if not windows:
-            summary = await self.summarize(title=title, extract="")
             sections = await self.summarize_structured(title=title, extract="")
-            return summary, sections
-        if len(windows) == 1:
-            summary = await self.summarize(title=title, extract=windows[0])
-            sections = await self.summarize_structured(title=title, extract=windows[0])
-            return summary, sections
-
-        part_summaries: list[str] = []
+            return sections.as_prose(), sections
         total = len(windows)
+        parts: list[StructuredSummary] = []
         for i, window in enumerate(windows):
-            part_summaries.append(
-                await self.summarize(
-                    title=f"{title} (part {i + 1}/{total})",
-                    extract=window,
-                )
-            )
-        combined = join_for_reduce(part_summaries)
-        # Fake reduce: one more summarize call on the combined parts.
-        summary = await self.summarize(title=title, extract=combined)
-        sections = await self.summarize_structured(title=title, extract=combined)
-        return summary, sections
+            part_title = title if total == 1 else f"{title} (part {i + 1}/{total})"
+            parts.append(await self.summarize_structured(title=part_title, extract=window))
+        sections = parts[0] if len(parts) == 1 else merge_structured_summaries(parts)
+        return sections.as_prose(), sections
 
     async def summarize_structured(
-        self, *, title: str, extract: str  # noqa: ARG002
+        self,
+        *,
+        title: str,
+        extract: str,  # noqa: ARG002
+        detailed: bool | None = None,  # noqa: ARG002
     ) -> StructuredSummary:
         return StructuredSummary(
+            topics=[
+                TopicDescription(name=title, description=f"Summary of {title}"),
+            ],
             tldr=[f"{title} point {i}" for i in range(1, 6)],
             key_concepts=[f"{title} concept"],
             examples=[f"{title} example"],
-            interview_points=[f"Explain {title}"],
         )
 
     async def chat_reply(
@@ -1270,7 +1292,7 @@ def client(
     app = create_app()
 
     settings = get_settings()
-    space_svc = SpaceService(space_repo, collaborator_repo)  # type: ignore[arg-type]
+    space_svc = SpaceService(space_repo, collaborator_repo, storage)  # type: ignore[arg-type]
     session_svc = SessionService(space_repo, space_svc)  # type: ignore[arg-type]
     streak_svc = StreakService(profile_repo)  # type: ignore[arg-type]
     extract_svc = ExtractService(storage)  # type: ignore[arg-type]

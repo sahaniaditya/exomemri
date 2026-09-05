@@ -28,6 +28,7 @@ from app.schemas.sources import (
     UploadUrlResponse,
 )
 from app.schemas.spaces import ArtifactUrlResponse
+from app.services.capture_identity import canonical_capture_url, identity_lookup_urls
 from app.services.concept_service import ConceptService
 from app.services.credits_service import CreditsService
 from app.services.space_service import SpaceService
@@ -156,7 +157,8 @@ class CaptureService:
         await self._require_owned_space(user, payload.space_id)
 
         url_str = str(payload.url) if payload.url else None
-        content_hash = compute_content_hash(payload.content, url_str)
+        stored_url = canonical_capture_url(payload.type, url_str) or url_str
+        content_hash = compute_content_hash(payload.content, stored_url)
         if payload.content_hash and payload.content_hash != content_hash:
             logger.warning(
                 "content_hash_mismatch",
@@ -165,7 +167,9 @@ class CaptureService:
 
         # Re-capturing the same page into the same space reuses the original id,
         # so the row and its storage prefix keep pointing at each other.
-        existing_id = await self._existing_source_id(payload.space_id, content_hash)
+        existing_id = await self._existing_source_id(
+            payload.space_id, content_hash, payload.type, url_str
+        )
         is_new = existing_id is None
         source_id = existing_id or uuid4()
         prefix = build_source_prefix(user.id, payload.space_id, source_id)
@@ -180,7 +184,7 @@ class CaptureService:
                 space_id=payload.space_id,
                 source_type=payload.type,
                 title=payload.title,
-                url=url_str,
+                url=stored_url,
                 author=payload.author,
                 content_hash=content_hash,
                 captured_at=captured_at,
@@ -195,7 +199,7 @@ class CaptureService:
                 space_id=payload.space_id,
                 source_type=payload.type,
                 title=payload.title,
-                url=url_str,
+                url=stored_url,
                 author=payload.author,
                 prefix=prefix,
                 content_hash=content_hash,
@@ -213,6 +217,7 @@ class CaptureService:
                 "source_id": row["id"],
                 "space_id": str(payload.space_id),
                 "type": payload.type.value,
+                "is_new": is_new,
             },
         )
         return CaptureResponse(
@@ -248,8 +253,11 @@ class CaptureService:
         await self._require_owned_space(user, payload.space_id)
 
         url_str = str(payload.url) if payload.url else None
-        content_hash = payload.content_hash or compute_content_hash(None, url_str)
-        existing_id = await self._existing_source_id(payload.space_id, content_hash)
+        stored_url = canonical_capture_url(SourceType.pdf, url_str) or url_str
+        content_hash = payload.content_hash or compute_content_hash(None, stored_url)
+        existing_id = await self._existing_source_id(
+            payload.space_id, content_hash, SourceType.pdf, url_str
+        )
         is_new = existing_id is None
         source_id = existing_id or uuid4()
         prefix = build_source_prefix(user.id, payload.space_id, source_id)
@@ -264,7 +272,7 @@ class CaptureService:
                 space_id=payload.space_id,
                 source_type=SourceType.pdf,
                 title=payload.title,
-                url=url_str,
+                url=stored_url,
                 author=payload.author,
                 content_hash=content_hash,
                 captured_at=captured_at,
@@ -283,7 +291,7 @@ class CaptureService:
                 space_id=payload.space_id,
                 source_type=SourceType.pdf,
                 title=payload.title,
-                url=url_str,
+                url=stored_url,
                 author=payload.author,
                 prefix=prefix,
                 content_hash=content_hash,
@@ -358,12 +366,30 @@ class CaptureService:
             partial(self._spaces.require_owned_space, user, space_id)
         )
 
-    async def _existing_source_id(self, space_id: UUID, content_hash: str) -> UUID | None:
-        return await anyio.to_thread.run_sync(
+    async def _existing_source_id(
+        self,
+        space_id: UUID,
+        content_hash: str,
+        source_type: SourceType,
+        url: str | None,
+    ) -> UUID | None:
+        by_hash = await anyio.to_thread.run_sync(
             partial(
                 self._spaces.existing_source_id,
                 space_id=space_id,
                 content_hash=content_hash,
+            )
+        )
+        if by_hash is not None:
+            return by_hash
+        lookup_urls = list(identity_lookup_urls(source_type, url))
+        if not lookup_urls:
+            return None
+        return await anyio.to_thread.run_sync(
+            partial(
+                self._spaces.existing_source_id_for_url,
+                space_id=space_id,
+                urls=lookup_urls,
             )
         )
 

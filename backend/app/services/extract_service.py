@@ -50,5 +50,8 @@ class ExtractService:
         if source_type is SourceType.ai_chat:
             data = json.loads(raw)
             turns = data if isinstance(data, list) else data.get("messages", [])
-            return "\n\n".join(f"{t.get('role', '?')}: {t.get('content', '')}" for t in turns)
+            return "\n\n".join(
+                f"{t.get('role', '?')}: {t.get('text') or t.get('content') or ''}"
+                for t in turns
+            )
         return raw  # article/note/pdf extracts are already plain text

@@ -75,7 +75,7 @@ def _build_service(
 ) -> ConceptService:
     from app.config import get_settings
 
-    space_svc = SpaceService(space_repo, FakeCollaboratorRepo())  # type: ignore[arg-type]
+    space_svc = SpaceService(space_repo, FakeCollaboratorRepo(), storage)  # type: ignore[arg-type]
     credits = CreditsService(credits_repo or FakeCreditsRepo())  # type: ignore[arg-type]
     coverage = CoverageService(
         FakeCoverageRepo(),

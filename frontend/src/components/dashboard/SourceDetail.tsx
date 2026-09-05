@@ -211,7 +211,10 @@ export default function SourceDetail({
           initialNotes={initialNotes}
           loadError={notesLoadError}
           editable={!readOnly}
-          plateNum={captureNotesPlateNum(initialSummary?.summary)}
+          plateNum={captureNotesPlateNum(
+            initialSummary?.summary,
+            initialSummary?.sections
+          )}
         />
       </div>
       {readOnly ? null : (

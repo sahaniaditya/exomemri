@@ -14,49 +14,59 @@ from app.schemas.coverage import (
     SyllabusTopic,
     SyllabusTopics,
 )
-from app.schemas.sources import StructuredSummary
-from app.services.pipeline.windows import join_for_reduce, split_for_llm
+from app.schemas.sources import (
+    DETAILED_SUMMARY_EXTRACT_CHARS,
+    MAX_SUBTOPIC_DESCRIPTION_LENGTH,
+    MAX_SUBTOPICS_PER_TOPIC,
+    MAX_TOPIC_DESCRIPTION_LENGTH,
+    MAX_TOPICS_PER_SOURCE,
+    DetailedStructuredSummaryOutput,
+    StructuredSummary,
+    StructuredSummaryOutput,
+    SubtopicDescription,
+    TopicDescription,
+)
+from app.services.pipeline.catalog import topics_from_source_catalog
+from app.services.pipeline.windows import split_for_llm
 from app.services.space_service import slugify
 
-SUMMARY_SYSTEM_PROMPT = (
-    "You summarize captured learning material for a student's personal knowledge "
-    "base. Write a detailed summary covering the main ideas, key facts, definitions, "
-    "steps, numbers, names, and anything worth remembering. Length should scale with "
-    "the material — typically 400-900 words for a substantial source, shorter only "
-    "when the source itself is brief. Do not omit important details to stay short. "
-    "Plain prose, no headers or bullet lists."
-)
+STRUCTURED_SUMMARY_SYSTEM_PROMPT = """You extract a structured learning record from \
+captured material for a student's personal knowledge base. Return only the schema \
+fields. This is not a short recap and not an abstract restated as one card.
 
-REDUCE_SUMMARY_SYSTEM_PROMPT = (
-    "You merge partial summaries of one long learning source into a single detailed "
-    "summary (600-1200 words, scaling with how much material there is to cover). Cover "
-    "the main ideas across all parts, key facts, definitions, steps, numbers, names, "
-    "and anything worth remembering — be thorough and do not omit important details "
-    "to stay short, while still writing a summary rather than a full transcript. "
-    "Plain prose, no headers or bullet lists. Do not mention that the material was "
-    "split into parts."
-)
+Topics MUST come from the source itself. Copy names the source actually uses \
+(headings, numbered items, named techniques). Do not invent a parallel taxonomy \
+(e.g. do not replace the source's "God Object" / "Long Method" list with \
+"Rigid code" / "Fragile code"). If a name is not in the source, it is not a topic.
 
-STRUCTURED_SUMMARY_SYSTEM_PROMPT = """You summarize captured learning material for a \
-student's personal knowledge base, broken into four sections. Be thorough and do not \
-omit important details to stay short — the length of each section should scale with \
-how rich the material is, while still reading as a summary rather than a full recount.
+If the source is a numbered or bulleted catalog, each named item is its own \
+topic, in that order. A follow-up question in a chat is an additional topic \
+under the name the source uses for it.
 
-- `tldr`: 5-10 bullets covering the main ideas in order of importance. Each bullet \
-should be detailed (2-4 sentences) and include the specifics that make it useful \
-later — names, numbers, definitions, steps, caveats — not a one-line headline. Use \
-more bullets for richer or longer material. Never truncate a point to keep it short.
-- `key_concepts`: 3-10 short noun phrases naming the subjects this material teaches \
-(e.g. "consistent hashing", not "technology" or "this video"). This is a summary \
-aid for the reader, not a request to canonicalize against any existing taxonomy.
-- `examples`: 2-8 concrete examples, cases, or illustrations actually used in the \
-material — not invented ones. Include enough context that the example is \
-understandable on its own.
-- `interview_points`: 3-8 questions or angles a reader could be quizzed on to check \
-they understood this material.
+Never collapse a paper, article, or catalog into one topic named after the \
+source title. Typical counts: as many catalog items as the source has (up to \
+the schema cap); 5-8 for a paper; 2-4 only if the source is a short note.
 
-Every bullet is a complete standalone sentence or phrase, no trailing punctuation \
-inconsistency, no markdown formatting inside the bullets themselves."""
+Then fill every field from those topics:
+
+- `topics`: one object per source topic, in teaching order. `name` is copied \
+from the source — never the page title, never a synonym from training data. \
+`description` is a summarized description of what THIS source taught about \
+that topic (definitions, examples, code, problem/better, caveats) — not a \
+one-sentence slogan. Typically 120-400 words when the source is rich on that \
+item; include the source's own examples. Never truncate to stay short.
+- `topics[].subtopics`: 2-6 named subtopics that THIS source actually covers \
+inside that topic. Copy those names from the source too. Empty list if none.
+- `key_concepts`: 3-10 short noun phrases copied from the source (the topic \
+names plus important sub-concepts it used).
+- `tldr`: 5-10 short takeaway bullets in teaching order, one per major topic \
+where possible. One or two sentences each — the full writeup lives in \
+`topics[].description` and `topics[].subtopics`.
+- `examples`: 2-8 concrete examples actually used in the material — not \
+invented. Tie each example to the topic it illustrates.
+
+Every bullet is a complete standalone sentence or phrase, no markdown inside \
+the strings themselves."""
 
 CHAT_SYSTEM_PROMPT = """You are a study assistant helping the user understand a source \
 they captured.
@@ -146,6 +156,83 @@ def merge_extracted_concepts(
     return ranked[:limit]
 
 
+def _unique_extend(dest: list[str], items: list[str], *, limit: int) -> None:
+    seen = set(dest)
+    for item in items:
+        text = item.strip()
+        if not text or text in seen:
+            continue
+        dest.append(text)
+        seen.add(text)
+        if len(dest) >= limit:
+            return
+
+
+def _merge_subtopics(
+    existing: list[SubtopicDescription], incoming: list[SubtopicDescription]
+) -> list[SubtopicDescription]:
+    by_slug: dict[str, SubtopicDescription] = {}
+    for sub in [*existing, *incoming]:
+        name = sub.name.strip()
+        slug = slugify(name)
+        if not slug or slug == "space":
+            continue
+        prior = by_slug.get(slug)
+        if prior is None:
+            by_slug[slug] = SubtopicDescription(name=name, description=sub.description)
+            continue
+        combined = f"{prior.description}\n\n{sub.description}"
+        if len(combined) > MAX_SUBTOPIC_DESCRIPTION_LENGTH:
+            combined = combined[:MAX_SUBTOPIC_DESCRIPTION_LENGTH]
+        by_slug[slug] = SubtopicDescription(name=prior.name, description=combined)
+    return list(by_slug.values())[:MAX_SUBTOPICS_PER_TOPIC]
+
+
+def merge_structured_summaries(parts: list[StructuredSummary]) -> StructuredSummary:
+    """Collapse windowed structured summaries: one topic per slug, extras appended."""
+    by_slug: dict[str, TopicDescription] = {}
+    tldr: list[str] = []
+    key_concepts: list[str] = []
+    examples: list[str] = []
+    for part in parts:
+        for topic in part.topics:
+            name = topic.name.strip()
+            slug = slugify(name)
+            if not slug or slug == "space":
+                continue
+            existing = by_slug.get(slug)
+            if existing is None:
+                by_slug[slug] = TopicDescription(
+                    name=name,
+                    description=topic.description,
+                    subtopics=list(topic.subtopics),
+                )
+                continue
+            combined = f"{existing.description}\n\n{topic.description}"
+            if len(combined) > MAX_TOPIC_DESCRIPTION_LENGTH:
+                combined = combined[:MAX_TOPIC_DESCRIPTION_LENGTH]
+            by_slug[slug] = TopicDescription(
+                name=existing.name,
+                description=combined,
+                subtopics=_merge_subtopics(existing.subtopics, topic.subtopics),
+            )
+        _unique_extend(tldr, part.tldr, limit=10)
+        _unique_extend(key_concepts, part.key_concepts, limit=10)
+        _unique_extend(examples, part.examples, limit=8)
+    if not tldr:
+        tldr = ["No takeaways were extracted."] * 5
+    if not key_concepts:
+        key_concepts = ["Untitled topic"]
+    if not examples:
+        examples = ["No examples were extracted."]
+    return StructuredSummary(
+        topics=list(by_slug.values())[:MAX_TOPICS_PER_SOURCE],
+        tldr=tldr[:10],
+        key_concepts=key_concepts[:10],
+        examples=examples[:8],
+    )
+
+
 class LLMService:
     def __init__(self, settings: Settings) -> None:
         self._client = AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -156,80 +243,93 @@ class LLMService:
         return self._model
 
     async def summarize(self, *, title: str, extract: str) -> str:
-        resp = await self._client.messages.create(
-            model=self._model,
-            max_tokens=2000,
-            system=SUMMARY_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Title: {title}\n\n{extract}"}],
-        )
-        return resp.content[0].text.strip()
+        sections = await self.summarize_structured(title=title, extract=extract)
+        return sections.as_prose()
 
     async def summarize_document(self, *, title: str, extract: str) -> str:
-        """Map-reduce prose summary so long extracts stay inside the prompt budget."""
+        """Topic descriptions of the whole extract, flattened to prose."""
         summary, _sections = await self.summarize_document_bundle(title=title, extract=extract)
         return summary
 
     async def summarize_structured_document(
         self, *, title: str, extract: str
     ) -> StructuredSummary:
-        """Structured summary over the whole document via map-reduce."""
+        """Structured topic descriptions over the whole document."""
         _summary, sections = await self.summarize_document_bundle(title=title, extract=extract)
         return sections
 
     async def summarize_document_bundle(
         self, *, title: str, extract: str
     ) -> tuple[str, StructuredSummary]:
-        """Prose + structured summary in one map-reduce pass.
+        """Structured LLM output, then flattened prose for ``summary_text``.
 
-        Long extracts are windowed once; part summaries feed both the reduce
-        prose call and the structured call so we do not map the document twice.
+        Long extracts are windowed so each parse stays inside the prompt budget.
+        Windowed results are merged by topic name; descriptions are concatenated,
+        not compressed.
         """
         windows = split_for_llm(extract)
+        # Use the full document length, not the window, so a short blog still
+        # has to return several topics instead of one title card.
+        detailed = len(extract) >= DETAILED_SUMMARY_EXTRACT_CHARS
         if not windows:
-            summary = await self.summarize(title=title, extract="")
-            sections = await self.summarize_structured(title=title, extract="")
-            return summary, sections
-        if len(windows) == 1:
-            summary = await self.summarize(title=title, extract=windows[0])
-            sections = await self.summarize_structured(title=title, extract=windows[0])
-            return summary, sections
+            sections = await self.summarize_structured(
+                title=title, extract="", detailed=False
+            )
+            return sections.as_prose(), sections
 
-        part_summaries: list[str] = []
         total = len(windows)
+        parts: list[StructuredSummary] = []
         for i, window in enumerate(windows):
-            part_summaries.append(
-                await self.summarize(
-                    title=f"{title} (part {i + 1}/{total})",
-                    extract=window,
+            part_title = title if total == 1 else f"{title} (part {i + 1}/{total})"
+            parts.append(
+                await self.summarize_structured(
+                    title=part_title, extract=window, detailed=detailed
                 )
             )
-        combined = join_for_reduce(part_summaries)
-        summary = await self._reduce_summary(title=title, part_summaries=part_summaries)
-        sections = await self.summarize_structured(title=title, extract=combined)
-        return summary, sections
+        sections = parts[0] if len(parts) == 1 else merge_structured_summaries(parts)
+        catalog = topics_from_source_catalog(extract)
+        if catalog:
+            sections = StructuredSummary(
+                topics=catalog,
+                tldr=sections.tldr,
+                key_concepts=sections.key_concepts,
+                examples=sections.examples,
+            )
+        return sections.as_prose(), sections
 
-    async def _reduce_summary(self, *, title: str, part_summaries: list[str]) -> str:
-        combined = join_for_reduce(part_summaries)
-        resp = await self._client.messages.create(
-            model=self._model,
-            max_tokens=2500,
-            system=REDUCE_SUMMARY_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Title: {title}\n\n{combined}"}],
-        )
-        return resp.content[0].text.strip()
+    async def summarize_structured(
+        self, *, title: str, extract: str, detailed: bool | None = None
+    ) -> StructuredSummary:
+        """Topics with summarized descriptions, plus TL;DR / concepts / examples.
 
-    async def summarize_structured(self, *, title: str, extract: str) -> StructuredSummary:
-        """The 4-part TL;DR/key-concepts/examples/interview-points summary.
-
-        Uses structured outputs, like ``extract_concepts``, so the bullet counts
-        and shape are validated rather than parsed out of free-form prose.
+        Uses structured outputs, like ``extract_concepts``, so the shape is
+        validated rather than parsed out of free-form prose. Long extracts
+        must return several topics so a paper cannot collapse into one title card.
         """
+        use_detailed = (
+            detailed
+            if detailed is not None
+            else len(extract) >= DETAILED_SUMMARY_EXTRACT_CHARS
+        )
+        output_format: type[StructuredSummary] = (
+            DetailedStructuredSummaryOutput if use_detailed else StructuredSummaryOutput
+        )
         resp = await self._client.messages.parse(
             model=self._model,
-            max_tokens=4096,
+            max_tokens=8192,
             system=STRUCTURED_SUMMARY_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Title: {title}\n\n{extract}"}],
-            output_format=StructuredSummary,
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Title: {title}\n\n"
+                        "Use only topic names that appear in the source. "
+                        "Do not invent a taxonomy.\n\n"
+                        f"{extract}"
+                    ),
+                }
+            ],
+            output_format=output_format,
         )
         return resp.parsed_output
 

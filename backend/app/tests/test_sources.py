@@ -215,6 +215,190 @@ def test_recapturing_the_same_page_updates_one_row(
     assert space_repo.sources[first]["title"] == "Post (v2)"
 
 
+def test_recapturing_same_article_url_with_new_body_updates_one_row(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    first = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/post?utm_source=share",
+            "title": "Post",
+            "content": "first extract",
+        },
+    ).json()["source_id"]
+    second = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/post",
+            "title": "Post (updated)",
+            "content": "second extract with more text",
+        },
+    ).json()["source_id"]
+
+    assert second == first
+    assert len(space_repo.sources) == 1
+    row = space_repo.sources[first]
+    assert row["title"] == "Post (updated)"
+    assert row["url"] == "https://example.com/post"
+    assert row["content_hash"] == hashlib.sha256(
+        b"second extract with more text"
+    ).hexdigest()
+
+
+def test_recapturing_same_chat_thread_with_new_messages_updates_one_row(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    first_content = json.dumps(
+        {"title": "Chat", "url": "https://chatgpt.com/c/xyz", "messages": [
+            {"role": "user", "text": "hello"}
+        ]}
+    )
+    second_content = json.dumps(
+        {"title": "Chat", "url": "https://chatgpt.com/c/xyz", "messages": [
+            {"role": "user", "text": "hello"},
+            {"role": "assistant", "text": "hi there"},
+        ]}
+    )
+    first = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "ai_chat",
+            "url": "https://chatgpt.com/c/xyz",
+            "title": "Chat",
+            "content": first_content,
+        },
+    ).json()["source_id"]
+    second = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "ai_chat",
+            "url": "https://chatgpt.com/c/xyz",
+            "title": "Chat",
+            "content": second_content,
+        },
+    ).json()["source_id"]
+
+    assert second == first
+    assert len(space_repo.sources) == 1
+    assert space_repo.sources[first]["content_hash"] == hashlib.sha256(
+        second_content.encode()
+    ).hexdigest()
+
+
+def test_recapturing_chatgpt_host_variant_reuses_the_thread(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    first = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "ai_chat",
+            "url": "https://chatgpt.com/c/thread-1",
+            "title": "Chat",
+            "content": json.dumps([{"role": "user", "text": "one"}]),
+        },
+    ).json()["source_id"]
+    second = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "ai_chat",
+            "url": "https://chat.openai.com/c/thread-1",
+            "title": "Chat",
+            "content": json.dumps(
+                [{"role": "user", "text": "one"}, {"role": "user", "text": "two"}]
+            ),
+        },
+    ).json()["source_id"]
+
+    assert second == first
+    assert len(space_repo.sources) == 1
+    assert space_repo.sources[first]["url"] == "https://chatgpt.com/c/thread-1"
+
+
+def test_different_article_urls_create_two_rows(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    first = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/a",
+            "title": "A",
+            "content": "aaa",
+        },
+    ).json()["source_id"]
+    second = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/b",
+            "title": "B",
+            "content": "bbb",
+        },
+    ).json()["source_id"]
+
+    assert first != second
+    assert len(space_repo.sources) == 2
+
+
+def test_same_url_in_a_different_space_is_a_new_capture(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    other_space = client.post("/v1/spaces", json={"name": "Second space"}).json()["id"]
+    payload = {
+        "type": "article",
+        "url": "https://example.com/shared",
+        "title": "Shared",
+        "content": "same body",
+    }
+    first = client.post("/v1/sources", json={**payload, "space_id": SPACE}).json()[
+        "source_id"
+    ]
+    second = client.post(
+        "/v1/sources", json={**payload, "space_id": other_space}
+    ).json()["source_id"]
+
+    assert first != second
+    assert len(space_repo.sources) == 2
+
+
+def test_chatgpt_homepage_without_thread_id_does_not_collapse_chats(
+    client: TestClient, space_repo: FakeSpaceRepo
+) -> None:
+    first = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "ai_chat",
+            "url": "https://chatgpt.com/",
+            "title": "New chat",
+            "content": json.dumps([{"role": "user", "text": "alpha"}]),
+        },
+    ).json()["source_id"]
+    second = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "ai_chat",
+            "url": "https://chatgpt.com/",
+            "title": "New chat",
+            "content": json.dumps([{"role": "user", "text": "beta"}]),
+        },
+    ).json()["source_id"]
+
+    assert first != second
+    assert len(space_repo.sources) == 2
+
+
 def test_delete_capture_removes_row_and_artifacts(
     client: TestClient, storage: FakeStorage, space_repo: FakeSpaceRepo
 ) -> None:

@@ -13,9 +13,12 @@ import re
 from datetime import UTC, datetime
 from uuid import UUID
 
-from app.errors import ConflictError, NotFoundError
+import anyio
+
+from app.errors import ConflictError, NotFoundError, StorageError
 from app.repositories.collaborator_repo import CollaboratorRepo
 from app.repositories.space_repo import SpaceRepo
+from app.repositories.storage_repo import StorageRepo
 from app.schemas.common import User
 from app.schemas.spaces import FolderSummary, SourceCounts, SourceSummary, SpaceSummary
 
@@ -45,9 +48,15 @@ def _is_unique_violation(exc: Exception) -> bool:
 
 
 class SpaceService:
-    def __init__(self, spaces: SpaceRepo, collaborators: CollaboratorRepo) -> None:
+    def __init__(
+        self,
+        spaces: SpaceRepo,
+        collaborators: CollaboratorRepo,
+        storage: StorageRepo,
+    ) -> None:
         self._spaces = spaces
         self._collaborators = collaborators
+        self._storage = storage
 
     # --- spaces ---
 
@@ -132,6 +141,37 @@ class SpaceService:
             )
         return space
 
+    async def delete(self, user: User, space_id: UUID) -> None:
+        """Permanently remove a Learning Space the caller owns.
+
+        The row goes first so the dashboard cannot keep showing a space whose
+        files are already gone. Storage is then cleaned up; leftover objects
+        are logged rather than failing the request, so a storage blip cannot
+        undelete the space.
+        """
+
+        def _drop() -> str:
+            self.require_owned_space(user, space_id)
+            user_id = str(user.id)
+            was_active = self._spaces.get_active_space_id(user_id) == str(space_id)
+            self._spaces.delete_space(space_id=str(space_id))
+            if was_active:
+                remaining = self._spaces.list_spaces(user_id)
+                next_id = remaining[0]["id"] if remaining else None
+                self._spaces.set_active_space(user_id=user_id, space_id=next_id)
+            return user_id
+
+        user_id = await anyio.to_thread.run_sync(_drop)
+        logger.info("space_deleted", extra={"space_id": str(space_id)})
+        prefix = f"users/{user_id}/spaces/{space_id}"
+        try:
+            await self._storage.delete_prefix(prefix)
+        except StorageError:
+            logger.error(
+                "space_storage_delete_failed",
+                extra={"space_id": str(space_id), "prefix": prefix},
+            )
+
     def require_viewable_source(self, user: User, source_id: UUID) -> dict:
         """The source row if the caller owns it OR has a per-source grant.
 
@@ -182,6 +222,13 @@ class SpaceService:
         )
         return UUID(row["id"]) if row else None
 
+    def existing_source_id_for_url(
+        self, *, space_id: UUID, urls: list[str]
+    ) -> UUID | None:
+        """Id of the oldest capture in this space matching one of ``urls``."""
+        row = self._spaces.get_source_by_url(space_id=str(space_id), urls=urls)
+        return UUID(row["id"]) if row else None
+
     def record_source(
         self,
         *,
@@ -199,8 +246,9 @@ class SpaceService:
     ) -> dict:
         """Record a capture. Called only after its artifacts are in storage.
 
-        Conflicts on ``(space_id, content_hash)``; callers pass the id returned
-        by :meth:`existing_source_id` so a re-capture updates that row in place.
+        Conflicts on ``id``; callers pass the id returned by
+        :meth:`existing_source_id` / :meth:`existing_source_id_for_url` so a
+        re-capture updates that row in place.
         """
         return self._spaces.upsert_source(
             {

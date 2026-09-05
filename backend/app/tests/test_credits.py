@@ -90,6 +90,20 @@ def test_recapture_of_the_same_hash_is_free(
     assert credits_repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 1
 
 
+def test_recapture_of_the_same_url_with_new_content_is_free(
+    client: TestClient, credits_repo: FakeCreditsRepo
+) -> None:
+    first = client.post("/v1/sources", json=_article_payload(content="first body"))
+    second = client.post(
+        "/v1/sources",
+        json=_article_payload(title="Post (v2)", content="updated body"),
+    )
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert first.json()["source_id"] == second.json()["source_id"]
+    assert credits_repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 1
+
+
 def test_pdf_upload_url_consumes_one_credit(
     client: TestClient, credits_repo: FakeCreditsRepo
 ) -> None:
