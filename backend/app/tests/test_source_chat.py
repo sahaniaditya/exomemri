@@ -21,7 +21,7 @@ DEV_USER = "00000000-0000-0000-0000-0000000000a1"
 SPACE = SEEDED_SPACE_ID
 
 
-@pytest.mark.parametrize("bullet_count", [4, 6])
+@pytest.mark.parametrize("bullet_count", [4, 11])
 def test_structured_summary_rejects_wrong_tldr_bullet_count(bullet_count: int) -> None:
     with pytest.raises(ValidationError):
         StructuredSummary(
