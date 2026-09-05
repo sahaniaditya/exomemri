@@ -79,10 +79,10 @@ class UploadUrlResponse(BaseModel):
 class StructuredSummary(BaseModel):
     """The 4-part per-source summary, as a structured-output envelope."""
 
-    tldr: list[str] = Field(min_length=5, max_length=5)
-    key_concepts: list[str] = Field(min_length=1, max_length=8)
-    examples: list[str] = Field(min_length=1, max_length=6)
-    interview_points: list[str] = Field(min_length=1, max_length=6)
+    tldr: list[str] = Field(min_length=5, max_length=10)
+    key_concepts: list[str] = Field(min_length=1, max_length=10)
+    examples: list[str] = Field(min_length=1, max_length=8)
+    interview_points: list[str] = Field(min_length=1, max_length=8)
 
 
 class SummaryResponse(BaseModel):

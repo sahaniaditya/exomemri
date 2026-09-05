@@ -1798,7 +1798,7 @@
             "items": {
               "type": "string"
             },
-            "maxItems": 6,
+            "maxItems": 8,
             "minItems": 1,
             "title": "Examples",
             "type": "array"
@@ -1807,7 +1807,7 @@
             "items": {
               "type": "string"
             },
-            "maxItems": 6,
+            "maxItems": 8,
             "minItems": 1,
             "title": "Interview Points",
             "type": "array"
@@ -1816,7 +1816,7 @@
             "items": {
               "type": "string"
             },
-            "maxItems": 8,
+            "maxItems": 10,
             "minItems": 1,
             "title": "Key Concepts",
             "type": "array"
@@ -1825,7 +1825,7 @@
             "items": {
               "type": "string"
             },
-            "maxItems": 5,
+            "maxItems": 10,
             "minItems": 5,
             "title": "Tldr",
             "type": "array"

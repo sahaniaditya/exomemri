@@ -25,23 +25,28 @@ SUMMARY_SYSTEM_PROMPT = (
 )
 
 REDUCE_SUMMARY_SYSTEM_PROMPT = (
-    "You merge partial summaries of one long learning source into a single concise "
-    "summary (150-250 words). Cover the main ideas across all parts, key facts, and "
-    "anything worth remembering. Plain prose, no headers or bullet lists. Do not "
-    "mention that the material was split into parts."
+    "You merge partial summaries of one long learning source into a single detailed "
+    "summary (350-600 words, scaling with how much material there is to cover). Cover "
+    "the main ideas across all parts, key facts, and anything worth remembering — be "
+    "thorough and do not omit important details, while still writing a summary rather "
+    "than a full recount. Plain prose, no headers or bullet lists. Do not mention that "
+    "the material was split into parts."
 )
 
 STRUCTURED_SUMMARY_SYSTEM_PROMPT = """You summarize captured learning material for a \
-student's personal knowledge base, broken into four sections:
+student's personal knowledge base, broken into four sections. Be thorough and do not \
+omit important details — the length of each section should scale with how rich the \
+material is, while still reading as a summary rather than a full recount.
 
-- `tldr`: exactly 5 bullets, each one sentence, covering the main ideas in order of
-  importance.
-- `key_concepts`: 3-8 short noun phrases naming the subjects this material teaches
+- `tldr`: 5-10 bullets, each one sentence, covering the main ideas in order of
+  importance. Use more bullets for richer or longer material, fewer for shorter or
+  simpler material.
+- `key_concepts`: 3-10 short noun phrases naming the subjects this material teaches
   (e.g. "consistent hashing", not "technology" or "this video"). This is a summary
   aid for the reader, not a request to canonicalize against any existing taxonomy.
-- `examples`: 2-6 concrete examples, cases, or illustrations actually used in the
+- `examples`: 2-8 concrete examples, cases, or illustrations actually used in the
   material — not invented ones.
-- `interview_points`: 3-6 questions or angles a reader could be quizzed on to check
+- `interview_points`: 3-8 questions or angles a reader could be quizzed on to check
   they understood this material.
 
 Every bullet is a complete standalone sentence or phrase, no trailing punctuation
@@ -201,7 +206,7 @@ class LLMService:
         combined = join_for_reduce(part_summaries)
         resp = await self._client.messages.create(
             model=self._model,
-            max_tokens=500,
+            max_tokens=1000,
             system=REDUCE_SUMMARY_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Title: {title}\n\n{combined}"}],
         )
@@ -215,7 +220,7 @@ class LLMService:
         """
         resp = await self._client.messages.parse(
             model=self._model,
-            max_tokens=1200,
+            max_tokens=2400,
             system=STRUCTURED_SUMMARY_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Title: {title}\n\n{extract}"}],
             output_format=StructuredSummary,

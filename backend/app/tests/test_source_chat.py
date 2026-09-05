@@ -32,7 +32,7 @@ _CACHED_SECTIONS = {
 }
 
 
-@pytest.mark.parametrize("bullet_count", [4, 6])
+@pytest.mark.parametrize("bullet_count", [4, 11])
 def test_structured_summary_rejects_wrong_tldr_bullet_count(bullet_count: int) -> None:
     with pytest.raises(ValidationError):
         StructuredSummary(
