@@ -3,7 +3,8 @@
 /**
  * TipTap editor for one named note page. Mounted only while the page is open.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
@@ -27,6 +28,47 @@ const EMOJIS = [
   '✨', '💡', '🔥', '✅', '❓', '📌', '🧠', '📎', '🔗', '📝',
   '⭐', '🎯', '⚠️', '🚀', '💬', '📖',
 ]
+
+const EMOJI_PANEL_WIDTH = 240
+const EMOJI_PANEL_GAP = 6
+const EMOJI_PANEL_VIEWPORT_MARGIN = 8
+
+interface EmojiPanelPosition {
+  top: number
+  left: number
+}
+
+/** Anchors the emoji panel to its trigger button, clamped so it never overflows the viewport. */
+function computeEmojiPanelPosition(
+  anchorRect: DOMRect,
+  panelSize: { width: number; height: number }
+): EmojiPanelPosition {
+  const panelWidth = panelSize.width || EMOJI_PANEL_WIDTH
+  const panelHeight = panelSize.height
+
+  let left = anchorRect.left
+  if (left + panelWidth > window.innerWidth - EMOJI_PANEL_VIEWPORT_MARGIN) {
+    // Not enough room to the right — right-align the panel to the button instead.
+    left = anchorRect.right - panelWidth
+  }
+  left = Math.max(
+    EMOJI_PANEL_VIEWPORT_MARGIN,
+    Math.min(left, window.innerWidth - panelWidth - EMOJI_PANEL_VIEWPORT_MARGIN)
+  )
+
+  let top = anchorRect.bottom + EMOJI_PANEL_GAP
+  const fitsBelow = top + panelHeight <= window.innerHeight - EMOJI_PANEL_VIEWPORT_MARGIN
+  if (!fitsBelow) {
+    const above = anchorRect.top - EMOJI_PANEL_GAP - panelHeight
+    if (above >= EMOJI_PANEL_VIEWPORT_MARGIN) {
+      // Not enough room below — flip to open above the button instead.
+      top = above
+    }
+  }
+  top = Math.max(EMOJI_PANEL_VIEWPORT_MARGIN, top)
+
+  return { top, left }
+}
 
 const NoteImage = Image.extend({
   addAttributes() {
@@ -110,9 +152,12 @@ export default function NotePageEditor({
   const [savedAt, setSavedAt] = useState<string | null>(savedAtProp)
   const [error, setError] = useState<string | null>(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
+  const [emojiPos, setEmojiPos] = useState<EmojiPanelPosition | null>(null)
   const [ready, setReady] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
+  const emojiButtonRef = useRef<HTMLButtonElement>(null)
+  const emojiPanelRef = useRef<HTMLDivElement>(null)
   const initialContentRef = useRef(initialContent)
   const savedContentRef = useRef(savedContent)
   const readyRef = useRef(false)
@@ -190,10 +235,38 @@ export default function NotePageEditor({
   useEffect(() => {
     if (!emojiOpen) return
     const onDoc = (event: MouseEvent) => {
-      if (!emojiRef.current?.contains(event.target as Node)) setEmojiOpen(false)
+      const target = event.target as Node
+      // The panel is portaled to document.body, so it's no longer a descendant of
+      // emojiRef — check both the trigger's wrapper and the portaled panel itself.
+      if (emojiRef.current?.contains(target)) return
+      if (emojiPanelRef.current?.contains(target)) return
+      setEmojiOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
+  }, [emojiOpen])
+
+  useLayoutEffect(() => {
+    if (!emojiOpen) return
+    const reposition = () => {
+      const anchor = emojiButtonRef.current
+      if (!anchor) return
+      const anchorRect = anchor.getBoundingClientRect()
+      const panel = emojiPanelRef.current
+      const panelSize = {
+        width: panel?.offsetWidth ?? EMOJI_PANEL_WIDTH,
+        height: panel?.offsetHeight ?? 0,
+      }
+      setEmojiPos(computeEmojiPanelPosition(anchorRect, panelSize))
+    }
+    reposition()
+    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', reposition, true)
+    return () => {
+      window.removeEventListener('resize', reposition)
+      window.removeEventListener('scroll', reposition, true)
+      setEmojiPos(null)
+    }
   }, [emojiOpen])
 
   const handleSave = useCallback(async () => {
@@ -319,6 +392,7 @@ export default function NotePageEditor({
           <div className={styles.notesEmojiWrap} ref={emojiRef}>
             <button
               type="button"
+              ref={emojiButtonRef}
               className={styles.notesTool}
               disabled={!editor || !ready}
               onClick={() => setEmojiOpen(open => !open)}
@@ -327,23 +401,37 @@ export default function NotePageEditor({
             >
               Emoji
             </button>
-            {emojiOpen ? (
-              <div className={styles.notesEmojiPanel} role="listbox" aria-label="Emojis">
-                {EMOJIS.map(emoji => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className={styles.notesEmojiBtn}
-                    onClick={() => {
-                      editor?.chain().focus().insertContent(emoji).run()
-                      setEmojiOpen(false)
+            {emojiOpen
+              ? createPortal(
+                  <div
+                    ref={emojiPanelRef}
+                    className={styles.notesEmojiPanel}
+                    role="listbox"
+                    aria-label="Emojis"
+                    style={{
+                      top: emojiPos?.top ?? 0,
+                      left: emojiPos?.left ?? 0,
+                      opacity: emojiPos ? 1 : 0,
+                      pointerEvents: emojiPos ? 'auto' : 'none',
                     }}
                   >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            ) : null}
+                    {EMOJIS.map(emoji => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className={styles.notesEmojiBtn}
+                        onClick={() => {
+                          editor?.chain().focus().insertContent(emoji).run()
+                          setEmojiOpen(false)
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body
+                )
+              : null}
           </div>
           <button
             type="button"
