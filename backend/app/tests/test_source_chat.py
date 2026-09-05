@@ -32,6 +32,17 @@ _CACHED_SECTIONS = {
 }
 
 
+def test_structured_summary_accepts_long_detailed_bullets() -> None:
+    long_point = "A detailed finding. " * 80
+    summary = StructuredSummary(
+        tldr=[f"{long_point} {i}" for i in range(5)],
+        key_concepts=["a concept"],
+        examples=[long_point],
+        interview_points=[long_point],
+    )
+    assert all(len(item) > 500 for item in summary.tldr)
+
+
 @pytest.mark.parametrize("bullet_count", [4, 11])
 def test_structured_summary_rejects_wrong_tldr_bullet_count(bullet_count: int) -> None:
     with pytest.raises(ValidationError):

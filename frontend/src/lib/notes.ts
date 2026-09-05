@@ -37,6 +37,20 @@ export const EMPTY_NOTE_DOC: Record<string, unknown> = {
   content: [{ type: 'paragraph' }],
 }
 
+/** True when the clipboard is a whole code snippet, not mixed prose + code. */
+export function clipboardLooksLikeCode(data: DataTransfer): boolean {
+  const types = Array.from(data.types)
+  if (types.some(type => /vscode|code\.copymetadata/i.test(type))) return true
+  const html = data.getData('text/html').trim()
+  if (!html) return false
+  const leftover = html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?(html|head|body|meta|link|span|div|br|fragment)[^>]*>/gi, '')
+    .replace(/&nbsp;/gi, ' ')
+    .trim()
+  return /^<(pre|code)\b[\s\S]*<\/(pre|code)>\s*$/i.test(leftover)
+}
+
 export async function listSourceNotes(
   token: string,
   sourceId: string

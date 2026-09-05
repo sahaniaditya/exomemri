@@ -18,7 +18,7 @@ interface SourceNotesProps {
   initialNotes: NotePage[]
   loadError?: boolean
   editable?: boolean
-  /** Plate number shown in the section header (source detail uses 05). */
+  /** Plate number shown in the section header (source detail uses 05, or 06 with a prose summary). */
   plateNum?: string
   /** When false, omit the inner plate (parent section already has a Plate). */
   showHeader?: boolean

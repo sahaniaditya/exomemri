@@ -2352,12 +2352,26 @@ button.chip {
   height: 1px;
   background: linear-gradient(90deg, var(--line), transparent);
 }
+.captureProse {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--ink);
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+.captureProse p {
+  margin: 0 0 1em;
+}
+.captureProse p:last-child {
+  margin-bottom: 0;
+}
 .capturePoints {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 .capturePoints li {
@@ -2373,6 +2387,8 @@ button.chip {
   font-size: 15px;
   line-height: 1.55;
   color: var(--ink);
+  overflow: visible;
+  overflow-wrap: break-word;
   animation: captureCardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -2425,6 +2441,7 @@ button.chip {
   font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
+  overflow-wrap: break-word;
   animation: captureCardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
@@ -2476,6 +2493,7 @@ button.chip {
   font-size: 14.5px;
   line-height: 1.55;
   color: var(--muted);
+  overflow-wrap: break-word;
   animation: captureCardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
@@ -2725,10 +2743,13 @@ button.chip {
   position: fixed;
   z-index: 60;
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(auto-fill, 1.75rem);
+  justify-content: start;
   gap: 4px;
   padding: 8px;
-  width: 240px;
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
   background: var(--paper);
   border: 1px solid rgba(27, 26, 22, 0.12);
   border-radius: 10px;
@@ -2739,13 +2760,18 @@ button.chip {
   box-shadow: 0 16px 32px -20px rgba(0, 0, 0, 0.6);
 }
 .notesEmojiBtn {
+  width: 1.75rem;
+  height: 1.75rem;
   border: none;
   background: transparent;
-  font-size: 18px;
-  line-height: 1.4;
+  font-size: 16px;
+  line-height: 1;
   border-radius: 6px;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .notesEmojiBtn:hover {
   background: rgba(44, 93, 79, 0.1);
@@ -2837,6 +2863,70 @@ button.chip {
   font-size: inherit;
   color: inherit;
   font-family: inherit;
+}
+.notesCodeWrap {
+  position: relative;
+  margin: 0.75em 0;
+  border-radius: 10px;
+  border: 1px solid rgba(27, 26, 22, 0.12);
+  background: var(--paper);
+  overflow: hidden;
+}
+:global(.dark) .notesCodeWrap {
+  border: 1px solid var(--line);
+}
+.notesCodeWrap[data-selected='true'] {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+}
+.notesCodeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(27, 26, 22, 0.08);
+  background: rgba(244, 241, 233, 0.7);
+}
+:global(.dark) .notesCodeBar {
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+.notesCodeLabel {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+.notesCodeCopy {
+  border: 1px solid rgba(27, 26, 22, 0.12);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+:global(.dark) .notesCodeCopy {
+  border: 1px solid var(--line);
+}
+.notesCodeCopy:hover {
+  border-color: rgba(44, 93, 79, 0.35);
+  background: rgba(44, 93, 79, 0.06);
+}
+.notesCodePre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 .notesImageWrap {
   position: relative;
@@ -4823,8 +4913,8 @@ button.chip {
     min-height: 42px;
   }
   .notesEmojiPanel {
-    max-width: calc(100vw - 40px);
-    width: min(240px, calc(100vw - 40px));
+    max-width: calc(100vw - 16px);
+    width: min(280px, calc(100vw - 16px));
   }
   .profileFields {
     grid-template-columns: 1fr;

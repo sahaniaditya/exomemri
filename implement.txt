@@ -1,0 +1,4 @@
+1. summary should be detailed which are present on the screen : basically we should have detailed summary 
+even if text is too long 
+2. code section in notes : basically user can copy paste codes in a snippet
+3. fix the emoji orientation in notes : when we click emoji, emojis overflow from container

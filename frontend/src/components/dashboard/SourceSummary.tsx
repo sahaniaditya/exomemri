@@ -1,9 +1,23 @@
 import type { ReactNode } from 'react'
 import styles from './dashboard.module.css'
-import type { StructuredSummary } from '@/lib/sources'
+import {
+  captureSectionPlate,
+  splitSummaryParagraphs,
+  type StructuredSummary,
+} from '@/lib/sources'
 
 interface SourceSummaryProps {
+  summary?: string | null
   sections: StructuredSummary
+}
+
+function IconDoc() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" aria-hidden="true">
+      <path d="M7 4.5h7.2L18 8.3V19.5H7z" />
+      <path d="M14.2 4.5V8.3H18M9 12h6M9 15.2h4.5" />
+    </svg>
+  )
 }
 
 function IconSpark() {
@@ -64,14 +78,27 @@ function SectionHead({
   )
 }
 
-export default function SourceSummary({ sections }: SourceSummaryProps) {
+export default function SourceSummary({ summary, sections }: SourceSummaryProps) {
   const hasExamples = sections.examples.length > 0
   const hasInterview = sections.interview_points.length > 0
+  const paragraphs = splitSummaryParagraphs(summary)
+  const plate = (n: number) => captureSectionPlate(n, summary)
 
   return (
     <div className={styles.captureBody}>
+      {paragraphs.length > 0 ? (
+        <section className={styles.captureSection} style={{ animationDelay: '20ms' }}>
+          <SectionHead index="01" title="Summary" icon={<IconDoc />} />
+          <div className={styles.captureProse}>
+            {paragraphs.map((paragraph, i) => (
+              <p key={i}>{paragraph}</p>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className={styles.captureSection} style={{ animationDelay: '60ms' }}>
-        <SectionHead index="01" title="TL;DR" icon={<IconSpark />} />
+        <SectionHead index={plate(1)} title="TL;DR" icon={<IconSpark />} />
         <ol className={styles.capturePoints}>
           {sections.tldr.map((point, i) => (
             <li key={i} style={{ animationDelay: `${120 + i * 55}ms` }}>
@@ -85,7 +112,7 @@ export default function SourceSummary({ sections }: SourceSummaryProps) {
       </section>
 
       <section className={styles.captureSection} style={{ animationDelay: '140ms' }}>
-        <SectionHead index="02" title="Key concepts" icon={<IconNodes />} />
+        <SectionHead index={plate(2)} title="Key concepts" icon={<IconNodes />} />
         <ul className={styles.captureConceptGrid}>
           {sections.key_concepts.map((concept, i) => (
             <li
@@ -104,7 +131,7 @@ export default function SourceSummary({ sections }: SourceSummaryProps) {
         <div className={styles.captureSplit}>
           {hasExamples ? (
             <section className={styles.captureSection} style={{ animationDelay: '200ms' }}>
-              <SectionHead index="03" title="Examples" icon={<IconFlask />} />
+              <SectionHead index={plate(3)} title="Examples" icon={<IconFlask />} />
               <ul className={styles.captureExamples}>
                 {sections.examples.map((example, i) => (
                   <li key={i} style={{ animationDelay: `${220 + i * 45}ms` }}>
@@ -122,7 +149,7 @@ export default function SourceSummary({ sections }: SourceSummaryProps) {
 
           {hasInterview ? (
             <section className={styles.captureSection} style={{ animationDelay: '240ms' }}>
-              <SectionHead index="04" title="Interview points" icon={<IconMic />} />
+              <SectionHead index={plate(4)} title="Interview points" icon={<IconMic />} />
               <ul className={styles.captureInterview}>
                 {sections.interview_points.map((point, i) => (
                   <li key={i} style={{ animationDelay: `${260 + i * 45}ms` }}>

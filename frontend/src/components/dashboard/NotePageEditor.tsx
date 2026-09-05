@@ -6,14 +6,17 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useEditor, EditorContent, ReactNodeViewRenderer, type Editor } from '@tiptap/react'
+import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import NoteImageView from './NoteImageView'
+import { NoteCodeBlock } from './NoteCodeBlockView'
 import styles from './dashboard.module.css'
 import {
   EMPTY_NOTE_DOC,
+  clipboardLooksLikeCode,
   notesApiBase,
   notesArtifactUrlPath,
   type NoteImageUpload,
@@ -35,7 +38,7 @@ const EMOJIS = [
   '⭐', '🎯', '⚠️', '🚀', '💬', '📖',
 ]
 
-const EMOJI_PANEL_WIDTH = 240
+const EMOJI_PANEL_WIDTH = 280
 const EMOJI_PANEL_GAP = 6
 const EMOJI_PANEL_VIEWPORT_MARGIN = 8
 
@@ -129,6 +132,27 @@ function isImageOnlyClipboard(data: DataTransfer): boolean {
   const html = data.getData('text/html')
   if (!html.trim()) return true
   return isImageOnlyHtml(html)
+}
+
+function insertPastedCode(editor: Editor, text: string): boolean {
+  const normalized = text.replace(/\r\n/g, '\n')
+  if (!normalized) return false
+  const { selection } = editor.state
+  const insideCodeText =
+    editor.isActive('codeBlock') && !(selection instanceof NodeSelection)
+  if (insideCodeText) {
+    const { from, to } = selection
+    editor.view.dispatch(editor.state.tr.insertText(normalized, from, to))
+    return true
+  }
+  return editor
+    .chain()
+    .focus()
+    .insertContent({
+      type: 'codeBlock',
+      content: [{ type: 'text', text: normalized }],
+    })
+    .run()
 }
 
 function collectClipboardImages(event: ClipboardEvent): File[] {
@@ -259,7 +283,8 @@ export default function NotePageEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: false }),
+      StarterKit.configure({ heading: false, codeBlock: false }),
+      NoteCodeBlock.configure({ enableTabIndentation: true }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
@@ -288,8 +313,31 @@ export default function NotePageEditor({
         if (!data) return false
         const images = collectClipboardImages(event)
         const uploadable = images.filter(isUploadableImage)
-        if (!uploadable.length) {
-          if (!images.length || !isImageOnlyClipboard(data)) return false
+        if (uploadable.length) {
+          if (!isImageOnlyClipboard(data)) return false
+          event.preventDefault()
+          const editorInstance = editorRef.current
+          const posRef = { current: view.state.selection.from }
+          const onTransaction = ({
+            transaction,
+          }: {
+            transaction: { mapping: { map: (p: number) => number } }
+          }) => {
+            posRef.current = transaction.mapping.map(posRef.current)
+          }
+          editorInstance?.on('transaction', onTransaction)
+          void (async () => {
+            try {
+              for (const file of uploadable) {
+                await uploadImageRef.current(file, () => posRef.current)
+              }
+            } finally {
+              editorInstance?.off('transaction', onTransaction)
+            }
+          })()
+          return true
+        }
+        if (images.length && isImageOnlyClipboard(data)) {
           const tooBig = images.some(
             file => ALLOWED_IMAGE_TYPES.has(file.type) && file.size > MAX_IMAGE_BYTES
           )
@@ -299,24 +347,20 @@ export default function NotePageEditor({
           event.preventDefault()
           return true
         }
-        if (!isImageOnlyClipboard(data)) return false
-        event.preventDefault()
         const editorInstance = editorRef.current
-        const posRef = { current: view.state.selection.from }
-        const onTransaction = ({ transaction }: { transaction: { mapping: { map: (p: number) => number } } }) => {
-          posRef.current = transaction.mapping.map(posRef.current)
+        if (!editorInstance) return false
+        if (images.length && !editorInstance.isActive('codeBlock')) {
+          // Mixed image + text: don't steal the paste until there is a real mixed path.
+          return false
         }
-        editorInstance?.on('transaction', onTransaction)
-        void (async () => {
-          try {
-            for (const file of uploadable) {
-              await uploadImageRef.current(file, () => posRef.current)
-            }
-          } finally {
-            editorInstance?.off('transaction', onTransaction)
-          }
-        })()
-        return true
+        const text = data.getData('text/plain')
+        if (!text.trim()) return false
+        if (editorInstance.isActive('codeBlock') || clipboardLooksLikeCode(data)) {
+          event.preventDefault()
+          insertPastedCode(editorInstance, text)
+          return true
+        }
+        return false
       },
     },
   })
@@ -557,7 +601,7 @@ export default function NotePageEditor({
             className={styles.notesTool}
             disabled={!editor || !ready}
             onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-            aria-label="Code block"
+            aria-label="Code snippet"
             data-active={editor?.isActive('codeBlock') ? 'true' : undefined}
           >
             Code

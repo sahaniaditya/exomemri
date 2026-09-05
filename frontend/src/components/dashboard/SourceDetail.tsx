@@ -20,7 +20,11 @@ import {
   type SourceKind,
 } from '@/lib/dashboard-data'
 import type { Source } from '@/lib/spaces'
-import type { ChatMessage, SummaryResponse } from '@/lib/sources'
+import {
+  captureNotesPlateNum,
+  type ChatMessage,
+  type SummaryResponse,
+} from '@/lib/sources'
 import type { NotePage } from '@/lib/notes'
 import type { Collaborator, ShareLinkStatus } from '@/lib/sharing'
 import ShareManager from './ShareManager'
@@ -173,7 +177,10 @@ export default function SourceDetail({
           </div>
         </header>
         {initialSummary?.sections ? (
-          <SourceSummary sections={initialSummary.sections} />
+          <SourceSummary
+            summary={initialSummary.summary}
+            sections={initialSummary.sections}
+          />
         ) : (
           <div className={styles.captureEmptySummary}>
             <div className={styles.captureEmptyIcon} aria-hidden="true">
@@ -204,6 +211,7 @@ export default function SourceDetail({
           initialNotes={initialNotes}
           loadError={notesLoadError}
           editable={!readOnly}
+          plateNum={captureNotesPlateNum(initialSummary?.summary)}
         />
       </div>
       {readOnly ? null : (

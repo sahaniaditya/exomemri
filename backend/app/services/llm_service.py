@@ -20,36 +20,42 @@ from app.services.space_service import slugify
 
 SUMMARY_SYSTEM_PROMPT = (
     "You summarize captured learning material for a student's personal knowledge "
-    "base. Write a concise summary (150-250 words) covering the main ideas, key "
-    "facts, and anything worth remembering. Plain prose, no headers or bullet lists."
+    "base. Write a detailed summary covering the main ideas, key facts, definitions, "
+    "steps, numbers, names, and anything worth remembering. Length should scale with "
+    "the material — typically 400-900 words for a substantial source, shorter only "
+    "when the source itself is brief. Do not omit important details to stay short. "
+    "Plain prose, no headers or bullet lists."
 )
 
 REDUCE_SUMMARY_SYSTEM_PROMPT = (
     "You merge partial summaries of one long learning source into a single detailed "
-    "summary (350-600 words, scaling with how much material there is to cover). Cover "
-    "the main ideas across all parts, key facts, and anything worth remembering — be "
-    "thorough and do not omit important details, while still writing a summary rather "
-    "than a full recount. Plain prose, no headers or bullet lists. Do not mention that "
-    "the material was split into parts."
+    "summary (600-1200 words, scaling with how much material there is to cover). Cover "
+    "the main ideas across all parts, key facts, definitions, steps, numbers, names, "
+    "and anything worth remembering — be thorough and do not omit important details "
+    "to stay short, while still writing a summary rather than a full transcript. "
+    "Plain prose, no headers or bullet lists. Do not mention that the material was "
+    "split into parts."
 )
 
 STRUCTURED_SUMMARY_SYSTEM_PROMPT = """You summarize captured learning material for a \
 student's personal knowledge base, broken into four sections. Be thorough and do not \
-omit important details — the length of each section should scale with how rich the \
-material is, while still reading as a summary rather than a full recount.
+omit important details to stay short — the length of each section should scale with \
+how rich the material is, while still reading as a summary rather than a full recount.
 
-- `tldr`: 5-10 bullets, each one sentence, covering the main ideas in order of
-  importance. Use more bullets for richer or longer material, fewer for shorter or
-  simpler material.
-- `key_concepts`: 3-10 short noun phrases naming the subjects this material teaches
-  (e.g. "consistent hashing", not "technology" or "this video"). This is a summary
-  aid for the reader, not a request to canonicalize against any existing taxonomy.
-- `examples`: 2-8 concrete examples, cases, or illustrations actually used in the
-  material — not invented ones.
-- `interview_points`: 3-8 questions or angles a reader could be quizzed on to check
-  they understood this material.
+- `tldr`: 5-10 bullets covering the main ideas in order of importance. Each bullet \
+should be detailed (2-4 sentences) and include the specifics that make it useful \
+later — names, numbers, definitions, steps, caveats — not a one-line headline. Use \
+more bullets for richer or longer material. Never truncate a point to keep it short.
+- `key_concepts`: 3-10 short noun phrases naming the subjects this material teaches \
+(e.g. "consistent hashing", not "technology" or "this video"). This is a summary \
+aid for the reader, not a request to canonicalize against any existing taxonomy.
+- `examples`: 2-8 concrete examples, cases, or illustrations actually used in the \
+material — not invented ones. Include enough context that the example is \
+understandable on its own.
+- `interview_points`: 3-8 questions or angles a reader could be quizzed on to check \
+they understood this material.
 
-Every bullet is a complete standalone sentence or phrase, no trailing punctuation
+Every bullet is a complete standalone sentence or phrase, no trailing punctuation \
 inconsistency, no markdown formatting inside the bullets themselves."""
 
 CHAT_SYSTEM_PROMPT = """You are a study assistant helping the user understand a source \
@@ -152,7 +158,7 @@ class LLMService:
     async def summarize(self, *, title: str, extract: str) -> str:
         resp = await self._client.messages.create(
             model=self._model,
-            max_tokens=500,
+            max_tokens=2000,
             system=SUMMARY_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Title: {title}\n\n{extract}"}],
         )
@@ -206,7 +212,7 @@ class LLMService:
         combined = join_for_reduce(part_summaries)
         resp = await self._client.messages.create(
             model=self._model,
-            max_tokens=1000,
+            max_tokens=2500,
             system=REDUCE_SUMMARY_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Title: {title}\n\n{combined}"}],
         )
@@ -220,7 +226,7 @@ class LLMService:
         """
         resp = await self._client.messages.parse(
             model=self._model,
-            max_tokens=2400,
+            max_tokens=4096,
             system=STRUCTURED_SUMMARY_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Title: {title}\n\n{extract}"}],
             output_format=StructuredSummary,

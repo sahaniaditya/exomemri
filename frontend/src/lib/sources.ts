@@ -15,6 +15,25 @@ export interface SummaryResponse {
   summarized_at: string | null
 }
 
+export function splitSummaryParagraphs(summary: string | null | undefined): string[] {
+  const prose = summary?.trim() ?? ''
+  if (!prose) return []
+  return prose.split(/\n\n+/).filter(Boolean)
+}
+
+/** Capture-page notes plate: 06 when a prose summary is shown above it, else 05. */
+export function captureNotesPlateNum(summary: string | null | undefined): string {
+  return splitSummaryParagraphs(summary).length > 0 ? '06' : '05'
+}
+
+export function captureSectionPlate(
+  index: number,
+  summary: string | null | undefined
+): string {
+  const shift = splitSummaryParagraphs(summary).length > 0 ? 1 : 0
+  return String(index + shift).padStart(2, '0')
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
