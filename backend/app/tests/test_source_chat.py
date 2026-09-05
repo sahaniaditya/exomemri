@@ -32,14 +32,29 @@ _CACHED_SECTIONS = {
 }
 
 
-@pytest.mark.parametrize("bullet_count", [4, 6])
+def test_structured_summary_accepts_legacy_rows_without_topics() -> None:
+    summary = StructuredSummary.model_validate(_CACHED_SECTIONS)
+    assert summary.topics == []
+    assert summary.as_prose() == "\n".join(summary.tldr)
+
+
+def test_structured_summary_accepts_long_detailed_bullets() -> None:
+    long_point = "A detailed finding. " * 80
+    summary = StructuredSummary(
+        tldr=[f"{long_point} {i}" for i in range(5)],
+        key_concepts=["a concept"],
+        examples=[long_point],
+    )
+    assert all(len(item) > 500 for item in summary.tldr)
+
+
+@pytest.mark.parametrize("bullet_count", [4, 11])
 def test_structured_summary_rejects_wrong_tldr_bullet_count(bullet_count: int) -> None:
     with pytest.raises(ValidationError):
         StructuredSummary(
             tldr=[f"point {i}" for i in range(bullet_count)],
             key_concepts=["a concept"],
             examples=["an example"],
-            interview_points=["a question"],
         )
 
 

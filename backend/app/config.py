@@ -56,7 +56,8 @@ class Settings(BaseSettings):
     # the Chrome Web Store ID when known.
     cors_extension_origins: Annotated[list[str], NoDecode] = []
     # Whether to allow any chrome-extension:// origin (dev convenience only).
-    cors_allow_any_extension: bool = True
+    # Fail-closed: local unpacked-extension work must set CORS_ALLOW_ANY_EXTENSION=true.
+    cors_allow_any_extension: bool = False
     # Web app origins allowed to call the API (e.g. the Vercel frontend).
     # Comma-separated in env. Scheme + host only, NO trailing slash or path.
     # Required when ENV=production.

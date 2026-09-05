@@ -88,7 +88,7 @@ def _build_services(
     profile_repo: FakeProfileRepo,
     share_link_repo: FakeShareLinkRepo | None = None,
 ) -> tuple[SpaceService, SharingService]:
-    space_svc = SpaceService(space_repo, collaborator_repo)  # type: ignore[arg-type]
+    space_svc = SpaceService(space_repo, collaborator_repo, FakeStorage())  # type: ignore[arg-type]
     sharing_svc = SharingService(
         collaborator_repo,
         space_svc,

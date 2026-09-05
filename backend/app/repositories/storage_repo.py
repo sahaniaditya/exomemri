@@ -19,6 +19,11 @@ from app.errors import StorageError
 
 logger = logging.getLogger(__name__)
 
+# Closed allowlist of prefixes ``delete_prefix`` may wipe. A whole Learning
+# Space folder (captures + space-note images) or one capture folder.
+_SPACE_PREFIX_LEN = 4  # users/{user_id}/spaces/{space_id}
+_SOURCE_PREFIX_LEN = 6  # .../sources/{source_id}
+
 
 @lru_cache
 def _client(url: str, key: str) -> Client:
@@ -31,6 +36,27 @@ def _client(url: str, key: str) -> Client:
             httpx_client=httpx.Client(http2=False, follow_redirects=True),
         ),
     )
+
+
+def is_allowed_delete_prefix(prefix: str) -> bool:
+    """True only for a whole-space folder or a single source folder."""
+    clean = prefix.strip().strip("/")
+    if not clean or ".." in clean:
+        return False
+    parts = clean.split("/")
+    if any(not part or part in (".", "..") for part in parts):
+        return False
+    if parts[0] != "users":
+        return False
+    if len(parts) == _SPACE_PREFIX_LEN and parts[2] == "spaces":
+        return True
+    if (
+        len(parts) == _SOURCE_PREFIX_LEN
+        and parts[2] == "spaces"
+        and parts[4] == "sources"
+    ):
+        return True
+    return False
 
 
 class StorageRepo:
@@ -124,9 +150,9 @@ class StorageRepo:
             raise StorageError("Downloaded artifact is not valid UTF-8 text") from exc
 
     async def delete_prefix(self, prefix: str) -> None:
-        """Remove every object under ``prefix`` (a source's storage folder)."""
+        """Remove every object under ``prefix`` (a space or source folder)."""
         clean = prefix.strip().strip("/")
-        if not clean or ".." in clean or "/sources/" not in f"/{clean}/":
+        if not is_allowed_delete_prefix(clean):
             raise StorageError("Refusing to delete an invalid storage prefix")
 
         paths = await anyio.to_thread.run_sync(self._list_under, clean)

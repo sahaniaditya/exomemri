@@ -54,6 +54,15 @@ def list_spaces(
     return SpaceListResponse(spaces=svc.list(user))
 
 
+@router.delete("/{space_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_space(
+    space_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    svc: SpaceService = Depends(get_space_service),
+) -> None:
+    await svc.delete(user, space_id)
+
+
 @router.get("/{space_id}/sources", response_model=SourceListResponse)
 def list_space_sources(
     space_id: UUID,

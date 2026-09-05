@@ -9,6 +9,7 @@ import { type Profile } from '@/lib/profile'
 import { relativeTime } from '@/lib/dashboard-data'
 import type { Space } from '@/lib/spaces'
 import AccountChrome from './AccountChrome'
+import DeleteSpaceButton from './DeleteSpaceButton'
 import styles from './dashboard.module.css'
 
 interface SpaceHeroProps {
@@ -59,6 +60,9 @@ export default function SpaceHero({ space, profile, sourceCount }: SpaceHeroProp
                 ? relativeTime(space.last_captured_at)
                 : 'never'}
             </span>
+          </div>
+          <div className={styles.spaceHeroActions}>
+            <DeleteSpaceButton spaceId={space.id} name={space.name} />
           </div>
         </div>
         <div className={styles.topRight}>

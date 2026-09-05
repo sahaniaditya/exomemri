@@ -3,16 +3,20 @@
 /**
  * TipTap editor for one named note page. Mounted only while the page is open.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useEditor, EditorContent, ReactNodeViewRenderer, type Editor } from '@tiptap/react'
+import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import NoteImageView from './NoteImageView'
+import { NoteCodeBlock } from './NoteCodeBlockView'
 import styles from './dashboard.module.css'
 import {
   EMPTY_NOTE_DOC,
+  clipboardLooksLikeCode,
   notesApiBase,
   notesArtifactUrlPath,
   type NoteImageUpload,
@@ -33,6 +37,47 @@ const EMOJIS = [
   '✨', '💡', '🔥', '✅', '❓', '📌', '🧠', '📎', '🔗', '📝',
   '⭐', '🎯', '⚠️', '🚀', '💬', '📖',
 ]
+
+const EMOJI_PANEL_WIDTH = 280
+const EMOJI_PANEL_GAP = 6
+const EMOJI_PANEL_VIEWPORT_MARGIN = 8
+
+interface EmojiPanelPosition {
+  top: number
+  left: number
+}
+
+/** Anchors the emoji panel to its trigger button, clamped so it never overflows the viewport. */
+function computeEmojiPanelPosition(
+  anchorRect: DOMRect,
+  panelSize: { width: number; height: number }
+): EmojiPanelPosition {
+  const panelWidth = panelSize.width || EMOJI_PANEL_WIDTH
+  const panelHeight = panelSize.height
+
+  let left = anchorRect.left
+  if (left + panelWidth > window.innerWidth - EMOJI_PANEL_VIEWPORT_MARGIN) {
+    // Not enough room to the right — right-align the panel to the button instead.
+    left = anchorRect.right - panelWidth
+  }
+  left = Math.max(
+    EMOJI_PANEL_VIEWPORT_MARGIN,
+    Math.min(left, window.innerWidth - panelWidth - EMOJI_PANEL_VIEWPORT_MARGIN)
+  )
+
+  let top = anchorRect.bottom + EMOJI_PANEL_GAP
+  const fitsBelow = top + panelHeight <= window.innerHeight - EMOJI_PANEL_VIEWPORT_MARGIN
+  if (!fitsBelow) {
+    const above = anchorRect.top - EMOJI_PANEL_GAP - panelHeight
+    if (above >= EMOJI_PANEL_VIEWPORT_MARGIN) {
+      // Not enough room below — flip to open above the button instead.
+      top = above
+    }
+  }
+  top = Math.max(EMOJI_PANEL_VIEWPORT_MARGIN, top)
+
+  return { top, left }
+}
 
 const NoteImage = Image.extend({
   addAttributes() {
@@ -87,6 +132,27 @@ function isImageOnlyClipboard(data: DataTransfer): boolean {
   const html = data.getData('text/html')
   if (!html.trim()) return true
   return isImageOnlyHtml(html)
+}
+
+function insertPastedCode(editor: Editor, text: string): boolean {
+  const normalized = text.replace(/\r\n/g, '\n')
+  if (!normalized) return false
+  const { selection } = editor.state
+  const insideCodeText =
+    editor.isActive('codeBlock') && !(selection instanceof NodeSelection)
+  if (insideCodeText) {
+    const { from, to } = selection
+    editor.view.dispatch(editor.state.tr.insertText(normalized, from, to))
+    return true
+  }
+  return editor
+    .chain()
+    .focus()
+    .insertContent({
+      type: 'codeBlock',
+      content: [{ type: 'text', text: normalized }],
+    })
+    .run()
 }
 
 function collectClipboardImages(event: ClipboardEvent): File[] {
@@ -175,9 +241,12 @@ export default function NotePageEditor({
   const [savedAt, setSavedAt] = useState<string | null>(savedAtProp)
   const [error, setError] = useState<string | null>(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
+  const [emojiPos, setEmojiPos] = useState<EmojiPanelPosition | null>(null)
   const [ready, setReady] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
+  const emojiButtonRef = useRef<HTMLButtonElement>(null)
+  const emojiPanelRef = useRef<HTMLDivElement>(null)
   const initialContentRef = useRef(initialContent)
   const savedContentRef = useRef(savedContent)
   const readyRef = useRef(false)
@@ -214,7 +283,8 @@ export default function NotePageEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: false }),
+      StarterKit.configure({ heading: false, codeBlock: false }),
+      NoteCodeBlock.configure({ enableTabIndentation: true }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
@@ -243,8 +313,31 @@ export default function NotePageEditor({
         if (!data) return false
         const images = collectClipboardImages(event)
         const uploadable = images.filter(isUploadableImage)
-        if (!uploadable.length) {
-          if (!images.length || !isImageOnlyClipboard(data)) return false
+        if (uploadable.length) {
+          if (!isImageOnlyClipboard(data)) return false
+          event.preventDefault()
+          const editorInstance = editorRef.current
+          const posRef = { current: view.state.selection.from }
+          const onTransaction = ({
+            transaction,
+          }: {
+            transaction: { mapping: { map: (p: number) => number } }
+          }) => {
+            posRef.current = transaction.mapping.map(posRef.current)
+          }
+          editorInstance?.on('transaction', onTransaction)
+          void (async () => {
+            try {
+              for (const file of uploadable) {
+                await uploadImageRef.current(file, () => posRef.current)
+              }
+            } finally {
+              editorInstance?.off('transaction', onTransaction)
+            }
+          })()
+          return true
+        }
+        if (images.length && isImageOnlyClipboard(data)) {
           const tooBig = images.some(
             file => ALLOWED_IMAGE_TYPES.has(file.type) && file.size > MAX_IMAGE_BYTES
           )
@@ -254,24 +347,20 @@ export default function NotePageEditor({
           event.preventDefault()
           return true
         }
-        if (!isImageOnlyClipboard(data)) return false
-        event.preventDefault()
         const editorInstance = editorRef.current
-        const posRef = { current: view.state.selection.from }
-        const onTransaction = ({ transaction }: { transaction: { mapping: { map: (p: number) => number } } }) => {
-          posRef.current = transaction.mapping.map(posRef.current)
+        if (!editorInstance) return false
+        if (images.length && !editorInstance.isActive('codeBlock')) {
+          // Mixed image + text: don't steal the paste until there is a real mixed path.
+          return false
         }
-        editorInstance?.on('transaction', onTransaction)
-        void (async () => {
-          try {
-            for (const file of uploadable) {
-              await uploadImageRef.current(file, () => posRef.current)
-            }
-          } finally {
-            editorInstance?.off('transaction', onTransaction)
-          }
-        })()
-        return true
+        const text = data.getData('text/plain')
+        if (!text.trim()) return false
+        if (editorInstance.isActive('codeBlock') || clipboardLooksLikeCode(data)) {
+          event.preventDefault()
+          insertPastedCode(editorInstance, text)
+          return true
+        }
+        return false
       },
     },
   })
@@ -316,10 +405,38 @@ export default function NotePageEditor({
   useEffect(() => {
     if (!emojiOpen) return
     const onDoc = (event: MouseEvent) => {
-      if (!emojiRef.current?.contains(event.target as Node)) setEmojiOpen(false)
+      const target = event.target as Node
+      // The panel is portaled to document.body, so it's no longer a descendant of
+      // emojiRef — check both the trigger's wrapper and the portaled panel itself.
+      if (emojiRef.current?.contains(target)) return
+      if (emojiPanelRef.current?.contains(target)) return
+      setEmojiOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
+  }, [emojiOpen])
+
+  useLayoutEffect(() => {
+    if (!emojiOpen) return
+    const reposition = () => {
+      const anchor = emojiButtonRef.current
+      if (!anchor) return
+      const anchorRect = anchor.getBoundingClientRect()
+      const panel = emojiPanelRef.current
+      const panelSize = {
+        width: panel?.offsetWidth ?? EMOJI_PANEL_WIDTH,
+        height: panel?.offsetHeight ?? 0,
+      }
+      setEmojiPos(computeEmojiPanelPosition(anchorRect, panelSize))
+    }
+    reposition()
+    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', reposition, true)
+    return () => {
+      window.removeEventListener('resize', reposition)
+      window.removeEventListener('scroll', reposition, true)
+      setEmojiPos(null)
+    }
   }, [emojiOpen])
 
   const handleSave = useCallback(async () => {
@@ -469,9 +586,30 @@ export default function NotePageEditor({
           >
             Link
           </button>
+          <button
+            type="button"
+            className={styles.notesTool}
+            disabled={!editor || !ready}
+            onClick={() => editor?.chain().focus().toggleCode().run()}
+            aria-label="Inline code"
+            data-active={editor?.isActive('code') ? 'true' : undefined}
+          >
+            <code>{'</>'}</code>
+          </button>
+          <button
+            type="button"
+            className={styles.notesTool}
+            disabled={!editor || !ready}
+            onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+            aria-label="Code snippet"
+            data-active={editor?.isActive('codeBlock') ? 'true' : undefined}
+          >
+            Code
+          </button>
           <div className={styles.notesEmojiWrap} ref={emojiRef}>
             <button
               type="button"
+              ref={emojiButtonRef}
               className={styles.notesTool}
               disabled={!editor || !ready}
               onClick={() => setEmojiOpen(open => !open)}
@@ -480,23 +618,37 @@ export default function NotePageEditor({
             >
               Emoji
             </button>
-            {emojiOpen ? (
-              <div className={styles.notesEmojiPanel} role="listbox" aria-label="Emojis">
-                {EMOJIS.map(emoji => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className={styles.notesEmojiBtn}
-                    onClick={() => {
-                      editor?.chain().focus().insertContent(emoji).run()
-                      setEmojiOpen(false)
+            {emojiOpen
+              ? createPortal(
+                  <div
+                    ref={emojiPanelRef}
+                    className={styles.notesEmojiPanel}
+                    role="listbox"
+                    aria-label="Emojis"
+                    style={{
+                      top: emojiPos?.top ?? 0,
+                      left: emojiPos?.left ?? 0,
+                      opacity: emojiPos ? 1 : 0,
+                      pointerEvents: emojiPos ? 'auto' : 'none',
                     }}
                   >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            ) : null}
+                    {EMOJIS.map(emoji => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className={styles.notesEmojiBtn}
+                        onClick={() => {
+                          editor?.chain().focus().insertContent(emoji).run()
+                          setEmojiOpen(false)
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body
+                )
+              : null}
           </div>
           <button
             type="button"

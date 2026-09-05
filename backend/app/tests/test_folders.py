@@ -15,6 +15,7 @@ from app.tests.conftest import (
     SEEDED_SPACE_ID,
     FakeCollaboratorRepo,
     FakeSpaceRepo,
+    FakeStorage,
 )
 
 OTHER_USER_ID = "00000000-0000-0000-0000-0000000000ff"
@@ -148,7 +149,7 @@ def test_cannot_move_a_source_into_another_spaces_folder(
 def test_other_user_cannot_create_a_folder(
     space_repo: FakeSpaceRepo, collaborator_repo: FakeCollaboratorRepo
 ) -> None:
-    svc = SpaceService(space_repo, collaborator_repo)  # type: ignore[arg-type]
+    svc = SpaceService(space_repo, collaborator_repo, FakeStorage())  # type: ignore[arg-type]
     other = User(id=UUID(OTHER_USER_ID), email="other@exomemri.com")
     with pytest.raises(NotFoundError):
         svc.create_folder(other, UUID(SEEDED_SPACE_ID), "Sneaky")
