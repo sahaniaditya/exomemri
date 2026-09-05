@@ -2722,10 +2722,8 @@ button.chip {
   position: relative;
 }
 .notesEmojiPanel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 5;
+  position: fixed;
+  z-index: 60;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   gap: 4px;
