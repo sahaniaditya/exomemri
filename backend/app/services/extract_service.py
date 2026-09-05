@@ -15,9 +15,9 @@ EXTRACT_KEY_BY_TYPE = {
     SourceType.pdf: "raw/extracted.txt",
 }
 
-# Keeps a single inline LLM prompt within a safe context budget. The capture
-# pipeline uses ``split_for_llm`` / map-reduce for longer documents; chat and
-# lazy summary still take the first window via ``read_extract``.
+# Keeps a single inline LLM prompt within a safe context budget. Pipeline
+# map-reduce summarize uses ``read_full_extract`` and windows internally.
+# Chat's extract fallback still takes the first window via ``read_extract``.
 MAX_EXTRACT_CHARS = 40_000
 
 
@@ -50,5 +50,8 @@ class ExtractService:
         if source_type is SourceType.ai_chat:
             data = json.loads(raw)
             turns = data if isinstance(data, list) else data.get("messages", [])
-            return "\n\n".join(f"{t.get('role', '?')}: {t.get('content', '')}" for t in turns)
+            return "\n\n".join(
+                f"{t.get('role', '?')}: {t.get('text') or t.get('content') or ''}"
+                for t in turns
+            )
         return raw  # article/note/pdf extracts are already plain text

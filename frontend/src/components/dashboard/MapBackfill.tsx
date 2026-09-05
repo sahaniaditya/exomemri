@@ -57,7 +57,11 @@ export default function MapBackfill({ spaceId, pending }: MapBackfillProps) {
           setError(
             res.status === 401
               ? 'Your session expired. Reload the page and sign in again.'
-              : 'Mapping failed. Try again in a moment.'
+              : res.status === 402
+                ? "You're out of credits. Mapping unlocks when your monthly allowance resets."
+                : res.status === 429
+                  ? 'Mapping is limited to a few batches per hour. Try again later.'
+                  : 'Mapping failed. Try again in a moment.'
           )
           return
         }

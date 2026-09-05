@@ -13,6 +13,7 @@ from app.tests.conftest import (
     SEEDED_SPACE_ID,
     SEEDED_SPACE_NAME,
     FakeConceptRepo,
+    FakeCoverageRepo,
 )
 
 DEV_USER_ID = "00000000-0000-0000-0000-0000000000a1"
@@ -48,9 +49,19 @@ def test_empty_space_returns_an_empty_plan(client: TestClient) -> None:
 
 
 def test_uncovered_topics_make_up_the_plan(
-    client: TestClient, concept_repo: FakeConceptRepo
+    client: TestClient, coverage_repo: FakeCoverageRepo
 ) -> None:
-    _seed_concept(concept_repo, label="Load balancing")
+    coverage_repo.upsert(
+        space_id=SEEDED_SPACE_ID,
+        user_id=DEV_USER_ID,
+        coverage_pct=0,
+        topics=[
+            {"label": f"{SEEDED_SPACE_NAME} gap A", "covered": False},
+            {"label": "Load balancing", "covered": True},
+        ],
+        concept_count=1,
+        generated_at="2026-08-18T00:00:00+00:00",
+    )
 
     res = client.get(f"/v1/spaces/{SEEDED_SPACE_ID}/plan")
     assert res.status_code == 200
@@ -61,3 +72,14 @@ def test_uncovered_topics_make_up_the_plan(
     titles = {i["title"] for i in items}
     assert f"{SEEDED_SPACE_NAME} gap A" in titles
     assert "Load balancing" not in titles
+
+
+def test_plan_does_not_generate_coverage(
+    client: TestClient, concept_repo: FakeConceptRepo, coverage_repo: FakeCoverageRepo
+) -> None:
+    _seed_concept(concept_repo, label="Load balancing")
+
+    res = client.get(f"/v1/spaces/{SEEDED_SPACE_ID}/plan")
+    assert res.status_code == 200
+    assert res.json()["items"] == []
+    assert SEEDED_SPACE_ID not in coverage_repo.coverage

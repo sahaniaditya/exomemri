@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from functools import partial
 from uuid import UUID
 
@@ -26,6 +25,20 @@ from app.services.space_service import SpaceService
 RETRIEVAL_K = 6
 
 
+def _cached_summary(source: dict) -> SummaryResponse | None:
+    # Pre-migration rows have summary_text but no summary_sections — treat as a
+    # miss. Generation lives in the capture pipeline, not on GET.
+    if not (source.get("summary_text") and source.get("summary_sections")):
+        return None
+    return SummaryResponse(
+        summary=source["summary_text"],
+        sections=StructuredSummary(**source["summary_sections"]),
+        generated=False,
+        model=source.get("summary_model"),
+        summarized_at=source.get("summarized_at"),
+    )
+
+
 class SourceChatService:
     def __init__(
         self,
@@ -43,42 +56,22 @@ class SourceChatService:
         self._chunks = chunks
         self._credits = credits
 
-    async def get_or_create_summary(self, *, user: User, source_id: UUID) -> SummaryResponse:
+    async def get_summary(self, *, user: User, source_id: UUID) -> SummaryResponse:
         # A superset of ownership — lets a read-only collaborator see a
         # source's summary without granting them any write access. Chat
         # (list/send messages) stays strictly owner-only, unaffected.
         source = await anyio.to_thread.run_sync(
             partial(self._spaces.require_viewable_source, user, source_id)
         )
-        # A source captured before this feature shipped has summary_text but no
-        # summary_sections yet; fall through to regenerate both like a cache miss.
-        if source.get("summary_text") and source.get("summary_sections"):
-            return SummaryResponse(
-                summary=source["summary_text"],
-                sections=StructuredSummary(**source["summary_sections"]),
-                generated=False,
-                model=source.get("summary_model"),
-                summarized_at=source.get("summarized_at"),
-            )
-
-        extract = await self._extracts.read_extract(source)
-        summary = await self._llm.summarize(title=source["title"], extract=extract)
-        sections = await self._llm.summarize_structured(title=source["title"], extract=extract)
-        await anyio.to_thread.run_sync(
-            partial(
-                self._spaces.save_summary,
-                source_id=source_id,
-                summary=summary,
-                sections=sections.model_dump(),
-                model=self._llm.model_name,
-            )
-        )
+        cached = _cached_summary(source)
+        if cached is not None:
+            return cached
         return SummaryResponse(
-            summary=summary,
-            sections=sections,
-            generated=True,
-            model=self._llm.model_name,
-            summarized_at=datetime.now(UTC),
+            summary=None,
+            sections=None,
+            generated=False,
+            model=None,
+            summarized_at=None,
         )
 
     async def list_messages(self, *, user: User, source_id: UUID) -> MessageListResponse:
@@ -108,9 +101,8 @@ class SourceChatService:
     async def _send_message(
         self, *, user: User, source: dict, source_id: UUID, content: str
     ) -> SendMessageResponse:
-        # Guarantees a summary/extract exist even if this is the very first
-        # interaction with the source (no prior "open" call happened).
-        summary_resp = await self.get_or_create_summary(user=user, source_id=source_id)
+        cached = _cached_summary(source)
+        summary_text = cached.summary if cached and cached.summary else ""
         prior_rows = await anyio.to_thread.run_sync(partial(self._spaces.list_messages, source_id))
         extract = await self._retrieve_context(user=user, source=source, question=content)
 
@@ -131,7 +123,7 @@ class SourceChatService:
         reply = await self._llm.chat_reply(
             title=source["title"],
             source_type=source["type"],
-            summary=summary_resp.summary,
+            summary=summary_text,
             extract=extract,
             history=history,
         )

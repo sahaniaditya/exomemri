@@ -23,6 +23,7 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly code?: string,
+    readonly detail?: unknown,
   ) {
     super(message)
     this.name = "ApiError"
@@ -51,7 +52,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!resp.ok) {
     const err = body?.error
-    throw new ApiError(err?.message ?? `Request failed (${resp.status})`, resp.status, err?.code)
+    throw new ApiError(
+      err?.message ?? `Request failed (${resp.status})`,
+      resp.status,
+      err?.code,
+      err?.detail,
+    )
   }
   return body as T
 }

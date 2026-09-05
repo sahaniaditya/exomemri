@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import os
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Self
 from uuid import UUID
 
 import certifi
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # Some local Python installs (notably python.org's macOS build) ship without
@@ -51,16 +51,36 @@ class Settings(BaseSettings):
     dev_user_email: str = "aditya@exomemri.com"
 
     # --- CORS ---
-    # The unpacked extension origin (chrome-extension://<id>). Populate for a
-    # stable dev id (pin a manifest `key`). Comma-separated in env.
+    # Pin known extension IDs (`chrome-extension://<id>`). For a stable unpacked
+    # id, pin a manifest `key`. Comma-separated in env. Production should list
+    # the Chrome Web Store ID when known.
     cors_extension_origins: Annotated[list[str], NoDecode] = []
     # Whether to allow any chrome-extension:// origin (dev convenience only).
-    cors_allow_any_extension: bool = True
+    # Fail-closed: local unpacked-extension work must set CORS_ALLOW_ANY_EXTENSION=true.
+    cors_allow_any_extension: bool = False
     # Web app origins allowed to call the API (e.g. the Vercel frontend).
     # Comma-separated in env. Scheme + host only, NO trailing slash or path.
+    # Required when ENV=production.
     cors_web_origins: Annotated[list[str], NoDecode] = []
 
     env: str = "dev"
+
+    # --- App-level rate limits (in-process; single-instance deploy) ---
+    # Login: per IP and per email (both must pass).
+    rate_limit_login_max: int = 5
+    rate_limit_login_window_seconds: int = 900  # 15 minutes
+    # Capture + upload-url: per authenticated user.
+    rate_limit_capture_max: int = 10
+    rate_limit_capture_window_seconds: int = 60
+    # Chat asks: per authenticated user.
+    rate_limit_chat_max: int = 20
+    rate_limit_chat_window_seconds: int = 60
+    # Coverage LLM regen (not cache hits): per space.
+    rate_limit_coverage_max: int = 1
+    rate_limit_coverage_window_seconds: int = 3600  # 1 hour
+    # Graph rebuild batches: per space.
+    rate_limit_rebuild_max: int = 2
+    rate_limit_rebuild_window_seconds: int = 3600  # 1 hour
 
     @field_validator("cors_extension_origins", "cors_web_origins", mode="before")
     @classmethod
@@ -74,6 +94,18 @@ class Settings(BaseSettings):
                 return json.loads(s)
             return [item.strip() for item in s.split(",") if item.strip()]
         return v
+
+    @model_validator(mode="after")
+    def _reject_insecure_production_cors(self) -> Self:
+        if self.env.strip().lower() != "production":
+            return self
+        if self.cors_allow_any_extension:
+            raise ValueError(
+                "CORS_ALLOW_ANY_EXTENSION must be false when ENV=production"
+            )
+        if not self.cors_web_origins:
+            raise ValueError("CORS_WEB_ORIGINS must be set when ENV=production")
+        return self
 
 
 @lru_cache

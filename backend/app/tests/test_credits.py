@@ -90,6 +90,20 @@ def test_recapture_of_the_same_hash_is_free(
     assert credits_repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 1
 
 
+def test_recapture_of_the_same_url_with_new_content_is_free(
+    client: TestClient, credits_repo: FakeCreditsRepo
+) -> None:
+    first = client.post("/v1/sources", json=_article_payload(content="first body"))
+    second = client.post(
+        "/v1/sources",
+        json=_article_payload(title="Post (v2)", content="updated body"),
+    )
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert first.json()["source_id"] == second.json()["source_id"]
+    assert credits_repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 1
+
+
 def test_pdf_upload_url_consumes_one_credit(
     client: TestClient, credits_repo: FakeCreditsRepo
 ) -> None:
@@ -137,6 +151,26 @@ def test_consume_ask_charges_on_the_third_question() -> None:
     assert repo.rows[DEV_USER]["ask_units"] == 0
 
 
+def test_consume_ask_debits_and_resets_units_together() -> None:
+    """Third ask must mutate balance and ask_units in one repo call (H4)."""
+    repo = FakeCreditsRepo()
+    svc = CreditsService(repo)  # type: ignore[arg-type]
+    svc.ensure_for_user(DEV_USER)
+    repo.rows[DEV_USER]["ask_units"] = 2
+
+    def _must_not_split(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("consume_ask must not call consume or set_ask_units")
+
+    repo.consume = _must_not_split  # type: ignore[method-assign]
+    repo.set_ask_units = _must_not_split  # type: ignore[method-assign]
+
+    charge = svc.consume_ask(DEV_USER)
+    assert charge.consumed_credit is True
+    assert charge.previous_ask_units == 2
+    assert repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 1
+    assert repo.rows[DEV_USER]["ask_units"] == 0
+
+
 def test_consume_ask_at_zero_balance_raises() -> None:
     repo = FakeCreditsRepo()
     svc = CreditsService(repo)  # type: ignore[arg-type]
@@ -160,3 +194,12 @@ def test_rollback_ask_restores_tally_and_credit() -> None:
     svc.rollback_ask(DEV_USER, charge)
     assert repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE
     assert repo.rows[DEV_USER]["ask_units"] == 2
+
+
+def test_consume_logs_reason_and_debits() -> None:
+    repo = FakeCreditsRepo()
+    svc = CreditsService(repo)  # type: ignore[arg-type]
+    svc.consume(DEV_USER, reason="coverage")
+    assert repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 1
+    svc.consume_capture(DEV_USER)
+    assert repo.rows[DEV_USER]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 2

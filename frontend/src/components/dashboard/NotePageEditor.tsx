@@ -3,16 +3,20 @@
 /**
  * TipTap editor for one named note page. Mounted only while the page is open.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useEditor, EditorContent, ReactNodeViewRenderer, type Editor } from '@tiptap/react'
+import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import NoteImageView from './NoteImageView'
+import { NoteCodeBlock } from './NoteCodeBlockView'
 import styles from './dashboard.module.css'
 import {
   EMPTY_NOTE_DOC,
+  clipboardLooksLikeCode,
   notesApiBase,
   notesArtifactUrlPath,
   type NoteImageUpload,
@@ -22,11 +26,58 @@ import {
 import { relativeTime } from '@/lib/dashboard-data'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+])
 
 const EMOJIS = [
   '✨', '💡', '🔥', '✅', '❓', '📌', '🧠', '📎', '🔗', '📝',
   '⭐', '🎯', '⚠️', '🚀', '💬', '📖',
 ]
+
+const EMOJI_PANEL_WIDTH = 280
+const EMOJI_PANEL_GAP = 6
+const EMOJI_PANEL_VIEWPORT_MARGIN = 8
+
+interface EmojiPanelPosition {
+  top: number
+  left: number
+}
+
+/** Anchors the emoji panel to its trigger button, clamped so it never overflows the viewport. */
+function computeEmojiPanelPosition(
+  anchorRect: DOMRect,
+  panelSize: { width: number; height: number }
+): EmojiPanelPosition {
+  const panelWidth = panelSize.width || EMOJI_PANEL_WIDTH
+  const panelHeight = panelSize.height
+
+  let left = anchorRect.left
+  if (left + panelWidth > window.innerWidth - EMOJI_PANEL_VIEWPORT_MARGIN) {
+    // Not enough room to the right — right-align the panel to the button instead.
+    left = anchorRect.right - panelWidth
+  }
+  left = Math.max(
+    EMOJI_PANEL_VIEWPORT_MARGIN,
+    Math.min(left, window.innerWidth - panelWidth - EMOJI_PANEL_VIEWPORT_MARGIN)
+  )
+
+  let top = anchorRect.bottom + EMOJI_PANEL_GAP
+  const fitsBelow = top + panelHeight <= window.innerHeight - EMOJI_PANEL_VIEWPORT_MARGIN
+  if (!fitsBelow) {
+    const above = anchorRect.top - EMOJI_PANEL_GAP - panelHeight
+    if (above >= EMOJI_PANEL_VIEWPORT_MARGIN) {
+      // Not enough room below — flip to open above the button instead.
+      top = above
+    }
+  }
+  top = Math.max(EMOJI_PANEL_VIEWPORT_MARGIN, top)
+
+  return { top, left }
+}
 
 const NoteImage = Image.extend({
   addAttributes() {
@@ -55,6 +106,85 @@ async function resolveImageSrc(scope: NotesScope, key: string): Promise<string |
     return null
   }
 }
+
+function isUploadableImage(file: File): boolean {
+  return ALLOWED_IMAGE_TYPES.has(file.type) && file.size > 0 && file.size <= MAX_IMAGE_BYTES
+}
+
+function isProbablyUrl(text: string): boolean {
+  return /^https?:\/\//i.test(text) && !/\s/.test(text)
+}
+
+function isImageOnlyHtml(html: string): boolean {
+  const leftover = html
+    .replace(/<img\b[^>]*>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?(html|head|body|meta|link|span|div|br|p|a|fragment)[^>]*>/gi, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return leftover.length === 0
+}
+
+function isImageOnlyClipboard(data: DataTransfer): boolean {
+  const text = data.getData('text/plain').trim()
+  if (text && !isProbablyUrl(text)) return false
+  const html = data.getData('text/html')
+  if (!html.trim()) return true
+  return isImageOnlyHtml(html)
+}
+
+function insertPastedCode(editor: Editor, text: string): boolean {
+  const normalized = text.replace(/\r\n/g, '\n')
+  if (!normalized) return false
+  const { selection } = editor.state
+  const insideCodeText =
+    editor.isActive('codeBlock') && !(selection instanceof NodeSelection)
+  if (insideCodeText) {
+    const { from, to } = selection
+    editor.view.dispatch(editor.state.tr.insertText(normalized, from, to))
+    return true
+  }
+  return editor
+    .chain()
+    .focus()
+    .insertContent({
+      type: 'codeBlock',
+      content: [{ type: 'text', text: normalized }],
+    })
+    .run()
+}
+
+function collectClipboardImages(event: ClipboardEvent): File[] {
+  const data = event.clipboardData
+  if (!data) return []
+  const files: File[] = []
+  const seen = new Set<File>()
+  for (const item of Array.from(data.items)) {
+    if (item.kind !== 'file' || !item.type.startsWith('image/')) continue
+    const file = item.getAsFile()
+    if (file && !seen.has(file)) {
+      seen.add(file)
+      files.push(file)
+    }
+  }
+  if (files.length) return files
+  return Array.from(data.files).filter(file => file.type.startsWith('image/'))
+}
+
+function imageFilename(file: File): string {
+  const name = file.name.trim()
+  if (name) return name
+  const subtype = file.type.split('/')[1]?.toLowerCase() ?? 'png'
+  const ext = subtype === 'jpeg' ? 'jpg' : subtype
+  return `pasted-image.${ext}`
+}
+
+function clampInsertPos(editor: Editor, pos: number): number {
+  return Math.max(0, Math.min(pos, editor.state.doc.content.size))
+}
+
+type UploadImageFn = (file: File, insertAt?: () => number) => Promise<void>
 
 async function hydrateImageUrls(
   doc: Record<string, unknown>,
@@ -107,16 +237,37 @@ export default function NotePageEditor({
     scope.kind === 'source' ? `source:${scope.sourceId}` : `space:${scope.spaceId}`
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(savedAtProp)
   const [error, setError] = useState<string | null>(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
+  const [emojiPos, setEmojiPos] = useState<EmojiPanelPosition | null>(null)
   const [ready, setReady] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
+  const emojiButtonRef = useRef<HTMLButtonElement>(null)
+  const emojiPanelRef = useRef<HTMLDivElement>(null)
   const initialContentRef = useRef(initialContent)
   const savedContentRef = useRef(savedContent)
   const readyRef = useRef(false)
   const dirtyRef = useRef(false)
+  const editableRef = useRef(editable)
+  const uploadCountRef = useRef(0)
+  const uploadImageRef = useRef<UploadImageFn>(async () => {})
+  const editorRef = useRef<Editor | null>(null)
+  const aliveRef = useRef(true)
+  const setErrorRef = useRef(setError)
+
+  useEffect(() => {
+    aliveRef.current = true
+    return () => {
+      aliveRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    setErrorRef.current = setError
+  }, [])
 
   useEffect(() => {
     readyRef.current = ready
@@ -126,9 +277,14 @@ export default function NotePageEditor({
     dirtyRef.current = dirty
   }, [dirty])
 
+  useEffect(() => {
+    editableRef.current = editable
+  }, [editable])
+
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: false }),
+      StarterKit.configure({ heading: false, codeBlock: false }),
+      NoteCodeBlock.configure({ enableTabIndentation: true }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
@@ -145,14 +301,73 @@ export default function NotePageEditor({
     immediatelyRender: false,
     editable: false,
     onUpdate: () => {
-      if (editable) setDirty(true)
+      if (editableRef.current) setDirty(true)
     },
     editorProps: {
       attributes: {
         class: styles.notesEditor,
       },
+      handlePaste(view, event) {
+        if (!editableRef.current || !readyRef.current) return false
+        const data = event.clipboardData
+        if (!data) return false
+        const images = collectClipboardImages(event)
+        const uploadable = images.filter(isUploadableImage)
+        if (uploadable.length) {
+          if (!isImageOnlyClipboard(data)) return false
+          event.preventDefault()
+          const editorInstance = editorRef.current
+          const posRef = { current: view.state.selection.from }
+          const onTransaction = ({
+            transaction,
+          }: {
+            transaction: { mapping: { map: (p: number) => number } }
+          }) => {
+            posRef.current = transaction.mapping.map(posRef.current)
+          }
+          editorInstance?.on('transaction', onTransaction)
+          void (async () => {
+            try {
+              for (const file of uploadable) {
+                await uploadImageRef.current(file, () => posRef.current)
+              }
+            } finally {
+              editorInstance?.off('transaction', onTransaction)
+            }
+          })()
+          return true
+        }
+        if (images.length && isImageOnlyClipboard(data)) {
+          const tooBig = images.some(
+            file => ALLOWED_IMAGE_TYPES.has(file.type) && file.size > MAX_IMAGE_BYTES
+          )
+          setErrorRef.current(
+            tooBig ? 'Image must be under 5 MB.' : 'Only image files are supported.'
+          )
+          event.preventDefault()
+          return true
+        }
+        const editorInstance = editorRef.current
+        if (!editorInstance) return false
+        if (images.length && !editorInstance.isActive('codeBlock')) {
+          // Mixed image + text: don't steal the paste until there is a real mixed path.
+          return false
+        }
+        const text = data.getData('text/plain')
+        if (!text.trim()) return false
+        if (editorInstance.isActive('codeBlock') || clipboardLooksLikeCode(data)) {
+          event.preventDefault()
+          insertPastedCode(editorInstance, text)
+          return true
+        }
+        return false
+      },
     },
   })
+
+  useEffect(() => {
+    editorRef.current = editor ?? null
+  }, [editor])
 
   useEffect(() => {
     editor?.setEditable(Boolean(editable && ready))
@@ -190,10 +405,38 @@ export default function NotePageEditor({
   useEffect(() => {
     if (!emojiOpen) return
     const onDoc = (event: MouseEvent) => {
-      if (!emojiRef.current?.contains(event.target as Node)) setEmojiOpen(false)
+      const target = event.target as Node
+      // The panel is portaled to document.body, so it's no longer a descendant of
+      // emojiRef — check both the trigger's wrapper and the portaled panel itself.
+      if (emojiRef.current?.contains(target)) return
+      if (emojiPanelRef.current?.contains(target)) return
+      setEmojiOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
+  }, [emojiOpen])
+
+  useLayoutEffect(() => {
+    if (!emojiOpen) return
+    const reposition = () => {
+      const anchor = emojiButtonRef.current
+      if (!anchor) return
+      const anchorRect = anchor.getBoundingClientRect()
+      const panel = emojiPanelRef.current
+      const panelSize = {
+        width: panel?.offsetWidth ?? EMOJI_PANEL_WIDTH,
+        height: panel?.offsetHeight ?? 0,
+      }
+      setEmojiPos(computeEmojiPanelPosition(anchorRect, panelSize))
+    }
+    reposition()
+    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', reposition, true)
+    return () => {
+      window.removeEventListener('resize', reposition)
+      window.removeEventListener('scroll', reposition, true)
+      setEmojiPos(null)
+    }
   }, [emojiOpen])
 
   const handleSave = useCallback(async () => {
@@ -237,48 +480,75 @@ export default function NotePageEditor({
     editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
   }
 
-  const uploadImage = async (file: File) => {
-    if (!editor) return
-    if (!file.type.startsWith('image/')) {
-      setError('Only image files are supported.')
-      return
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError('Image must be under 5 MB.')
-      return
-    }
-    setError(null)
-    try {
-      const mint = await fetch(`${apiBase}/note-images`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_type: file.type, filename: file.name }),
-      })
-      if (!mint.ok) throw Error(`mint ${mint.status}`)
-      const signed = (await mint.json()) as NoteImageUpload
-      const put = await fetch(signed.upload_url, {
-        method: 'PUT',
-        headers: { 'x-upsert': 'true', 'content-type': file.type },
-        body: file,
-      })
-      if (!put.ok) throw Error(`upload ${put.status}`)
-
-      const display =
-        (await resolveImageSrc(scope, signed.key)) ?? URL.createObjectURL(file)
-      editor
-        .chain()
-        .focus()
-        .insertContent({
-          type: 'image',
-          attrs: { src: display, alt: file.name, key: signed.key },
+  const uploadImage = useCallback(
+    async (file: File, insertAt?: () => number) => {
+      if (!editor) return
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+        setError('Only image files are supported.')
+        return
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        setError('Image must be under 5 MB.')
+        return
+      }
+      const filename = imageFilename(file)
+      setError(null)
+      uploadCountRef.current += 1
+      setUploading(true)
+      try {
+        const mint = await fetch(`${apiBase}/note-images`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content_type: file.type, filename }),
         })
-        .run()
-      setDirty(true)
-    } catch (caught) {
-      console.error('Note image upload failed:', caught)
-      setError('Image upload failed — try again.')
-    }
-  }
+        if (!aliveRef.current || editor.isDestroyed) return
+        if (mint.status === 401) {
+          setError('Your session has expired. Please log in again.')
+          return
+        }
+        if (!mint.ok) throw Error(`mint ${mint.status}`)
+        const signed = (await mint.json()) as NoteImageUpload
+        const put = await fetch(signed.upload_url, {
+          method: 'PUT',
+          headers: { 'x-upsert': 'true', 'content-type': file.type },
+          body: file,
+        })
+        if (!aliveRef.current || editor.isDestroyed) return
+        if (!put.ok) throw Error(`upload ${put.status}`)
+
+        const display =
+          (await resolveImageSrc(scope, signed.key)) ?? URL.createObjectURL(file)
+        if (!aliveRef.current || editor.isDestroyed) return
+        const node = {
+          type: 'image',
+          attrs: { src: display, alt: filename, key: signed.key },
+        }
+        if (insertAt) {
+          editor
+            .chain()
+            .insertContentAt(clampInsertPos(editor, insertAt()), node)
+            .run()
+        } else {
+          editor.chain().focus().insertContent(node).run()
+        }
+        setDirty(true)
+      } catch (caught) {
+        console.error('Note image upload failed:', caught)
+        if (aliveRef.current) setError('Image upload failed — try again.')
+      } finally {
+        uploadCountRef.current -= 1
+        if (uploadCountRef.current <= 0) {
+          uploadCountRef.current = 0
+          if (aliveRef.current) setUploading(false)
+        }
+      }
+    },
+    [apiBase, editor, scope]
+  )
+
+  useEffect(() => {
+    uploadImageRef.current = uploadImage
+  }, [uploadImage])
 
   const isEmpty = !savedAt && !dirty && ready && editor?.isEmpty
 
@@ -316,9 +586,30 @@ export default function NotePageEditor({
           >
             Link
           </button>
+          <button
+            type="button"
+            className={styles.notesTool}
+            disabled={!editor || !ready}
+            onClick={() => editor?.chain().focus().toggleCode().run()}
+            aria-label="Inline code"
+            data-active={editor?.isActive('code') ? 'true' : undefined}
+          >
+            <code>{'</>'}</code>
+          </button>
+          <button
+            type="button"
+            className={styles.notesTool}
+            disabled={!editor || !ready}
+            onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+            aria-label="Code snippet"
+            data-active={editor?.isActive('codeBlock') ? 'true' : undefined}
+          >
+            Code
+          </button>
           <div className={styles.notesEmojiWrap} ref={emojiRef}>
             <button
               type="button"
+              ref={emojiButtonRef}
               className={styles.notesTool}
               disabled={!editor || !ready}
               onClick={() => setEmojiOpen(open => !open)}
@@ -327,28 +618,42 @@ export default function NotePageEditor({
             >
               Emoji
             </button>
-            {emojiOpen ? (
-              <div className={styles.notesEmojiPanel} role="listbox" aria-label="Emojis">
-                {EMOJIS.map(emoji => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className={styles.notesEmojiBtn}
-                    onClick={() => {
-                      editor?.chain().focus().insertContent(emoji).run()
-                      setEmojiOpen(false)
+            {emojiOpen
+              ? createPortal(
+                  <div
+                    ref={emojiPanelRef}
+                    className={styles.notesEmojiPanel}
+                    role="listbox"
+                    aria-label="Emojis"
+                    style={{
+                      top: emojiPos?.top ?? 0,
+                      left: emojiPos?.left ?? 0,
+                      opacity: emojiPos ? 1 : 0,
+                      pointerEvents: emojiPos ? 'auto' : 'none',
                     }}
                   >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            ) : null}
+                    {EMOJIS.map(emoji => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className={styles.notesEmojiBtn}
+                        onClick={() => {
+                          editor?.chain().focus().insertContent(emoji).run()
+                          setEmojiOpen(false)
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body
+                )
+              : null}
           </div>
           <button
             type="button"
             className={styles.notesTool}
-            disabled={!editor || !ready}
+            disabled={!editor || !ready || uploading}
             onClick={() => fileRef.current?.click()}
             aria-label="Upload image"
           >
@@ -369,6 +674,8 @@ export default function NotePageEditor({
           <span className={styles.notesSaveMeta}>
             {error ? (
               <span className={styles.notesError}>{error}</span>
+            ) : uploading ? (
+              'Uploading image…'
             ) : dirty ? (
               'Unsaved changes'
             ) : savedAt ? (
@@ -382,7 +689,7 @@ export default function NotePageEditor({
           <button
             type="button"
             className={styles.notesSave}
-            disabled={!editor || !ready || !dirty || saving}
+            disabled={!editor || !ready || !dirty || saving || uploading}
             onClick={() => void handleSave()}
           >
             {saving ? 'Saving…' : 'Save'}

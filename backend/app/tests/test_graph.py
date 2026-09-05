@@ -9,14 +9,20 @@ from fastapi.testclient import TestClient
 
 from app.schemas.common import User
 from app.schemas.concepts import ExtractedConcept
+from app.schemas.credits import DEFAULT_MONTHLY_ALLOWANCE
 from app.services.concept_service import ConceptService
+from app.services.coverage_service import CoverageService
+from app.services.credits_service import CreditsService
 from app.services.extract_service import ExtractService
+from app.services.rate_limit_service import NoopRateLimiter
 from app.services.space_service import SpaceService
 from app.tests.conftest import (
     OTHER_USER_SPACE_ID,
     SEEDED_SPACE_ID,
     FakeCollaboratorRepo,
     FakeConceptRepo,
+    FakeCoverageRepo,
+    FakeCreditsRepo,
     FakeLLMService,
     FakeSpaceRepo,
     FakeStorage,
@@ -64,10 +70,24 @@ def _build_service(
     concept_repo: FakeConceptRepo,
     storage: FakeStorage,
     llm: FakeLLMService,
+    *,
+    credits_repo: FakeCreditsRepo | None = None,
 ) -> ConceptService:
-    space_svc = SpaceService(space_repo, FakeCollaboratorRepo())  # type: ignore[arg-type]
+    from app.config import get_settings
+
+    space_svc = SpaceService(space_repo, FakeCollaboratorRepo(), storage)  # type: ignore[arg-type]
+    credits = CreditsService(credits_repo or FakeCreditsRepo())  # type: ignore[arg-type]
+    coverage = CoverageService(
+        FakeCoverageRepo(),
+        concept_repo,
+        space_svc,
+        llm,
+        NoopRateLimiter(),
+        get_settings(),
+        credits,  # type: ignore[arg-type]
+    )
     return ConceptService(
-        concept_repo, space_svc, ExtractService(storage), llm  # type: ignore[arg-type]
+        concept_repo, space_svc, ExtractService(storage), llm, credits, coverage  # type: ignore[arg-type]
     )
 
 
@@ -304,3 +324,43 @@ async def test_backfill_survives_a_source_with_no_extract(
     assert result.pending == 0
     assert space_repo.sources[broken["id"]]["concepts_extracted_at"] is not None
     assert space_repo.sources[good["id"]]["concepts_extracted_at"] is not None
+
+
+def test_rebuild_consumes_one_credit_per_non_empty_batch(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    storage: FakeStorage,
+    credits_repo: FakeCreditsRepo,
+) -> None:
+    _seed_source(space_repo, storage, title="Old capture")
+    res = client.post(f"/v1/spaces/{SEEDED_SPACE_ID}/graph/rebuild")
+    assert res.status_code == 200
+    assert res.json()["processed"] == 1
+    assert credits_repo.rows[DEV_USER_ID]["balance"] == DEFAULT_MONTHLY_ALLOWANCE - 1
+
+
+def test_rebuild_empty_batch_is_free(
+    client: TestClient, credits_repo: FakeCreditsRepo
+) -> None:
+    credits_repo.ensure(user_id=DEV_USER_ID)
+    before = credits_repo.rows[DEV_USER_ID]["balance"]
+    res = client.post(f"/v1/spaces/{SEEDED_SPACE_ID}/graph/rebuild")
+    assert res.status_code == 200
+    assert res.json() == {"processed": 0, "failed": 0, "pending": 0}
+    assert credits_repo.rows[DEV_USER_ID]["balance"] == before
+
+
+def test_rebuild_returns_402_when_credits_are_exhausted(
+    client: TestClient,
+    space_repo: FakeSpaceRepo,
+    storage: FakeStorage,
+    credits_repo: FakeCreditsRepo,
+) -> None:
+    source = _seed_source(space_repo, storage, title="Old capture")
+    credits_repo.ensure(user_id=DEV_USER_ID)
+    credits_repo.rows[DEV_USER_ID]["balance"] = 0
+
+    res = client.post(f"/v1/spaces/{SEEDED_SPACE_ID}/graph/rebuild")
+    assert res.status_code == 402
+    assert res.json()["error"]["code"] == "credits_exhausted"
+    assert space_repo.sources[source["id"]].get("concepts_extracted_at") is None

@@ -72,6 +72,8 @@ project. Render config:
 `CORS_WEB_ORIGINS` is a comma-separated list of web app origins allowed to call
 the API (e.g. `https://atlas-ai-puce-xi.vercel.app`). Use scheme + host only —
 **no trailing slash or path**, since the browser's `Origin` header never has one.
+Production refuses to start if `CORS_ALLOW_ANY_EXTENSION` is true or
+`CORS_WEB_ORIGINS` is empty.
 
 ## Checks
 

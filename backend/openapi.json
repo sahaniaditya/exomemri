@@ -68,6 +68,7 @@
           "content": {
             "anyOf": [
               {
+                "maxLength": 500000,
                 "type": "string"
               },
               {
@@ -91,6 +92,7 @@
           "raw_html": {
             "anyOf": [
               {
+                "maxLength": 2000000,
                 "type": "string"
               },
               {
@@ -1790,31 +1792,22 @@
         "type": "object"
       },
       "StructuredSummary": {
-        "description": "The 4-part per-source summary, as a structured-output envelope.",
+        "description": "Per-source LLM output: topics with descriptions, plus supporting sections.\n\n``topics`` is empty on rows summarized before this shape existed.",
         "properties": {
           "examples": {
             "items": {
               "type": "string"
             },
-            "maxItems": 6,
+            "maxItems": 8,
             "minItems": 1,
             "title": "Examples",
-            "type": "array"
-          },
-          "interview_points": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 6,
-            "minItems": 1,
-            "title": "Interview Points",
             "type": "array"
           },
           "key_concepts": {
             "items": {
               "type": "string"
             },
-            "maxItems": 8,
+            "maxItems": 10,
             "minItems": 1,
             "title": "Key Concepts",
             "type": "array"
@@ -1823,17 +1816,24 @@
             "items": {
               "type": "string"
             },
-            "maxItems": 5,
+            "maxItems": 10,
             "minItems": 5,
             "title": "Tldr",
+            "type": "array"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/TopicDescription"
+            },
+            "maxItems": 24,
+            "title": "Topics",
             "type": "array"
           }
         },
         "required": [
           "tldr",
           "key_concepts",
-          "examples",
-          "interview_points"
+          "examples"
         ],
         "title": "StructuredSummary",
         "type": "object"
@@ -1866,6 +1866,31 @@
         "title": "StudyPlanResponse",
         "type": "object"
       },
+      "SubtopicDescription": {
+        "description": "A named subtopic covered inside a major topic.",
+        "properties": {
+          "description": {
+            "description": "Summarized description of this subtopic: definition, how it works, key facts, numbers, and caveats. Not a headline.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "description": "Short specific noun phrase for the subtopic.",
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ],
+        "title": "SubtopicDescription",
+        "type": "object"
+      },
       "SummaryResponse": {
         "properties": {
           "generated": {
@@ -1884,7 +1909,14 @@
             "title": "Model"
           },
           "sections": {
-            "$ref": "#/components/schemas/StructuredSummary"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StructuredSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "summarized_at": {
             "anyOf": [
@@ -1899,16 +1931,19 @@
             "title": "Summarized At"
           },
           "summary": {
-            "title": "Summary",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
           }
         },
         "required": [
-          "summary",
-          "sections",
-          "generated",
-          "model",
-          "summarized_at"
+          "generated"
         ],
         "title": "SummaryResponse",
         "type": "object"
@@ -1946,6 +1981,40 @@
           }
         },
         "title": "TopReviewsResponse",
+        "type": "object"
+      },
+      "TopicDescription": {
+        "description": "One major topic the source teaches, with a summarized description and subtopics.",
+        "properties": {
+          "description": {
+            "description": "Summarized description of what the source taught about this topic: definitions, how it works, key facts, steps, numbers, names, and caveats. Not a headline or a one-sentence summary.",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "description": "Short specific noun phrase copied from the source. Never invent a name.",
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "subtopics": {
+            "description": "Named subtopics covered inside this topic.",
+            "items": {
+              "$ref": "#/components/schemas/SubtopicDescription"
+            },
+            "maxItems": 8,
+            "title": "Subtopics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ],
+        "title": "TopicDescription",
         "type": "object"
       },
       "UpdateNotePageRequest": {
@@ -4167,9 +4236,54 @@
         ]
       }
     },
+    "/v1/spaces/{space_id}": {
+      "delete": {
+        "operationId": "delete_space_v1_spaces__space_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Space",
+        "tags": [
+          "spaces"
+        ]
+      }
+    },
     "/v1/spaces/{space_id}/coverage": {
       "get": {
-        "description": "The space's inferred syllabus and how much of it is covered.\n\nGenerated on first read and cached; regenerated automatically once the\nspace's mapped concepts change since the last generation.",
+        "description": "The space's inferred syllabus and how much of it is covered.\n\nCache-only: returns the last generated syllabus, or ``coverage_pct=None``\nif none exists yet. Generation is ``POST`` on this path (1 credit) or the\ncapture pipeline's rate-limited refresh.",
         "operationId": "get_space_coverage_v1_spaces__space_id__coverage_get",
         "parameters": [
           {
@@ -4215,6 +4329,57 @@
           }
         },
         "summary": "Get Space Coverage",
+        "tags": [
+          "coverage"
+        ]
+      },
+      "post": {
+        "description": "Infer (or refresh) the space syllabus. Consumes one credit.",
+        "operationId": "regenerate_space_coverage_v1_spaces__space_id__coverage_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regenerate Space Coverage",
         "tags": [
           "coverage"
         ]

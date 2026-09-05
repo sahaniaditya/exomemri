@@ -171,3 +171,39 @@ def test_notes_require_owned_source(client: TestClient) -> None:
     missing = str(uuid4())
     resp = client.get(f"/v1/sources/{missing}/notes")
     assert resp.status_code == 404
+
+
+def test_notes_survive_url_recapture(client: TestClient) -> None:
+    source_id = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/agentic",
+            "title": "Agentic AI",
+            "content": "first extract",
+        },
+    ).json()["source_id"]
+    created = client.post(
+        f"/v1/sources/{source_id}/notes", json={"title": "My takeaways"}
+    )
+    assert created.status_code == 201
+    note_id = created.json()["id"]
+
+    recapture = client.post(
+        "/v1/sources",
+        json={
+            "space_id": SPACE,
+            "type": "article",
+            "url": "https://example.com/agentic",
+            "title": "Agentic AI",
+            "content": "updated extract with more detail",
+        },
+    )
+    assert recapture.status_code == 202
+    assert recapture.json()["source_id"] == source_id
+
+    listed = client.get(f"/v1/sources/{source_id}/notes").json()["items"]
+    assert len(listed) == 1
+    assert listed[0]["id"] == note_id
+    assert listed[0]["title"] == "My takeaways"

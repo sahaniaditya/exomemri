@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from app.services.extract_service import MAX_EXTRACT_CHARS
 
-# Same budget as chat/lazy summary — one safe inline LLM call.
+# Same budget as chat's extract fallback — one safe inline LLM call.
 LLM_WINDOW_CHARS = MAX_EXTRACT_CHARS
 # Carry a little context across boundaries so ideas aren't cut mid-thought.
 LLM_WINDOW_OVERLAP_CHARS = 2_000

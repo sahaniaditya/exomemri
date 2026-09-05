@@ -14,11 +14,14 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import get_settings
 from app.errors import ConflictError, NotFoundError
 from app.schemas.common import User
 from app.services.concept_service import ConceptService
+from app.services.coverage_service import CoverageService
 from app.services.credits_service import CreditsService
 from app.services.extract_service import ExtractService
+from app.services.rate_limit_service import NoopRateLimiter
 from app.services.sharing_service import SharingService
 from app.services.source_chat_service import SourceChatService
 from app.services.space_service import SpaceService
@@ -27,6 +30,7 @@ from app.tests.conftest import (
     SEEDED_SPACE_ID,
     FakeCollaboratorRepo,
     FakeConceptRepo,
+    FakeCoverageRepo,
     FakeCreditsRepo,
     FakeLLMService,
     FakeNoteRepo,
@@ -84,7 +88,7 @@ def _build_services(
     profile_repo: FakeProfileRepo,
     share_link_repo: FakeShareLinkRepo | None = None,
 ) -> tuple[SpaceService, SharingService]:
-    space_svc = SpaceService(space_repo, collaborator_repo)  # type: ignore[arg-type]
+    space_svc = SpaceService(space_repo, collaborator_repo, FakeStorage())  # type: ignore[arg-type]
     sharing_svc = SharingService(
         collaborator_repo,
         space_svc,
@@ -97,14 +101,24 @@ def _build_services(
 # --- owner-side HTTP: invite/list/revoke ---
 
 
-def test_invite_unknown_username_is_not_found(
+def test_invite_unknown_username_is_generic_not_found(
     client: TestClient, space_repo: FakeSpaceRepo
 ) -> None:
+    """Missing usernames share one 404 envelope — no copy or detail that
+    distinguishes 'nobody' from 'alsomissing' (username enumeration)."""
     source = _seed_source(space_repo, space_id=SEEDED_SPACE_ID, user_id=DEV_USER_ID)
-    res = client.post(
+    first = client.post(
         f"/v1/sources/{source['id']}/collaborators", json={"username": "nobody"}
     )
-    assert res.status_code == 404
+    second = client.post(
+        f"/v1/sources/{source['id']}/collaborators", json={"username": "alsomissing"}
+    )
+    assert first.status_code == 404
+    assert second.status_code == 404
+    assert first.json() == second.json()
+    error = first.json()["error"]
+    assert error["message"] == "Unable to invite that user."
+    assert "detail" not in error
 
 
 def test_invite_into_unowned_source_is_not_found(
@@ -241,7 +255,7 @@ def test_collaborator_can_read_granted_source_but_not_a_sibling(
         CreditsService(FakeCreditsRepo()),  # type: ignore[arg-type]
     )
     summary = asyncio.run(
-        chat_svc.get_or_create_summary(user=other_user, source_id=UUID(source_a["id"]))
+        chat_svc.get_summary(user=other_user, source_id=UUID(source_a["id"]))
     )
     assert summary.summary == "A summary"
 
@@ -305,8 +319,18 @@ def test_collaborator_cannot_mutate_or_see_the_space_graph(
     with pytest.raises(NotFoundError):
         space_svc.require_owned_space(other_user, UUID(SEEDED_SPACE_ID))
 
+    credits = CreditsService(FakeCreditsRepo())  # type: ignore[arg-type]
+    coverage = CoverageService(
+        FakeCoverageRepo(),
+        concept_repo,
+        space_svc,
+        llm_service,
+        NoopRateLimiter(),
+        get_settings(),
+        credits,  # type: ignore[arg-type]
+    )
     concept_svc = ConceptService(
-        concept_repo, space_svc, ExtractService(storage), llm_service  # type: ignore[arg-type]
+        concept_repo, space_svc, ExtractService(storage), llm_service, credits, coverage  # type: ignore[arg-type]
     )
     with pytest.raises(NotFoundError):
         concept_svc.get_graph(other_user, UUID(SEEDED_SPACE_ID))

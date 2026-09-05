@@ -8,6 +8,7 @@ from fastapi import Depends, Header
 
 from app.config import Settings, get_settings
 from app.errors import AuthError
+from app.rate_limit import get_rate_limiter
 from app.repositories.chunk_repo import ChunkRepo
 from app.repositories.collaborator_repo import CollaboratorRepo
 from app.repositories.concept_repo import ConceptRepo
@@ -36,6 +37,7 @@ from app.services.note_service import NoteService
 from app.services.pipeline_service import PipelineService
 from app.services.plan_service import PlanService
 from app.services.profile_service import ProfileService
+from app.services.rate_limit_service import RateLimitService
 from app.services.review_service import ReviewService
 from app.services.session_service import SessionService
 from app.services.sharing_service import SharingService
@@ -59,8 +61,9 @@ def get_share_link_repo() -> ShareLinkRepo:
 def get_space_service(
     spaces: SpaceRepo = Depends(get_space_repo),
     collaborators: CollaboratorRepo = Depends(get_collaborator_repo),
+    storage: StorageRepo = Depends(get_storage_repo),
 ) -> SpaceService:
-    return SpaceService(spaces, collaborators)
+    return SpaceService(spaces, collaborators, storage)
 
 
 def get_session_service(
@@ -183,6 +186,47 @@ def get_authenticated_app_user(
     """
     return User(id=UUID(auth_user.id), email=auth_user.email)
 
+
+def enforce_capture_rate_limit(
+    user: User = Depends(get_authenticated_app_user),
+    limiter: RateLimitService = Depends(get_rate_limiter),
+    settings: Settings = Depends(get_settings),
+) -> User:
+    limiter.check(
+        f"capture:user:{user.id}",
+        limit=settings.rate_limit_capture_max,
+        window_seconds=settings.rate_limit_capture_window_seconds,
+    )
+    return user
+
+
+def enforce_chat_rate_limit(
+    user: User = Depends(get_authenticated_app_user),
+    limiter: RateLimitService = Depends(get_rate_limiter),
+    settings: Settings = Depends(get_settings),
+) -> User:
+    limiter.check(
+        f"chat:user:{user.id}",
+        limit=settings.rate_limit_chat_max,
+        window_seconds=settings.rate_limit_chat_window_seconds,
+    )
+    return user
+
+
+def enforce_rebuild_rate_limit(
+    space_id: UUID,
+    user: User = Depends(get_authenticated_app_user),
+    limiter: RateLimitService = Depends(get_rate_limiter),
+    settings: Settings = Depends(get_settings),
+) -> User:
+    limiter.check(
+        f"rebuild:space:{space_id}",
+        limit=settings.rate_limit_rebuild_max,
+        window_seconds=settings.rate_limit_rebuild_window_seconds,
+    )
+    return user
+
+
 def get_extract_service(storage: StorageRepo = Depends(get_storage_repo)) -> ExtractService:
     return ExtractService(storage)
 
@@ -208,13 +252,32 @@ def get_source_chat_service(
 def get_concept_repo() -> ConceptRepo:
     return ConceptRepo(get_service_client())
 
+
+def get_coverage_repo() -> CoverageRepo:
+    return CoverageRepo(get_service_client())
+
+
+def get_coverage_service(
+    coverage: CoverageRepo = Depends(get_coverage_repo),
+    concepts: ConceptRepo = Depends(get_concept_repo),
+    spaces: SpaceService = Depends(get_space_service),
+    llm: LLMService = Depends(get_llm_service),
+    limiter: RateLimitService = Depends(get_rate_limiter),
+    settings: Settings = Depends(get_settings),
+    credits: CreditsService = Depends(get_credits_service),
+) -> CoverageService:
+    return CoverageService(coverage, concepts, spaces, llm, limiter, settings, credits)
+
+
 def get_concept_service(
     concepts: ConceptRepo = Depends(get_concept_repo),
     spaces: SpaceService = Depends(get_space_service),
     extracts: ExtractService = Depends(get_extract_service),
     llm: LLMService = Depends(get_llm_service),
+    credits: CreditsService = Depends(get_credits_service),
+    coverage: CoverageService = Depends(get_coverage_service),
 ) -> ConceptService:
-    return ConceptService(concepts, spaces, extracts, llm)
+    return ConceptService(concepts, spaces, extracts, llm, credits, coverage)
 
 
 def get_capture_service(
@@ -227,17 +290,6 @@ def get_capture_service(
 ) -> CaptureService:
     return CaptureService(settings, storage, space_service, streaks, concepts, credits)
 
-
-def get_coverage_repo() -> CoverageRepo:
-    return CoverageRepo(get_service_client())
-
-def get_coverage_service(
-    coverage: CoverageRepo = Depends(get_coverage_repo),
-    concepts: ConceptRepo = Depends(get_concept_repo),
-    spaces: SpaceService = Depends(get_space_service),
-    llm: LLMService = Depends(get_llm_service),
-) -> CoverageService:
-    return CoverageService(coverage, concepts, spaces, llm)
 
 def get_plan_service(
     coverage: CoverageService = Depends(get_coverage_service),
@@ -252,5 +304,8 @@ def get_pipeline_service(
     llm: LLMService = Depends(get_llm_service),
     chunks: ChunkRepo = Depends(get_chunk_repo),
     space_service: SpaceService = Depends(get_space_service),
+    coverage: CoverageService = Depends(get_coverage_service),
 ) -> PipelineService:
-    return PipelineService(concepts, extracts, embeddings, llm, chunks, space_service)
+    return PipelineService(
+        concepts, extracts, embeddings, llm, chunks, space_service, coverage
+    )

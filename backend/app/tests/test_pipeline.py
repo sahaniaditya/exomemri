@@ -7,14 +7,20 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.schemas.common import User
+from app.schemas.sources import StructuredSummary
 from app.services.concept_service import ConceptService
+from app.services.coverage_service import CoverageService
+from app.services.credits_service import CreditsService
 from app.services.pipeline_service import PipelineService
+from app.services.rate_limit_service import NoopRateLimiter
 from app.services.space_service import SpaceService
 from app.tests.conftest import (
     SEEDED_SPACE_ID,
     FakeChunkRepo,
     FakeCollaboratorRepo,
     FakeConceptRepo,
+    FakeCoverageRepo,
+    FakeCreditsRepo,
     FakeEmbeddingService,
     FakeLLMService,
     FakeSpaceRepo,
@@ -69,9 +75,25 @@ def _build_pipeline_service(
     chunks: FakeChunkRepo,
     concepts: FakeConceptRepo,
 ) -> PipelineService:
-    space_svc = SpaceService(space_repo, FakeCollaboratorRepo())  # type: ignore[arg-type]
-    concept_svc = ConceptService(concepts, space_svc, extracts, llm)  # type: ignore[arg-type]
-    return PipelineService(concept_svc, extracts, embeddings, llm, chunks, space_svc)
+    from app.config import get_settings
+
+    space_svc = SpaceService(space_repo, FakeCollaboratorRepo(), FakeStorage())  # type: ignore[arg-type]
+    credits = CreditsService(FakeCreditsRepo())  # type: ignore[arg-type]
+    coverage = CoverageService(
+        FakeCoverageRepo(),
+        concepts,
+        space_svc,
+        llm,
+        NoopRateLimiter(),
+        get_settings(),
+        credits,  # type: ignore[arg-type]
+    )
+    concept_svc = ConceptService(
+        concepts, space_svc, extracts, llm, credits, coverage  # type: ignore[arg-type]
+    )
+    return PipelineService(
+        concept_svc, extracts, embeddings, llm, chunks, space_svc, coverage
+    )
 
 
 async def test_pipeline_chunks_embeds_and_summarizes(
@@ -103,8 +125,13 @@ async def test_pipeline_chunks_embeds_and_summarizes(
     )
 
     assert space_repo.sources[source["id"]]["processing_status"] == "ready"
-    assert space_repo.sources[source["id"]]["summary_text"] == "Summary of A long article"
-    assert len(space_repo.sources[source["id"]]["summary_sections"]["tldr"]) == 5
+    assert (
+        space_repo.sources[source["id"]]["summary_text"]
+        == "A long article — Summary of A long article"
+    )
+    stored_sections = space_repo.sources[source["id"]]["summary_sections"]
+    assert len(stored_sections["tldr"]) == 5
+    assert stored_sections["topics"][0]["name"] == "A long article"
     stored_chunks = chunk_repo.chunks_by_source[source["id"]]
     assert len(stored_chunks) > 1
     assert all(c["embedding"] for c in stored_chunks)
@@ -139,7 +166,7 @@ async def test_pipeline_marks_failed_on_node_exception(
     assert source["id"] not in chunk_repo.chunks_by_source
 
 
-async def test_pipeline_map_reduces_long_extract(
+async def test_pipeline_summarizes_long_extract_without_merge(
     dev_user: User,
     space_repo: FakeSpaceRepo,
     storage: FakeStorage,
@@ -147,17 +174,25 @@ async def test_pipeline_map_reduces_long_extract(
     embedding_service: FakeEmbeddingService,
     concept_repo: FakeConceptRepo,
 ) -> None:
-    """A multi-window extract still reaches ready with one combined summary."""
+    """A multi-window extract concatenates part summaries instead of merging."""
     from app.services.extract_service import MAX_EXTRACT_CHARS, ExtractService
     from app.services.pipeline.windows import split_for_llm
 
     class CountingLLM(FakeLLMService):
         def __init__(self) -> None:
-            self.summarize_calls = 0
+            self.structured_calls = 0
 
-        async def summarize(self, *, title: str, extract: str) -> str:
-            self.summarize_calls += 1
-            return await super().summarize(title=title, extract=extract)
+        async def summarize_structured(
+            self,
+            *,
+            title: str,
+            extract: str,
+            detailed: bool | None = None,
+        ) -> StructuredSummary:
+            self.structured_calls += 1
+            return await super().summarize_structured(
+                title=title, extract=extract, detailed=detailed
+            )
 
     text = ("Paragraph about distributed systems. " * 80 + "\n\n") * 40
     assert len(text) > MAX_EXTRACT_CHARS
@@ -181,7 +216,9 @@ async def test_pipeline_map_reduces_long_extract(
     )
 
     assert space_repo.sources[source["id"]]["processing_status"] == "ready"
-    assert space_repo.sources[source["id"]]["summary_text"] == "Summary of A long article"
-    # Map (one per window) + one reduce call — more than a single-window path.
-    assert llm.summarize_calls > 2
+    summary_text = space_repo.sources[source["id"]]["summary_text"]
+    assert "Summary of A long article (part 1/" in summary_text
+    assert "\n\n" in summary_text
+    # One structured parse per window — no second merge pass.
+    assert llm.structured_calls == len(split_for_llm(text))
     assert len(chunk_repo.chunks_by_source[source["id"]]) > 1

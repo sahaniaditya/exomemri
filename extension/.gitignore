@@ -26,3 +26,6 @@ coverage/
 .DS_Store
 *.pem
 *.log
+backend-security-audit-findings.xlsx
+
+

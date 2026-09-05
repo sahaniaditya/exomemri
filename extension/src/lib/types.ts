@@ -542,6 +542,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/spaces/{space_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Space */
+        delete: operations["delete_space_v1_spaces__space_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/spaces/{space_id}/coverage": {
         parameters: {
             query?: never;
@@ -553,12 +570,17 @@ export interface paths {
          * Get Space Coverage
          * @description The space's inferred syllabus and how much of it is covered.
          *
-         *     Generated on first read and cached; regenerated automatically once the
-         *     space's mapped concepts change since the last generation.
+         *     Cache-only: returns the last generated syllabus, or ``coverage_pct=None``
+         *     if none exists yet. Generation is ``POST`` on this path (1 credit) or the
+         *     capture pipeline's rate-limited refresh.
          */
         get: operations["get_space_coverage_v1_spaces__space_id__coverage_get"];
         put?: never;
-        post?: never;
+        /**
+         * Regenerate Space Coverage
+         * @description Infer (or refresh) the space syllabus. Consumes one credit.
+         */
+        post: operations["regenerate_space_coverage_v1_spaces__space_id__coverage_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1540,17 +1562,19 @@ export interface components {
         };
         /**
          * StructuredSummary
-         * @description The 4-part per-source summary, as a structured-output envelope.
+         * @description Per-source LLM output: topics with descriptions, plus supporting sections.
+         *
+         *     ``topics`` is empty on rows summarized before this shape existed.
          */
         StructuredSummary: {
             /** Examples */
             examples: string[];
-            /** Interview Points */
-            interview_points: string[];
             /** Key Concepts */
             key_concepts: string[];
             /** Tldr */
             tldr: string[];
+            /** Topics */
+            topics?: components["schemas"]["TopicDescription"][];
         };
         /** StudyPlanResponse */
         StudyPlanResponse: {
@@ -1567,17 +1591,33 @@ export interface components {
              */
             space_id: string;
         };
+        /**
+         * SubtopicDescription
+         * @description A named subtopic covered inside a major topic.
+         */
+        SubtopicDescription: {
+            /**
+             * Description
+             * @description Summarized description of this subtopic: definition, how it works, key facts, numbers, and caveats. Not a headline.
+             */
+            description: string;
+            /**
+             * Name
+             * @description Short specific noun phrase for the subtopic.
+             */
+            name: string;
+        };
         /** SummaryResponse */
         SummaryResponse: {
             /** Generated */
             generated: boolean;
             /** Model */
-            model: string | null;
-            sections: components["schemas"]["StructuredSummary"];
+            model?: string | null;
+            sections?: components["schemas"]["StructuredSummary"] | null;
             /** Summarized At */
-            summarized_at: string | null;
+            summarized_at?: string | null;
             /** Summary */
-            summary: string;
+            summary?: string | null;
         };
         /**
          * SyllabusTopic
@@ -1596,6 +1636,27 @@ export interface components {
         TopReviewsResponse: {
             /** Items */
             items?: components["schemas"]["PublicReview"][];
+        };
+        /**
+         * TopicDescription
+         * @description One major topic the source teaches, with a summarized description and subtopics.
+         */
+        TopicDescription: {
+            /**
+             * Description
+             * @description Summarized description of what the source taught about this topic: definitions, how it works, key facts, steps, numbers, names, and caveats. Not a headline or a one-sentence summary.
+             */
+            description: string;
+            /**
+             * Name
+             * @description Short specific noun phrase copied from the source. Never invent a name.
+             */
+            name: string;
+            /**
+             * Subtopics
+             * @description Named subtopics covered inside this topic.
+             */
+            subtopics?: components["schemas"]["SubtopicDescription"][];
         };
         /**
          * UpdateNotePageRequest
@@ -3025,7 +3086,71 @@ export interface operations {
             };
         };
     };
+    delete_space_v1_spaces__space_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_space_coverage_v1_spaces__space_id__coverage_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    regenerate_space_coverage_v1_spaces__space_id__coverage_post: {
         parameters: {
             query?: never;
             header?: {

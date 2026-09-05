@@ -103,6 +103,19 @@
   color: var(--sage-light);
 }
 
+.pulseCta {
+  background: var(--ink);
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation-delay: 0.12s;
+  position: relative;
+  overflow: hidden;
+}
+
+.app .pulseCta {
+  color: var(--paper);
+}
+
 :global(.dark) .loading {
   background: #09090b;
   color: #a1a1aa;
@@ -605,6 +618,9 @@
   font-size: 11.5px;
   letter-spacing: 0.04em;
   color: var(--sage);
+}
+.spaceHeroActions {
+  margin-top: 18px;
 }
 .spacePulse {
   display: grid;
@@ -2205,7 +2221,8 @@ button.chip {
   transform: none;
   box-shadow: none;
 }
-.captureDeleteBtn {
+.captureDeleteBtn,
+.spaceDeleteBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2222,21 +2239,25 @@ button.chip {
   transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease,
     color 0.18s ease;
 }
-.captureDeleteBtn svg {
+.captureDeleteBtn svg,
+.spaceDeleteBtn svg {
   width: 16px;
   height: 16px;
   stroke: currentColor;
 }
-.captureDeleteBtn:hover:enabled {
+.captureDeleteBtn:hover:enabled,
+.spaceDeleteBtn:hover:enabled {
   background: var(--clay);
   border-color: var(--clay);
   color: var(--on-accent);
   transform: translateY(-2px);
 }
-.captureDeleteBtn:active:enabled {
+.captureDeleteBtn:active:enabled,
+.spaceDeleteBtn:active:enabled {
   transform: translateY(0);
 }
-.captureDeleteBtn:disabled {
+.captureDeleteBtn:disabled,
+.spaceDeleteBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none;
@@ -2339,12 +2360,49 @@ button.chip {
   height: 1px;
   background: linear-gradient(90deg, var(--line), transparent);
 }
+.captureProse {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--ink);
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+.captureProse p {
+  margin: 0 0 1em;
+}
+.captureProse p:last-child {
+  margin-bottom: 0;
+}
+.captureTopicClosed .folderHead {
+  border-bottom: none;
+}
+.captureTopicBody {
+  padding: 4px 16px 16px;
+}
+.captureTopicDescription {
+  margin: 0 0 1em;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.captureTopicDescription:last-child {
+  margin-bottom: 0;
+}
+.captureSubtopics {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
 .capturePoints {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 .capturePoints li {
@@ -2360,6 +2418,8 @@ button.chip {
   font-size: 15px;
   line-height: 1.55;
   color: var(--ink);
+  overflow: visible;
+  overflow-wrap: break-word;
   animation: captureCardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -2412,6 +2472,7 @@ button.chip {
   font-size: 14px;
   font-weight: 500;
   line-height: 1.4;
+  overflow-wrap: break-word;
   animation: captureCardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
@@ -2436,13 +2497,7 @@ button.chip {
   box-shadow: 0 0 0 4px rgba(44, 93, 79, 0.12);
   flex: none;
 }
-.captureSplit {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 28px 24px;
-}
-.captureExamples,
-.captureInterview {
+.captureExamples {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2450,8 +2505,7 @@ button.chip {
   flex-direction: column;
   gap: 10px;
 }
-.captureExamples li,
-.captureInterview li {
+.captureExamples li {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 12px;
@@ -2463,20 +2517,18 @@ button.chip {
   font-size: 14.5px;
   line-height: 1.55;
   color: var(--muted);
+  overflow-wrap: break-word;
   animation: captureCardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-:global(.dark) .captureExamples li,
-:global(.dark) .captureInterview li {
+:global(.dark) .captureExamples li {
   border: 1px solid var(--line);
 }
-.captureExamples li:hover,
-.captureInterview li:hover {
+.captureExamples li:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px -18px rgba(27, 26, 22, 0.4);
 }
-:global(.dark) .captureExamples li:hover,
-:global(.dark) .captureInterview li:hover {
+:global(.dark) .captureExamples li:hover {
   box-shadow: 0 12px 24px -18px rgba(0, 0, 0, 0.6);
 }
 .captureExampleMark {
@@ -2494,23 +2546,6 @@ button.chip {
   width: 13px;
   height: 13px;
   stroke: currentColor;
-}
-.captureInterviewQ {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-ibm-plex-mono), monospace;
-  font-size: 11px;
-  color: var(--clay);
-  background: rgba(181, 98, 60, 0.1);
-  border: 1px solid rgba(181, 98, 60, 0.22);
-  flex: none;
-}
-.captureInterview li {
-  color: var(--ink);
 }
 /* ---- Capture notes (user notebook) ---- */
 .notesSection {
@@ -2709,15 +2744,16 @@ button.chip {
   position: relative;
 }
 .notesEmojiPanel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 5;
+  position: fixed;
+  z-index: 60;
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(auto-fill, 1.75rem);
+  justify-content: start;
   gap: 4px;
   padding: 8px;
-  width: 240px;
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
   background: var(--paper);
   border: 1px solid rgba(27, 26, 22, 0.12);
   border-radius: 10px;
@@ -2728,13 +2764,18 @@ button.chip {
   box-shadow: 0 16px 32px -20px rgba(0, 0, 0, 0.6);
 }
 .notesEmojiBtn {
+  width: 1.75rem;
+  height: 1.75rem;
   border: none;
   background: transparent;
-  font-size: 18px;
-  line-height: 1.4;
+  font-size: 16px;
+  line-height: 1;
   border-radius: 6px;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .notesEmojiBtn:hover {
   background: rgba(44, 93, 79, 0.1);
@@ -2794,6 +2835,102 @@ button.chip {
   color: var(--forest);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+.notesEditor code {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 0.9em;
+  background: rgba(27, 26, 22, 0.08);
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+}
+:global(.dark) .notesEditor code {
+  background: rgba(255, 255, 255, 0.08);
+}
+.notesEditor pre {
+  margin: 0.75em 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid rgba(27, 26, 22, 0.12);
+  overflow-x: auto;
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+:global(.dark) .notesEditor pre {
+  border: 1px solid var(--line);
+}
+.notesEditor pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: inherit;
+  font-family: inherit;
+}
+.notesCodeWrap {
+  position: relative;
+  margin: 0.75em 0;
+  border-radius: 10px;
+  border: 1px solid rgba(27, 26, 22, 0.12);
+  background: var(--paper);
+  overflow: hidden;
+}
+:global(.dark) .notesCodeWrap {
+  border: 1px solid var(--line);
+}
+.notesCodeWrap[data-selected='true'] {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+}
+.notesCodeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(27, 26, 22, 0.08);
+  background: rgba(244, 241, 233, 0.7);
+}
+:global(.dark) .notesCodeBar {
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+.notesCodeLabel {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+.notesCodeCopy {
+  border: 1px solid rgba(27, 26, 22, 0.12);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+:global(.dark) .notesCodeCopy {
+  border: 1px solid var(--line);
+}
+.notesCodeCopy:hover {
+  border-color: rgba(44, 93, 79, 0.35);
+  background: rgba(44, 93, 79, 0.06);
+}
+.notesCodePre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 .notesImageWrap {
   position: relative;
@@ -3317,8 +3454,7 @@ button.chip {
     flex-wrap: wrap;
     min-width: 0;
   }
-  .capturePoints,
-  .captureSplit {
+  .capturePoints {
     grid-template-columns: 1fr;
   }
   .captureTitle {
@@ -3849,6 +3985,9 @@ button.chip {
   line-height: 1.6;
   color: var(--muted);
   margin: 0;
+}
+.covempty + .maptoggle {
+  margin-top: 12px;
 }
 .covsection {
   margin-top: 14px;
@@ -4777,8 +4916,8 @@ button.chip {
     min-height: 42px;
   }
   .notesEmojiPanel {
-    max-width: calc(100vw - 40px);
-    width: min(240px, calc(100vw - 40px));
+    max-width: calc(100vw - 16px);
+    width: min(280px, calc(100vw - 16px));
   }
   .profileFields {
     grid-template-columns: 1fr;

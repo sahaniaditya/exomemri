@@ -17,6 +17,7 @@ import anyio
 from app.repositories.chunk_repo import ChunkRepo
 from app.schemas.common import User
 from app.services.concept_service import ConceptService
+from app.services.coverage_service import CoverageService
 from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
@@ -35,6 +36,7 @@ class PipelineService:
         llm: LLMService,
         chunks: ChunkRepo,
         space_service: SpaceService,
+        coverage: CoverageService,
     ) -> None:
         self._space_service = space_service
         self._graph = build_pipeline(
@@ -44,6 +46,7 @@ class PipelineService:
             llm=llm,
             chunks=chunks,
             space_service=space_service,
+            coverage=coverage,
         )
 
     async def run(self, *, user: User, source_id: UUID, space_id: UUID) -> None:
