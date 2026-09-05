@@ -316,6 +316,26 @@ export default function NotePageEditor({
           >
             Link
           </button>
+          <button
+            type="button"
+            className={styles.notesTool}
+            disabled={!editor || !ready}
+            onClick={() => editor?.chain().focus().toggleCode().run()}
+            aria-label="Inline code"
+            data-active={editor?.isActive('code') ? 'true' : undefined}
+          >
+            <code>{'</>'}</code>
+          </button>
+          <button
+            type="button"
+            className={styles.notesTool}
+            disabled={!editor || !ready}
+            onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+            aria-label="Code block"
+            data-active={editor?.isActive('codeBlock') ? 'true' : undefined}
+          >
+            Code
+          </button>
           <div className={styles.notesEmojiWrap} ref={emojiRef}>
             <button
               type="button"

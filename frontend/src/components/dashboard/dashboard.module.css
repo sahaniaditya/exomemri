@@ -2795,6 +2795,38 @@ button.chip {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.notesEditor code {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 0.9em;
+  background: rgba(27, 26, 22, 0.08);
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+}
+:global(.dark) .notesEditor code {
+  background: rgba(255, 255, 255, 0.08);
+}
+.notesEditor pre {
+  margin: 0.75em 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid rgba(27, 26, 22, 0.12);
+  overflow-x: auto;
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+:global(.dark) .notesEditor pre {
+  border: 1px solid var(--line);
+}
+.notesEditor pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: inherit;
+  font-family: inherit;
+}
 .notesImageWrap {
   position: relative;
   display: block;
