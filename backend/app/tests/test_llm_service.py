@@ -8,9 +8,6 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import pytest
-from pydantic import ValidationError
-
 from app.config import get_settings
 from app.schemas.sources import (
     DETAILED_SUMMARY_EXTRACT_CHARS,
@@ -111,13 +108,14 @@ def test_structured_summary_as_prose_joins_topic_descriptions() -> None:
     assert "majority vote" in prose
 
 
-def test_structured_summary_output_requires_at_least_one_topic() -> None:
-    with pytest.raises(ValidationError):
-        StructuredSummaryOutput(
-            tldr=[f"point {i}" for i in range(5)],
-            key_concepts=["a concept"],
-            examples=["an example"],
-        )
+def test_structured_summary_output_accepts_empty_topics() -> None:
+    sections = StructuredSummaryOutput(
+        tldr=[f"point {i}" for i in range(5)],
+        key_concepts=["a concept"],
+        examples=["an example"],
+    )
+    assert sections.topics == []
+    assert sections.as_prose() == "\n".join(sections.tldr)
 
 
 def test_structured_summary_as_prose_falls_back_to_tldr() -> None:
@@ -191,17 +189,18 @@ def test_merge_structured_summaries_merges_subtopics() -> None:
     assert "Iterator allocation cost" in merged.topics[0].subtopics[0].description
 
 
-def test_detailed_summary_output_rejects_fewer_than_four_topics() -> None:
+def test_detailed_summary_output_accepts_fewer_than_four_topics() -> None:
     short = "A detailed finding. " * 20
-    with pytest.raises(ValidationError):
-        DetailedStructuredSummaryOutput(
-            topics=[
-                TopicDescriptionOutput(name="Only one", description=short),
-            ],
-            tldr=[f"point {i}" for i in range(5)],
-            key_concepts=["a concept"],
-            examples=["an example"],
-        )
+    sections = DetailedStructuredSummaryOutput(
+        topics=[
+            TopicDescriptionOutput(name="Only one", description=short),
+        ],
+        tldr=[f"point {i}" for i in range(5)],
+        key_concepts=["a concept"],
+        examples=["an example"],
+    )
+    assert len(sections.topics) == 1
+    assert sections.topics[0].name == "Only one"
 
 
 async def test_summarize_uses_structured_parse() -> None:
