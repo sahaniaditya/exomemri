@@ -3,6 +3,47 @@
  * Scoped as a CSS module so it cannot leak into auth/marketing pages,
  * which still carry their own inline styling.
  */
+ /* dashboard.module.css */
+.checkCoverageBtn {
+  background: var(--surface-interactive, #2a2a2a);
+  color: var(--text-primary, #ffffff);
+  border: 1px solid var(--border-subtle, #444);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.checkCoverageBtn:hover {
+  background: var(--surface-interactive-hover, #3a3a3a);
+}
+
+.ringGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recheckBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #888);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.recheckBtn:hover {
+  color: var(--text-primary, #fff);
+}
+
+.coverageSpinner {
+  font-size: 0.75rem;
+  color: var(--text-muted, #aaa);
+}
+
 .themeToggle {
   display: inline-flex;
   align-items: center;
