@@ -45,6 +45,9 @@ export default async function DashboardPage() {
   const captures = recentSources.map(toCapturedSource)
   const totalSources = apiSpaces.reduce((sum, space) => sum + space.source_counts.total, 0)
 
+  // Collect all space IDs owned by the user
+  const spaceIds = apiSpaces.map(space => space.id)
+
   return (
     <div className={`${styles.app} ${atlasFontVars}`}>
       <Sidebar
@@ -80,7 +83,8 @@ export default async function DashboardPage() {
                   : undefined
               }
             />
-            <CaptureFeed sources={captures} canDelete />
+            {/* Pass spaceIds explicitly so socket listens across all spaces */}
+            <CaptureFeed sources={captures} spaceIds={spaceIds} canDelete />
           </section>
 
           {sharedSpaces.length > 0 && (

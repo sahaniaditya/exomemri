@@ -64,6 +64,7 @@ def build_pipeline(
                 )
             )
             extract = await extracts.read_full_extract(state["source"])
+            print("fetch_extract")
             return {**state, "extract": extract}
         except Exception as exc:  # noqa: BLE001 - graph must never raise
             logger.error("pipeline_fetch_failed", extra={"source_id": state["source_id"]})
@@ -78,7 +79,8 @@ def build_pipeline(
                     status=ProcessingStatus.chunking.value,
                 )
             )
-            return {**state, "chunks": chunk_text(state["extract"])}
+            print("chunk")
+            return {**state, "chunks": await anyio.to_thread.run_sync(chunk_text, state["extract"])}
         except Exception as exc:  # noqa: BLE001 - graph must never raise
             logger.error("pipeline_chunk_failed", extra={"source_id": state["source_id"]})
             return {**state, "error": str(exc)}
@@ -113,6 +115,7 @@ def build_pipeline(
             await anyio.to_thread.run_sync(
                 partial(chunks.replace_chunks, source_id=state["source_id"], chunks=chunk_rows)
             )
+            print("embd")
             return {**state, "embeddings": vectors}
         except Exception as exc:  # noqa: BLE001 - graph must never raise
             logger.error("pipeline_embed_failed", extra={"source_id": state["source_id"]})
@@ -139,6 +142,7 @@ def build_pipeline(
                     model=llm.model_name,
                 )
             )
+            print("summarizze")
             return {**state, "summary": summary, "summary_sections": sections.model_dump()}
         except Exception as exc:  # noqa: BLE001 - graph must never raise
             logger.error("pipeline_summarize_failed", extra={"source_id": state["source_id"]})
@@ -176,6 +180,7 @@ def build_pipeline(
             logger.error(
                 "pipeline_extract_concepts_failed", extra={"source_id": state["source_id"]}
             )
+            print("extract_concept")
             return {**state, "error": str(exc)}
 
     async def finalize(state: PipelineState) -> PipelineState:
@@ -200,6 +205,7 @@ def build_pipeline(
                 status=ProcessingStatus.failed.value,
             )
         )
+        print("mark_failed")
         return state
 
     graph: StateGraph = StateGraph(PipelineState)
