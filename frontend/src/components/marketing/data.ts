@@ -5,9 +5,7 @@ export const FULL_ANSWER =
  * Chrome Web Store listing for the capture extension.
  * Set `NEXT_PUBLIC_CHROME_WEB_STORE_URL` in production once the listing is live.
  */
-export const CHROME_WEB_STORE_URL =
-  process.env.NEXT_PUBLIC_CHROME_WEB_STORE_URL?.trim() ||
-  'https://chromewebstore.google.com/detail/exomemri';
+export const CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/detail/nlpddiadlnpflmmmbjchklkoccpjhehc?utm_source=item-share-cb"
 
 export const NAV_LINKS = [
   { label: 'How it works', href: '#how' },
