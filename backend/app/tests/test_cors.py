@@ -113,3 +113,18 @@ def test_pinned_web_origin_is_reflected_unknown_is_not() -> None:
     )
     assert _allow_origin(client, PINNED_WEB) == PINNED_WEB
     assert _allow_origin(client, EVIL_WEB) is None
+
+
+def test_frontend_url_falls_back_to_first_cors_web_origin() -> None:
+    settings = _settings(frontend_url="", cors_web_origins=[PINNED_WEB, EVIL_WEB])
+    assert settings.frontend_url == PINNED_WEB
+
+
+def test_frontend_url_strips_trailing_slash() -> None:
+    settings = _settings(frontend_url="https://exomemri.com/")
+    assert settings.frontend_url == "https://exomemri.com"
+
+
+def test_frontend_url_defaults_to_localhost_without_cors_origins() -> None:
+    settings = _settings(frontend_url="", cors_web_origins=[])
+    assert settings.frontend_url == "http://localhost:3000"
