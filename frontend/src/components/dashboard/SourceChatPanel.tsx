@@ -8,11 +8,13 @@
  */
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
 import { Lockup } from '@/components/brand/Lockup'
 import { ThemeMark } from '@/components/brand/ThemeMark'
 import { Mark } from '@/components/brand/Mark'
 import { useLockBodyScroll } from '@/lib/lock-body-scroll'
 import { useIsMounted } from '@/lib/use-is-mounted'
+import { getCachedMessages, setCachedMessages } from '@/lib/source-chat-cache'
 import styles from './dashboard.module.css'
 import type { ChatMessage } from '@/lib/sources'
 
@@ -57,7 +59,14 @@ export default function SourceChatPanel({
   onClose,
 }: SourceChatPanelProps) {
   const mounted = useIsMounted()
-  const [messages, setMessages] = useState(initialMessages)
+  const router = useRouter()
+
+  // CHANGED: seed state from the in-memory cache first (instant, synchronous,
+  // no network wait). Falls back to the server-provided initialMessages only
+  // if this sourceId hasn't been cached yet in this page session.
+  const [messages, setMessages] = useState<ChatMessage[]>(
+    () => getCachedMessages(sourceId) ?? initialMessages
+  )
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
@@ -75,6 +84,13 @@ export default function SourceChatPanel({
   )
 
   useLockBodyScroll(true)
+
+  // NEW: keep the module-level cache in sync with state on every change.
+  // Runs synchronously in the same commit as setMessages — no async gap,
+  // so closing the tab immediately after sending can't lose the update.
+  useEffect(() => {
+    setCachedMessages(sourceId, messages)
+  }, [sourceId, messages])
 
   useEffect(() => {
     widthRef.current = width
@@ -128,7 +144,7 @@ export default function SourceChatPanel({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') handleClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -179,6 +195,16 @@ export default function SourceChatPanel({
     }
   }
 
+  // CHANGED: router.refresh() is now just a best-effort background sync for
+  // the server-rendered segment (e.g. a future hard reload benefits from it).
+  // It is no longer load-bearing for correctness — the cache above already
+  // guarantees the panel shows the latest messages instantly on reopen,
+  // even if this refresh never resolves (tab closed early, slow network, etc).
+  const handleClose = () => {
+    router.refresh()
+    onClose()
+  }
+
   const handleSend = async () => {
     const content = input.trim()
     if (!content || sending) return
@@ -211,6 +237,10 @@ export default function SourceChatPanel({
       }
       const userMessage = data.user_message
       const assistantMessage = data.assistant_message
+      // This setMessages call synchronously triggers the cache-sync effect
+      // above before this function's async work continues — so even if the
+      // user closes the tab on the very next tick, the cache already has
+      // the real (non-optimistic) messages.
       setMessages(prev => [
         ...prev.filter(m => m.id !== optimisticId),
         userMessage,
@@ -241,7 +271,7 @@ export default function SourceChatPanel({
         type="button"
         className={styles.memoryBackdrop}
         aria-label="Close memory panel"
-        onClick={onClose}
+        onClick={handleClose}
       />
       <aside
         ref={panelRef}
@@ -268,7 +298,7 @@ export default function SourceChatPanel({
           <button
             type="button"
             className={styles.memoryPanelClose}
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close memory panel"
           >
             <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" aria-hidden="true">

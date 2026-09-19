@@ -4,20 +4,20 @@
  * Space-scoped capture list grouped into one-level folders.
  * Owners can create / rename / delete folders and move captures;
  * viewers see the same grouping read-only.
+ *
+ * Live status updates (Processing → Ready / Failed) arrive over the
+ * same capture WebSocket feed as the flat CaptureFeed, instead of
+ * being polled for via router.refresh().
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 
-import {
-  isCaptureProcessing,
-  type CapturedSource,
-} from '@/lib/dashboard-data'
+import { type CapturedSource } from '@/lib/dashboard-data'
 import type { SpaceFolder } from '@/lib/spaces'
+import { useCaptureSocket } from '@/lib/use-capture-socket'
 import CaptureFeed, { CaptureRow } from './CaptureFeed'
 import MoveToFolderMenu from './MoveToFolderMenu'
 import styles from './dashboard.module.css'
-
-const POLL_MS = 2500
 
 export default function SpaceCaptureFeed({
   spaceId,
@@ -35,26 +35,37 @@ export default function SpaceCaptureFeed({
   emptyBody: string
 }) {
   const router = useRouter()
-  const pending = sources.some(source => isCaptureProcessing(source.status))
+
+  // Local mirror of server-provided sources
+  const [liveSources, setLiveSources] = useState(sources)
+
+  useEffect(() => {
+    setLiveSources(sources)
+  }, [sources])
+
+  // Stable identity for socket hook subscription
+  const spaceIds = useMemo(() => [spaceId], [spaceId])
+
+  // Listen for realtime updates
+  useCaptureSocket(spaceIds, event => {
+    setLiveSources(prev =>
+      prev.map(source =>
+        source.id === event.sourceId ? { ...source, ...event.patch } : source
+      )
+    )
+  })
+
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [renameError, setRenameError] = useState<string | null>(null)
   const [busyFolder, setBusyFolder] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!pending) return
-    const id = window.setInterval(() => {
-      router.refresh()
-    }, POLL_MS)
-    return () => window.clearInterval(id)
-  }, [pending, router])
-
   const grouped = useMemo(() => {
     const byFolder = new Map<string, CapturedSource[]>()
     for (const folder of folders) byFolder.set(folder.id, [])
     const ungrouped: CapturedSource[] = []
-    for (const source of sources) {
+    for (const source of liveSources) {
       if (source.folderId && byFolder.has(source.folderId)) {
         byFolder.get(source.folderId)!.push(source)
       } else {
@@ -62,7 +73,7 @@ export default function SpaceCaptureFeed({
       }
     }
     return { ungrouped, byFolder }
-  }, [folders, sources])
+  }, [folders, liveSources])
 
   function toggle(id: string) {
     setCollapsed(prev => {
@@ -148,10 +159,12 @@ export default function SpaceCaptureFeed({
     )
   }
 
-  if (sources.length === 0 && folders.length === 0) {
+  // ✅ FIX: Pass spaceIds explicitly so subscription maintains continuity on empty states
+  if (liveSources.length === 0 && folders.length === 0) {
     return (
       <CaptureFeed
-        sources={sources}
+        sources={liveSources}
+        spaceIds={spaceIds}
         emptyTitle={emptyTitle}
         emptyBody={emptyBody}
       />

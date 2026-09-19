@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 
 from supabase import Client
 
+from app.config import Settings
 from app.errors import AuthError, ConflictError, NotFoundError
 from app.repositories.profile_repo import ProfileRepo
 from app.repositories.supabase_client import get_auth_client
@@ -31,10 +32,12 @@ class AuthService:
         profiles: ProfileRepo,
         service_client: Client,
         credits: CreditsService,
+        settings: Settings,
     ) -> None:
         self._profiles = profiles
         self._service_client = service_client
         self._credits = credits
+        self._settings = settings
 
     def login(self, email: str, password: str) -> LoginResponse:
         try:
@@ -98,3 +101,37 @@ class AuthService:
             self._credits.ensure_for_user(user_id)
         except Exception:  # noqa: BLE001 - credits must not block onboarding
             logger.warning("credits_ensure_on_onboarding_failed", extra={"user_id": user_id})
+
+    def request_password_reset(self, email: str) -> None:
+        """Always succeeds from the caller's perspective — never reveals
+        whether an account exists for this email (avoids enumeration)."""
+        try:
+            auth_client = get_auth_client()
+            auth_client.auth.reset_password_for_email(
+                email,
+                {"redirect_to": f"{self._settings.frontend_url}/reset-password"},
+            )
+        except Exception:  # noqa: BLE001 - swallow; log only, don't leak to caller
+            logger.warning("password_reset_request_failed", exc_info=True)
+
+    def reset_password(self, token_hash: str, new_password: str) -> None:
+        try:
+            auth_client = get_auth_client()
+            res = auth_client.auth.verify_otp(
+                {"token_hash": token_hash, "type": "recovery"}
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.info("password_reset_token_invalid", exc_info=True)
+            raise AuthError("This reset link is invalid or has expired.") from exc
+
+        user = getattr(res, "user", None)
+        if not user:
+            raise AuthError("This reset link is invalid or has expired.")
+
+        try:
+            self._service_client.auth.admin.update_user_by_id(
+                user.id, {"password": new_password}
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error("password_update_failed")
+            raise AuthError("Failed to update password. Please try again.") from exc

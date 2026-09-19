@@ -164,7 +164,7 @@ export default function SignupPage() {
           <p className={styles.subheading}>Build a learning memory that never forgets.</p>
 
           {/* Google */}
-          <button
+          {/* <button
             type="button"
             onClick={handleGoogleSignup}
             disabled={loading}
@@ -177,14 +177,14 @@ export default function SignupPage() {
               <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
             </svg>
             Continue with Google
-          </button>
+          </button> */}
 
           {/* Divider */}
-          <div className={styles.dividerContainer}>
+          {/* <div className={styles.dividerContainer}>
             <span className={styles.dividerLine} />
             <span className={styles.dividerText}>or</span>
             <span className={styles.dividerLine} />
-          </div>
+          </div> */}
 
           {/* Form */}
           <form onSubmit={handleEmailSignUp} className={styles.form}>

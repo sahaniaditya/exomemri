@@ -475,6 +475,20 @@
         "title": "FolderSummary",
         "type": "object"
       },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
+        "type": "object"
+      },
       "GraphEdge": {
         "description": "A source mentioning a concept, weighted by the LLM's salience score.",
         "properties": {
@@ -691,6 +705,17 @@
           "sort_order"
         ],
         "title": "NotePageResponse",
+        "type": "object"
+      },
+      "OkResponse": {
+        "properties": {
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "title": "OkResponse",
         "type": "object"
       },
       "OnboardingStatusResponse": {
@@ -1046,6 +1071,25 @@
           "name"
         ],
         "title": "RenameFolderRequest",
+        "type": "object"
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "password": {
+            "minLength": 8,
+            "title": "Password",
+            "type": "string"
+          },
+          "token_hash": {
+            "title": "Token Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token_hash",
+          "password"
+        ],
+        "title": "ResetPasswordRequest",
         "type": "object"
       },
       "ReviewResponse": {
@@ -1792,14 +1836,13 @@
         "type": "object"
       },
       "StructuredSummary": {
-        "description": "Per-source LLM output: topics with descriptions, plus supporting sections.\n\n``topics`` is empty on rows summarized before this shape existed.",
+        "description": "Per-source LLM output: topics with descriptions, plus supporting sections.\n\n``topics`` is empty on rows summarized before this shape existed, and may\nalso be empty if the LLM output didn't include any \u2014 callers should treat\nan empty ``topics`` list as \"fall back to ``tldr``\" (see ``as_prose``).",
         "properties": {
           "examples": {
             "items": {
               "type": "string"
             },
             "maxItems": 8,
-            "minItems": 1,
             "title": "Examples",
             "type": "array"
           },
@@ -1808,7 +1851,6 @@
               "type": "string"
             },
             "maxItems": 10,
-            "minItems": 1,
             "title": "Key Concepts",
             "type": "array"
           },
@@ -1817,7 +1859,6 @@
               "type": "string"
             },
             "maxItems": 10,
-            "minItems": 5,
             "title": "Tldr",
             "type": "array"
           },
@@ -1830,11 +1871,6 @@
             "type": "array"
           }
         },
-        "required": [
-          "tldr",
-          "key_concepts",
-          "examples"
-        ],
         "title": "StructuredSummary",
         "type": "object"
       },
@@ -1870,24 +1906,20 @@
         "description": "A named subtopic covered inside a major topic.",
         "properties": {
           "description": {
+            "default": "",
             "description": "Summarized description of this subtopic: definition, how it works, key facts, numbers, and caveats. Not a headline.",
             "maxLength": 4000,
-            "minLength": 1,
             "title": "Description",
             "type": "string"
           },
           "name": {
+            "default": "",
             "description": "Short specific noun phrase for the subtopic.",
             "maxLength": 160,
-            "minLength": 2,
             "title": "Name",
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "description"
-        ],
         "title": "SubtopicDescription",
         "type": "object"
       },
@@ -1987,16 +2019,16 @@
         "description": "One major topic the source teaches, with a summarized description and subtopics.",
         "properties": {
           "description": {
+            "default": "",
             "description": "Summarized description of what the source taught about this topic: definitions, how it works, key facts, steps, numbers, names, and caveats. Not a headline or a one-sentence summary.",
             "maxLength": 8000,
-            "minLength": 1,
             "title": "Description",
             "type": "string"
           },
           "name": {
+            "default": "",
             "description": "Short specific noun phrase copied from the source. Never invent a name.",
             "maxLength": 160,
-            "minLength": 2,
             "title": "Name",
             "type": "string"
           },
@@ -2010,10 +2042,6 @@
             "type": "array"
           }
         },
-        "required": [
-          "name",
-          "description"
-        ],
         "title": "TopicDescription",
         "type": "object"
       },
@@ -2348,6 +2376,47 @@
         ]
       }
     },
+    "/v1/auth/forgot-password": {
+      "post": {
+        "operationId": "forgot_password_v1_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forgot Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/v1/auth/login": {
       "post": {
         "operationId": "login_v1_auth_login_post",
@@ -2565,6 +2634,47 @@
           }
         },
         "summary": "Profile Status",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/reset-password": {
+      "post": {
+        "operationId": "reset_password_v1_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Password",
         "tags": [
           "auth"
         ]

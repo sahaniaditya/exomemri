@@ -8,10 +8,10 @@ which is in turn the source of truth for the extension's generated TS types
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 from app.schemas.common import ProcessingStatus, SourceType
 
@@ -77,28 +77,52 @@ class UploadUrlResponse(BaseModel):
     path: str
 
 
+# --- Summary shape caps -----------------------------------------------------
+# These are now *ceilings only* (used to truncate an overshooting LLM list),
+# not floors the LLM must clear. Availability > strictness: a thin summary
+# that parses beats a rejected response that doesn't. If you need to bring
+# quality checks back, do it as a post-hoc quality score / re-prompt, not as
+# a validation error that kills the whole call.
 MAX_TOPICS_PER_SOURCE = 24
 MAX_SUBTOPICS_PER_TOPIC = 8
 MAX_TOPIC_NAME_LENGTH = 160
 MAX_TOPIC_DESCRIPTION_LENGTH = 8000
 MAX_SUBTOPIC_DESCRIPTION_LENGTH = 4000
-# Any real article/note above this length must split into several topics rather
-# than one card named after the source title. 2500 was too high: short blogs
-# and abstracts never hit the detailed parse envelope.
-DETAILED_SUMMARY_MIN_TOPICS = 4
+MAX_KEY_CONCEPTS = 10
+MAX_TLDR = 10
+MAX_EXAMPLES = 8
+
 DETAILED_SUMMARY_EXTRACT_CHARS = 400
+
+
+def _truncate_list(v: Any, max_len: int) -> Any:
+    """Keep the model's own ordering (assumed importance-first) and drop the tail
+    instead of failing validation when the LLM overshoots a cap."""
+    if isinstance(v, list) and len(v) > max_len:
+        return v[:max_len]
+    return v
+
+
+def _coerce_str(v: Any) -> Any:
+    """Best-effort coercion so a None/number/etc from a flaky LLM parse
+    doesn't hard-fail validation; empty/missing becomes an empty string
+    rather than raising."""
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v
+    return str(v)
 
 
 class SubtopicDescription(BaseModel):
     """A named subtopic covered inside a major topic."""
-
     name: str = Field(
-        min_length=2,
+        default="",
         max_length=MAX_TOPIC_NAME_LENGTH,
         description="Short specific noun phrase for the subtopic.",
     )
     description: str = Field(
-        min_length=1,
+        default="",
         max_length=MAX_SUBTOPIC_DESCRIPTION_LENGTH,
         description=(
             "Summarized description of this subtopic: definition, how it works, "
@@ -106,17 +130,21 @@ class SubtopicDescription(BaseModel):
         ),
     )
 
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def _coerce(cls, v: Any) -> Any:
+        return _coerce_str(v)
+
 
 class TopicDescription(BaseModel):
     """One major topic the source teaches, with a summarized description and subtopics."""
-
     name: str = Field(
-        min_length=2,
+        default="",
         max_length=MAX_TOPIC_NAME_LENGTH,
         description="Short specific noun phrase copied from the source. Never invent a name.",
     )
     description: str = Field(
-        min_length=1,
+        default="",
         max_length=MAX_TOPIC_DESCRIPTION_LENGTH,
         description=(
             "Summarized description of what the source taught about this topic: "
@@ -130,12 +158,23 @@ class TopicDescription(BaseModel):
         description="Named subtopics covered inside this topic.",
     )
 
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def _coerce(cls, v: Any) -> Any:
+        return _coerce_str(v)
+
+    @field_validator("subtopics", mode="before")
+    @classmethod
+    def _cap_subtopics(cls, v: Any) -> Any:
+        return _truncate_list(v, MAX_SUBTOPICS_PER_TOPIC)
+
 
 class TopicDescriptionOutput(TopicDescription):
-    """LLM parse envelope: a real writeup, not a one-liner."""
-
+    """LLM parse envelope. Previously required a 200+ char writeup; that floor
+    is gone now — a short-but-present description is accepted so a slightly
+    thin topic doesn't sink the whole summary."""
     description: str = Field(
-        min_length=200,
+        default="",
         max_length=MAX_TOPIC_DESCRIPTION_LENGTH,
         description=(
             "Summarized description of what the source taught about this topic: "
@@ -148,13 +187,34 @@ class TopicDescriptionOutput(TopicDescription):
 class StructuredSummary(BaseModel):
     """Per-source LLM output: topics with descriptions, plus supporting sections.
 
-    ``topics`` is empty on rows summarized before this shape existed.
+    ``topics`` is empty on rows summarized before this shape existed, and may
+    also be empty if the LLM output didn't include any — callers should treat
+    an empty ``topics`` list as "fall back to ``tldr``" (see ``as_prose``).
     """
-
     topics: list[TopicDescription] = Field(default_factory=list, max_length=MAX_TOPICS_PER_SOURCE)
-    tldr: list[str] = Field(min_length=5, max_length=10)
-    key_concepts: list[str] = Field(min_length=1, max_length=10)
-    examples: list[str] = Field(min_length=1, max_length=8)
+    tldr: list[str] = Field(default_factory=list, max_length=MAX_TLDR)
+    key_concepts: list[str] = Field(default_factory=list, max_length=MAX_KEY_CONCEPTS)
+    examples: list[str] = Field(default_factory=list, max_length=MAX_EXAMPLES)
+
+    @field_validator("topics", mode="before")
+    @classmethod
+    def _cap_topics(cls, v: Any) -> Any:
+        return _truncate_list(v, MAX_TOPICS_PER_SOURCE)
+
+    @field_validator("key_concepts", mode="before")
+    @classmethod
+    def _cap_key_concepts(cls, v: Any) -> Any:
+        return _truncate_list(v, MAX_KEY_CONCEPTS)
+
+    @field_validator("tldr", mode="before")
+    @classmethod
+    def _cap_tldr(cls, v: Any) -> Any:
+        return _truncate_list(v, MAX_TLDR)
+
+    @field_validator("examples", mode="before")
+    @classmethod
+    def _cap_examples(cls, v: Any) -> Any:
+        return _truncate_list(v, MAX_EXAMPLES)
 
     def as_prose(self) -> str:
         """Flat text for chat context and ``summary_text`` storage."""
@@ -169,18 +229,24 @@ class StructuredSummary(BaseModel):
 
 
 class StructuredSummaryOutput(StructuredSummary):
-    """LLM parse envelope: at least one topic so the model cannot omit descriptions."""
-
-    topics: list[TopicDescription] = Field(min_length=1, max_length=MAX_TOPICS_PER_SOURCE)
+    """LLM parse envelope. No longer requires at least one topic — an LLM
+    response with only tldr/key_concepts/examples now parses fine and
+    ``as_prose()`` falls back to the tldr."""
+    topics: list[TopicDescription] = Field(default_factory=list, max_length=MAX_TOPICS_PER_SOURCE)
 
 
 class DetailedStructuredSummaryOutput(StructuredSummary):
-    """LLM parse envelope for long sources: several topics, not one title card."""
-
+    """LLM parse envelope for long sources. No longer requires 4+ topics —
+    fewer topics now parses instead of raising."""
     topics: list[TopicDescriptionOutput] = Field(
-        min_length=DETAILED_SUMMARY_MIN_TOPICS,
+        default_factory=list,
         max_length=MAX_TOPICS_PER_SOURCE,
     )
+
+    @field_validator("topics", mode="before")
+    @classmethod
+    def _cap_topics_detailed(cls, v: Any) -> Any:
+        return _truncate_list(v, MAX_TOPICS_PER_SOURCE)
 
 
 class SummaryResponse(BaseModel):

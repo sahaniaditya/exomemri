@@ -22,13 +22,19 @@ export default function SpacesGrid({ spaces }: { spaces: LearningSpace[] }) {
         const total = KIND_ORDER.reduce((sum, kind) => sum + space.counts[kind], 0)
         const kinds = KIND_ORDER.filter(kind => space.counts[kind] > 0)
         return (
-          <Link
-            href={`/dashboard/spaces/${space.id}`}
+          <article
             className={styles.space}
             key={space.id}
             style={{ animationDelay: `${index * 40}ms` }}
           >
             <div className={styles.spaceAccent} aria-hidden="true" />
+            <Link
+              href={`/dashboard/spaces/${space.id}`}
+              className={styles.spaceMain}
+              aria-label={space.name}
+            >
+              <span className={styles.spaceHit} aria-hidden="true" />
+            </Link>
             <div className={styles.shead}>
               <div>
                 <div className={styles.spaceIndex}>
@@ -36,13 +42,11 @@ export default function SpacesGrid({ spaces }: { spaces: LearningSpace[] }) {
                 </div>
                 <div className={styles.stitle}>{space.name}</div>
               </div>
-              {space.coverage !== null ? (
-                <CoverageRing pct={space.coverage} />
-              ) : (
-                <span className={styles.spaceGo} aria-hidden="true">
-                  →
-                </span>
-              )}
+              <CoverageRing
+                spaceId={space.id}
+                spaceName={space.name}
+                initialCoverage={space.coverage}
+              />
             </div>
 
             <div className={styles.styp}>
@@ -64,7 +68,7 @@ export default function SpacesGrid({ spaces }: { spaces: LearningSpace[] }) {
               </span>
               <span>{space.lastActive}</span>
             </div>
-          </Link>
+          </article>
         )
       })}
       <NewSpaceTile />

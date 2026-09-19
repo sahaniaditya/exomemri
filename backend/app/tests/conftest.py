@@ -13,6 +13,7 @@ os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("ANTHROPIC_MODEL_NAME", "claude-haiku-4-5")
 os.environ.setdefault("HF_TOKEN", "test-hf-token")
+os.environ.setdefault("FRONTEND_URL", "http://localhost:3000")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

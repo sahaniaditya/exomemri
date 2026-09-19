@@ -589,6 +589,53 @@ export default function OnboardingPage() {
                   ))}
                 </div>
 
+                {/* Chrome Extension Promo Link */}
+                <a
+                  href="https://chromewebstore.google.com/detail/nlpddiadlnpflmmmbjchklkoccpjhehc?utm_source=item-share-cb"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: 20,
+                    padding: '12px 16px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 5,
+                    textDecoration: 'none',
+                    transition: 'border-color .15s, background .15s',
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.borderColor = 'var(--accent-color)';
+                    e.currentTarget.style.background = 'var(--accent-subtle-bg)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                    e.currentTarget.style.background = 'var(--input-bg)';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{
+                      width: 30, height: 30, borderRadius: 6,
+                      background: 'var(--accent-badge-bg)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'IBM Plex Mono', fontSize: 14, color: 'var(--accent-color)'
+                    }}>
+                      🧩
+                    </span>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Get the Browser Extension
+                      </div>
+                      <div style={{ fontFamily: 'IBM Plex Mono', fontSize: 10.5, color: 'var(--text-muted)' }}>
+                        Capture videos, articles, and AI chats with one click.
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{ fontFamily: 'IBM Plex Mono', fontSize: 13, color: 'var(--accent-color)' }}>↗</span>
+                </a>
+
                 {error && (
                   <div style={{
                     marginTop: 18, padding: '11px 14px',
@@ -603,7 +650,7 @@ export default function OnboardingPage() {
 
                 {/* Workspace summary */}
                 <div style={{
-                  marginTop: 24, padding: '13px 15px',
+                  marginTop: 20, padding: '13px 15px',
                   background: 'var(--input-bg)', border: '1px solid var(--border-color)',
                   borderRadius: 5,
                 }}>

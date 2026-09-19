@@ -1,75 +1,43 @@
 'use client'
+
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import styles from './dashboard.module.css'
 import type { CoverageResponse } from '@/lib/coverage'
 import CoverageRing from './CoverageRing'
 
 export default function CoverageCard({
-  coverage,
+  coverage: initial,
   spaceId,
+  spaceName,
 }: {
   coverage: CoverageResponse
   spaceId: string
+  spaceName: string
 }) {
-  const router = useRouter()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function assess() {
-    setBusy(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/spaces/${spaceId}/coverage`, { method: 'POST' })
-      if (res.status === 402) {
-        setError("You're out of credits. Coverage unlocks when your monthly allowance resets.")
-        return
-      }
-      if (res.status === 429) {
-        setError('Coverage was just generated. Try again in a bit.')
-        return
-      }
-      if (!res.ok) {
-        setError('Could not assess coverage. Try again in a moment.')
-        return
-      }
-      router.refresh()
-    } catch (caught) {
-      console.error('Coverage assess failed:', caught)
-      setError('Could not assess coverage. Check your connection.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  if (coverage.coverage_pct === null) {
-    return (
-      <div className={styles.rcard}>
-        <p className={styles.covempty}>
-          Not assessed yet — capture a few sources, then spend one credit to infer a syllabus.
-        </p>
-        <button
-          type="button"
-          className={styles.maptoggle}
-          onClick={assess}
-          disabled={busy}
-        >
-          {busy ? 'Assessing…' : 'Assess coverage'}
-        </button>
-        {error ? <p className={styles.backfillerror}>{error}</p> : null}
-      </div>
-    )
-  }
-
+  const [coverage, setCoverage] = useState(initial)
   const covered = coverage.topics.filter(t => t.covered)
   const gaps = coverage.topics.filter(t => !t.covered)
+  const empty = covered.length === 0 && gaps.length === 0
 
   return (
     <div className={styles.rcard}>
       <div className={styles.covhead}>
         <div className={styles.covlabel}>Inferred syllabus</div>
-        <CoverageRing pct={coverage.coverage_pct} />
+        <CoverageRing
+          spaceId={spaceId}
+          spaceName={spaceName}
+          initialCoverage={coverage.coverage_pct}
+          onUpdated={setCoverage}
+        />
       </div>
+
+      {empty ? (
+        <p className={styles.covempty}>
+          {coverage.coverage_pct == null
+            ? 'Check coverage to infer a syllabus from the concepts in this space.'
+            : 'No syllabus topics came back. Try again after more sources are mapped.'}
+        </p>
+      ) : null}
 
       {covered.length > 0 && (
         <div className={styles.covsection}>

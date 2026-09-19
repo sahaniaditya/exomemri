@@ -252,6 +252,7 @@ export function Popup() {
                   {saveError}
                 </div>
               )}
+              <p style={styles.note}>English-language sources only, for now.</p>
             </section>
 
             <div style={styles.plate}>
@@ -434,5 +435,12 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "0.06em",
     color: color.sageLight,
     textAlign: "center",
+  },
+
+  note: {
+    fontSize: 11.5,
+    lineHeight: 1.4,
+    color: color.clay,
+    margin: "10px 0 0",
   },
 }

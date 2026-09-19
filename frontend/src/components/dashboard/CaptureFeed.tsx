@@ -2,16 +2,16 @@
 
 /**
  * Capture list with live status badges.
- * While any row is still processing, refresh the server tree so
- * Processing → Ready / Failed without a manual reload.
+ * Subscribes to a WebSocket feed so Processing → Ready / Failed updates
+ * arrive as pushed events instead of being polled for.
  */
-import { useEffect, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   isCaptureProcessing,
   type CapturedSource,
 } from '@/lib/dashboard-data'
+import { useCaptureSocket } from '@/lib/use-capture-socket'
 import styles from './dashboard.module.css'
 import SourceIcon from './SourceIcon'
 import OriginalLink from './OriginalLink'
@@ -19,14 +19,15 @@ import DeleteCaptureButton from './DeleteCaptureButton'
 
 interface CaptureFeedProps {
   sources: CapturedSource[]
-  /** Override empty-state copy for space-scoped feeds. */
+  /** Pass space IDs explicitly so empty lists still open a socket channel */
+  spaceIds?: string[]
   emptyTitle?: string
   emptyBody?: string
   extraActions?: (source: CapturedSource) => ReactNode
   canDelete?: boolean
 }
 
-const POLL_MS = 2500
+
 
 function StatusBadge({ status }: { status: CapturedSource['status'] }) {
   if (status === 'processing') {
@@ -109,23 +110,35 @@ export function CaptureRow({
 
 export default function CaptureFeed({
   sources,
+  spaceIds: explicitSpaceIds,
   emptyTitle = 'No captures yet',
   emptyBody = 'Install the browser extension, open a video or article, and save it into a Learning Space — it will show up here.',
   extraActions,
   canDelete,
 }: CaptureFeedProps) {
-  const router = useRouter()
-  const pending = sources.some(source => isCaptureProcessing(source.status))
+  const [liveSources, setLiveSources] = useState(sources)
 
   useEffect(() => {
-    if (!pending) return
-    const id = window.setInterval(() => {
-      router.refresh()
-    }, POLL_MS)
-    return () => window.clearInterval(id)
-  }, [pending, router])
+    setLiveSources(sources)
+  }, [sources])
 
-  if (sources.length === 0) {
+  // Prefer explicitly passed spaceIds; fallback to extracting from initial sources
+  const resolvedSpaceIds = useMemo(() => {
+    if (explicitSpaceIds && explicitSpaceIds.length > 0) {
+      return explicitSpaceIds
+    }
+    return Array.from(new Set(sources.map(s => s.spaceId)))
+  }, [explicitSpaceIds, sources])
+
+  useCaptureSocket(resolvedSpaceIds, event => {
+    setLiveSources(prev =>
+      prev.map(source =>
+        source.id === event.sourceId ? { ...source, ...event.patch } : source
+      )
+    )
+  })
+
+  if (liveSources.length === 0) {
     return (
       <div className={styles.empty}>
         <div className={styles.et}>{emptyTitle}</div>
@@ -137,7 +150,7 @@ export default function CaptureFeed({
   return (
     <div className={styles.feedPanel}>
       <div className={styles.feed}>
-        {sources.map(source => (
+        {liveSources.map(source => (
           <CaptureRow
             key={source.id}
             source={source}

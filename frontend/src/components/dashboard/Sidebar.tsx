@@ -113,13 +113,20 @@ export default function Sidebar({
       <div className={styles.spacer} />
 
       <div className={styles.extStack}>
-        <div className={styles.ext}>
-          <div className={styles.st}>
-            <span className={styles.dot} aria-hidden="true" />
-            Browser extension
-          </div>
-          <p>Capture videos, articles, and AI chats with one click while you browse.</p>
-        </div>
+        <a 
+            href="https://chromewebstore.google.com/detail/nlpddiadlnpflmmmbjchklkoccpjhehc?utm_source=item-share-cb" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className={styles.extLink}
+          >
+            <div className={styles.ext}>
+              <div className={styles.st}>
+                <span className={styles.dot} aria-hidden="true" />
+                Browser extension
+              </div>
+              <p>Capture videos, articles, and AI chats with one click while you browse.</p>
+            </div>
+          </a>
         <div className={styles.ext}>
           <div className={styles.st}>
             <span className={styles.dot} aria-hidden="true" />

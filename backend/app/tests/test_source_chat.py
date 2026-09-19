@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
 
-from app.schemas.sources import StructuredSummary
+from app.schemas.sources import MAX_TLDR, StructuredSummary
 from app.tests.conftest import (
     OTHER_USER_SPACE_ID,
     SEEDED_SPACE_ID,
@@ -48,14 +46,22 @@ def test_structured_summary_accepts_long_detailed_bullets() -> None:
     assert all(len(item) > 500 for item in summary.tldr)
 
 
-@pytest.mark.parametrize("bullet_count", [4, 11])
-def test_structured_summary_rejects_wrong_tldr_bullet_count(bullet_count: int) -> None:
-    with pytest.raises(ValidationError):
-        StructuredSummary(
-            tldr=[f"point {i}" for i in range(bullet_count)],
-            key_concepts=["a concept"],
-            examples=["an example"],
-        )
+def test_structured_summary_accepts_short_tldr() -> None:
+    summary = StructuredSummary(
+        tldr=[f"point {i}" for i in range(4)],
+        key_concepts=["a concept"],
+        examples=["an example"],
+    )
+    assert len(summary.tldr) == 4
+
+
+def test_structured_summary_truncates_tldr_past_cap() -> None:
+    summary = StructuredSummary(
+        tldr=[f"point {i}" for i in range(MAX_TLDR + 1)],
+        key_concepts=["a concept"],
+        examples=["an example"],
+    )
+    assert len(summary.tldr) == MAX_TLDR
 
 
 def _seed_note_source(

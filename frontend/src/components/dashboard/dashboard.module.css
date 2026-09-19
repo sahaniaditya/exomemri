@@ -3,6 +3,127 @@
  * Scoped as a CSS module so it cannot leak into auth/marketing pages,
  * which still carry their own inline styling.
  */
+ /* dashboard.module.css */
+.checkCoverageBtn {
+  background: var(--surface-interactive, #2a2a2a);
+  color: var(--text-primary, #ffffff);
+  border: 1px solid var(--border-subtle, #444);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.checkCoverageBtn:hover:not(:disabled) {
+  background: var(--surface-interactive-hover, #3a3a3a);
+}
+
+.ringGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recheckBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #888);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.recheckBtn:hover:not(:disabled) {
+  color: var(--text-primary, #fff);
+}
+
+.checkCoverageBtn:disabled,
+.recheckBtn:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.coverageSpinner {
+  font-size: 0.75rem;
+  color: var(--text-muted, #aaa);
+}
+
+.toastStack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 16px 40px -20px rgba(27, 26, 22, 0.45);
+  animation: toastIn 0.2s ease-out;
+}
+
+:global(.dark) .toast {
+  box-shadow: 0 16px 40px -20px rgba(0, 0, 0, 0.65);
+}
+
+.toastError {
+  border-color: color-mix(in srgb, var(--clay) 50%, var(--line));
+}
+
+.toastMsg {
+  margin: 0;
+  flex: 1;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.toastError .toastMsg {
+  color: var(--clay);
+}
+
+.toastDismiss {
+  flex: none;
+  margin: -2px -4px 0 0;
+  padding: 0 6px;
+  border: none;
+  background: none;
+  color: var(--sage);
+  font-size: 18px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.toastDismiss:hover {
+  color: var(--ink);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .themeToggle {
   display: inline-flex;
   align-items: center;
@@ -982,6 +1103,27 @@
   overflow: hidden;
   animation: riseIn 0.5s ease both;
   min-height: 176px;
+}
+.spaceMain {
+  color: inherit;
+  text-decoration: none;
+}
+.spaceMain:focus {
+  outline: none;
+}
+.spaceHit {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+}
+.spaceCoverage {
+  position: relative;
+  z-index: 1;
+}
+.space:has(.spaceMain:focus-visible) {
+  border-color: rgba(44, 93, 79, 0.45);
+  box-shadow: 0 0 0 2px rgba(44, 93, 79, 0.28);
 }
 :global(.dark) .space {
   border: 1px solid var(--line);

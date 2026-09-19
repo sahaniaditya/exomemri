@@ -24,6 +24,7 @@ os.environ.setdefault("SUPABASE_URL", "https://ci.example.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "ci-placeholder-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "ci-placeholder-key")
 os.environ.setdefault("HF_TOKEN", "ci-placeholder-key")
+os.environ.setdefault("FRONTEND_URL", "https://ci.example")
 
 from app.main import app  # noqa: E402
 

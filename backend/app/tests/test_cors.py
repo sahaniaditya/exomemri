@@ -22,6 +22,7 @@ def _settings(**overrides: object) -> Settings:
         "supabase_service_key": "test-service-key",
         "anthropic_api_key": "test-anthropic-key",
         "hf_token": "test-hf-token",
+        "frontend_url": "http://localhost:3000",
         "env": "dev",
         "_env_file": None,
     }

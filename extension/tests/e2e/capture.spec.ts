@@ -5,6 +5,9 @@
  * drives the popup's Save action (via the background's capture entry) — the
  * background asks the tab's content script to extract, then persists. Asserts
  * the capture hit POST /v1/sources with the expected payload.
+ *
+ * `npm run e2e` rebuilds with WXT_BACKEND_URL=http://localhost:8000 so this
+ * hits the in-process mock, not the production backend baked into `wxt build`.
  */
 import { fileURLToPath } from "node:url"
 
@@ -83,7 +86,9 @@ test("captures the active tab's article and returns Saved", async () => {
     return g.__atlasCaptureActiveTab()
   })) as CaptureResult
 
-  expect(result.ok).toBe(true)
+  expect(result, result.ok ? undefined : `capture failed: ${result.error}`).toMatchObject({
+    ok: true,
+  })
   expect(result.source_id).toBeTruthy()
 
   // The capture actually hit the backend with the expected shape.
