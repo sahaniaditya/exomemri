@@ -1,17 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Lockup } from '@/components/brand/Lockup'
 import styles from '../login/login.module.css'
 
 type Stage = 'ready' | 'invalid' | 'done'
 
-export default function ResetPasswordForm() {
-  const searchParams = useSearchParams()
-  const tokenHash = searchParams.get('token_hash')
-  const type = searchParams.get('type')
+export default function ResetPasswordForm({
+  tokenHash,
+  type,
+}: {
+  tokenHash: string | null
+  type: string | null
+}) {
 
   const [stage, setStage] = useState<Stage>(
     tokenHash && type === 'recovery' ? 'ready' : 'invalid'
