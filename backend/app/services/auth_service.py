@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 
 from supabase import Client
 
+from app.config import Settings
 from app.errors import AuthError, ConflictError, NotFoundError
 from app.repositories.profile_repo import ProfileRepo
 from app.repositories.supabase_client import get_auth_client
@@ -21,8 +22,6 @@ from app.schemas.auth import (
     ProfileUpsertRequest,
 )
 from app.services.credits_service import CreditsService
-
-from app.config import Settings
 
 logger = logging.getLogger(__name__)
 

@@ -12,6 +12,7 @@
     "zip": "wxt zip",
     "test": "vitest run",
     "test:watch": "vitest",
+    "pree2e": "WXT_BACKEND_URL=http://localhost:8000 wxt build",
     "e2e": "playwright test",
     "typecheck": "wxt prepare && tsc --noEmit",
     "lint": "eslint .",

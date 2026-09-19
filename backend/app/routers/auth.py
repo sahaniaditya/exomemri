@@ -10,18 +10,22 @@ from app.dependencies import (
     get_authenticated_user,
     get_bearer_token,
 )
-from app.rate_limit import check_login_rate_limits, get_rate_limiter,check_password_reset_rate_limits
+from app.rate_limit import (
+    check_login_rate_limits,
+    check_password_reset_rate_limits,
+    get_rate_limiter,
+)
 from app.schemas.auth import (
     AuthUser,
+    ForgotPasswordRequest,
     LoginResponse,
     MessageResponse,
+    OkResponse,
     OnboardingStatusResponse,
     ProfileUpsertRequest,
+    ResetPasswordRequest,
     UserLogin,
     UsernameAvailabilityResponse,
-    ForgotPasswordRequest,
-    ResetPasswordRequest,
-    OkResponse,
 )
 from app.services.auth_service import AuthService
 from app.services.rate_limit_service import RateLimitService
