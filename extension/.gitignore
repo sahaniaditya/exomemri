@@ -15,7 +15,6 @@ dist/
 .env.*
 !.env.example
 !.env.production
-.env.production
 
 # tests
 playwright-report/

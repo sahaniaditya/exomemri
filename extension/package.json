@@ -1,7 +1,7 @@
 {
   "name": "exomemri-extension",
   "displayName": "exomemri",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "exomemri capture extension — one-click capture of what you learn online into a Learning Space.",
   "author": "exomemri",
   "private": true,

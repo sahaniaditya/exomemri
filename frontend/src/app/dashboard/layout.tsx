@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { apiFetch } from '@/lib/api'
+import ToastHost from '@/components/dashboard/ToastHost'
 
 export default async function DashboardLayout({
   children,
@@ -46,5 +47,10 @@ export default async function DashboardLayout({
   }
 
   // 5. Authorized and onboarded. Render the dashboard layout view!
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      <ToastHost />
+    </>
+  )
 }

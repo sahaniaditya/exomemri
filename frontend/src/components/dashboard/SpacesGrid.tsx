@@ -1,8 +1,7 @@
-// @/components/dashboard/SpacesGrid.tsx
 import { type LearningSpace } from '@/lib/dashboard-data'
 import styles from './dashboard.module.css'
 import Link from 'next/link'
-import OnDemandCoverage from './CoverageRing'
+import CoverageRing from './CoverageRing'
 import NewSpaceTile from './NewSpaceTile'
 import SourceIcon from './SourceIcon'
 
@@ -23,13 +22,19 @@ export default function SpacesGrid({ spaces }: { spaces: LearningSpace[] }) {
         const total = KIND_ORDER.reduce((sum, kind) => sum + space.counts[kind], 0)
         const kinds = KIND_ORDER.filter(kind => space.counts[kind] > 0)
         return (
-          <Link
-            href={`/dashboard/spaces/${space.id}`}
+          <article
             className={styles.space}
             key={space.id}
             style={{ animationDelay: `${index * 40}ms` }}
           >
             <div className={styles.spaceAccent} aria-hidden="true" />
+            <Link
+              href={`/dashboard/spaces/${space.id}`}
+              className={styles.spaceMain}
+              aria-label={space.name}
+            >
+              <span className={styles.spaceHit} aria-hidden="true" />
+            </Link>
             <div className={styles.shead}>
               <div>
                 <div className={styles.spaceIndex}>
@@ -37,10 +42,9 @@ export default function SpacesGrid({ spaces }: { spaces: LearningSpace[] }) {
                 </div>
                 <div className={styles.stitle}>{space.name}</div>
               </div>
-
-              {/* On-demand interactive trigger */}
-              <OnDemandCoverage
+              <CoverageRing
                 spaceId={space.id}
+                spaceName={space.name}
                 initialCoverage={space.coverage}
               />
             </div>
@@ -64,7 +68,7 @@ export default function SpacesGrid({ spaces }: { spaces: LearningSpace[] }) {
               </span>
               <span>{space.lastActive}</span>
             </div>
-          </Link>
+          </article>
         )
       })}
       <NewSpaceTile />
