@@ -38,7 +38,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str
     anthropic_model_name: str = "claude-haiku-4-5"
 
-    frontend_url: str
+    # Password-reset email redirect origin (scheme + host, no trailing slash).
+    # Optional: falls back to the first CORS_WEB_ORIGINS entry, then localhost.
+    frontend_url: str = ""
 
     # Hugging Face Inference API (chunk/query embeddings for RAG chat).
     hf_token: str
@@ -99,6 +101,14 @@ class Settings(BaseSettings):
                 return json.loads(s)
             return [item.strip() for item in s.split(",") if item.strip()]
         return v
+
+    @model_validator(mode="after")
+    def _normalize_frontend_url(self) -> Self:
+        url = self.frontend_url.strip()
+        if not url:
+            url = self.cors_web_origins[0] if self.cors_web_origins else "http://localhost:3000"
+        self.frontend_url = url.rstrip("/")
+        return self
 
     @model_validator(mode="after")
     def _reject_insecure_production_cors(self) -> Self:

@@ -28,7 +28,7 @@ services:
         sync: false
       # Web app origin used for password-reset email redirects.
       - key: FRONTEND_URL
-        sync: false
+        value: https://exomemri.com
       # Comma-separated allowed extension origins (e.g. chrome-extension://<id>).
       - key: CORS_EXTENSION_ORIGINS
         sync: false
