@@ -148,8 +148,9 @@ def get_review_service(
 def get_auth_service(
     profiles: ProfileRepo = Depends(get_profile_repo),
     credits: CreditsService = Depends(get_credits_service),
+    settings: Settings = Depends(get_settings),
 ) -> AuthService:
-    return AuthService(profiles, get_service_client(), credits)
+    return AuthService(profiles, get_service_client(), credits, settings)
 
 
 def get_bearer_token(authorization: str = Header(None)) -> str:

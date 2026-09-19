@@ -168,7 +168,7 @@ export default function LoginForm({ returnTo }: LoginFormProps) {
               <div className={styles.inputGroup}>
                 <div className={styles.labelRow}>
                   <label htmlFor="password" className={styles.label}>Password</label>
-                  <a href="#" className={styles.forgotLink}>Forgot?</a>
+                  <Link href="/forgot-password" className={styles.forgotLink}>Forgot?</Link>
                 </div>
                 <input
                   id="password"

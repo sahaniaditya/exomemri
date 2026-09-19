@@ -54,3 +54,29 @@ def check_login_rate_limits(
         limit=settings.rate_limit_login_max,
         window_seconds=settings.rate_limit_login_window_seconds,
     )
+
+def check_password_reset_rate_limits(
+    *,
+    request: Request,
+    email: str,
+    limiter: RateLimitService,
+    settings: Settings,
+) -> None:
+    """Throttle password-reset requests by IP and by normalized email.
+
+    Deliberately does not distinguish 'account exists' from 'rate limited'
+    in the response — both look identical to the caller — to avoid using
+    rate-limit behavior itself as an email-enumeration side channel.
+    """
+    ip = client_ip(request)
+    limiter.check(
+        f"password_reset:ip:{ip}",
+        limit=settings.rate_limit_password_reset_max,
+        window_seconds=settings.rate_limit_password_reset_window_seconds,
+    )
+    normalized = email.strip().lower()
+    limiter.check(
+        f"password_reset:email:{normalized}",
+        limit=settings.rate_limit_password_reset_max,
+        window_seconds=settings.rate_limit_password_reset_window_seconds,
+    )

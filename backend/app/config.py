@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     anthropic_api_key: str
     anthropic_model_name: str = "claude-haiku-4-5"
 
+    frontend_url: str
+
     # Hugging Face Inference API (chunk/query embeddings for RAG chat).
     hf_token: str
     hf_embedding_model: str = "BAAI/bge-small-en-v1.5"
@@ -81,6 +83,9 @@ class Settings(BaseSettings):
     # Graph rebuild batches: per space.
     rate_limit_rebuild_max: int = 2
     rate_limit_rebuild_window_seconds: int = 3600  # 1 hour
+
+    rate_limit_password_reset_max: int = 10
+    rate_limit_password_reset_window_seconds: int = 900
 
     @field_validator("cors_extension_origins", "cors_web_origins", mode="before")
     @classmethod
