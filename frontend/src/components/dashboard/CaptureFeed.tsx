@@ -2,15 +2,15 @@
 
 /**
  * Capture list with live status badges.
- * Subscribes to a WebSocket feed so Processing → Ready / Failed updates
- * arrive as pushed events instead of being polled for.
+ * Subscribes to a Realtime feed: status changes on existing rows are
+ * patched in place instantly; a brand-new capture triggers a single
+ * router.refresh() so the server-rendered row (with spaceName, meta,
+ * etc. computed server-side) appears without a manual reload.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import {
-  isCaptureProcessing,
-  type CapturedSource,
-} from '@/lib/dashboard-data'
+import type { CapturedSource } from '@/lib/dashboard-data'
 import { useCaptureSocket } from '@/lib/use-capture-socket'
 import styles from './dashboard.module.css'
 import SourceIcon from './SourceIcon'
@@ -19,15 +19,12 @@ import DeleteCaptureButton from './DeleteCaptureButton'
 
 interface CaptureFeedProps {
   sources: CapturedSource[]
-  /** Pass space IDs explicitly so empty lists still open a socket channel */
-  spaceIds?: string[]
+  /** Override empty-state copy for space-scoped feeds. */
   emptyTitle?: string
   emptyBody?: string
   extraActions?: (source: CapturedSource) => ReactNode
   canDelete?: boolean
 }
-
-
 
 function StatusBadge({ status }: { status: CapturedSource['status'] }) {
   if (status === 'processing') {
@@ -110,33 +107,44 @@ export function CaptureRow({
 
 export default function CaptureFeed({
   sources,
-  spaceIds: explicitSpaceIds,
   emptyTitle = 'No captures yet',
   emptyBody = 'Install the browser extension, open a video or article, and save it into a Learning Space — it will show up here.',
   extraActions,
   canDelete,
 }: CaptureFeedProps) {
+  const router = useRouter()
+
+  // Local mirror of the server-provided sources, patched in place by
+  // incoming UPDATE events. Re-synced whenever the server sends a fresh
+  // `sources` prop — including after the router.refresh() triggered by
+  // a new-capture INSERT event below.
   const [liveSources, setLiveSources] = useState(sources)
 
   useEffect(() => {
     setLiveSources(sources)
   }, [sources])
 
-  // Prefer explicitly passed spaceIds; fallback to extracting from initial sources
-  const resolvedSpaceIds = useMemo(() => {
-    if (explicitSpaceIds && explicitSpaceIds.length > 0) {
-      return explicitSpaceIds
-    }
-    return Array.from(new Set(sources.map(s => s.spaceId)))
-  }, [explicitSpaceIds, sources])
+  const spaceIds = useMemo(
+    () => Array.from(new Set(sources.map(s => s.spaceId))),
+    [sources]
+  )
 
-  useCaptureSocket(resolvedSpaceIds, event => {
-    setLiveSources(prev =>
-      prev.map(source =>
-        source.id === event.sourceId ? { ...source, ...event.patch } : source
+  useCaptureSocket(
+    spaceIds,
+    event => {
+      setLiveSources(prev =>
+        prev.map(source =>
+          source.id === event.sourceId ? { ...source, ...event.patch } : source
+        )
       )
-    )
-  })
+    },
+    () => {
+      // A brand-new capture landed for one of these spaces. Refetch the
+      // server-rendered list so it appears with its correct spaceName,
+      // meta, etc. — no full page reload, no flash.
+      router.refresh()
+    }
+  )
 
   if (liveSources.length === 0) {
     return (
