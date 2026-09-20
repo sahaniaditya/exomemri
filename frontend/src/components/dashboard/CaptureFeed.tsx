@@ -19,6 +19,14 @@ import DeleteCaptureButton from './DeleteCaptureButton'
 
 interface CaptureFeedProps {
   sources: CapturedSource[]
+  /**
+   * Space ids to subscribe the realtime socket to. Pass this explicitly
+   * when the feed should listen across spaces that may have zero current
+   * captures (e.g. the top-level dashboard feed) — otherwise the socket
+   * would have nothing to derive space ids from until a first capture
+   * exists. When omitted, ids are derived from `sources` instead.
+   */
+  spaceIds?: string[]
   /** Override empty-state copy for space-scoped feeds. */
   emptyTitle?: string
   emptyBody?: string
@@ -107,6 +115,7 @@ export function CaptureRow({
 
 export default function CaptureFeed({
   sources,
+  spaceIds: spaceIdsProp,
   emptyTitle = 'No captures yet',
   emptyBody = 'Install the browser extension, open a video or article, and save it into a Learning Space — it will show up here.',
   extraActions,
@@ -124,10 +133,15 @@ export default function CaptureFeed({
     setLiveSources(sources)
   }, [sources])
 
-  const spaceIds = useMemo(
+  // Prefer an explicitly passed spaceIds prop (needed when the feed can
+  // be empty but should still listen for captures across those spaces,
+  // e.g. the top-level dashboard). Fall back to deriving ids from the
+  // current sources for space-scoped feeds that don't pass it.
+  const derivedSpaceIds = useMemo(
     () => Array.from(new Set(sources.map(s => s.spaceId))),
     [sources]
   )
+  const spaceIds = spaceIdsProp ?? derivedSpaceIds
 
   useCaptureSocket(
     spaceIds,
