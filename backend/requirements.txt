@@ -42,3 +42,5 @@ langchain-core>=0.3
 # langchain
 # langgraph-checkpoint
 # langsmith
+
+sentence-transformers==6.1.0
