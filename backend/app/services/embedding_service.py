@@ -6,6 +6,7 @@ import asyncio
 import logging
 from functools import lru_cache
 from typing import TYPE_CHECKING
+import threading
 
 from app.config import Settings
 from app.errors import AppError
@@ -31,16 +32,23 @@ class EmbeddingProviderError(AppError):
     code = "embedding_provider_error"
 
 
-@lru_cache(maxsize=2)
-def _load_model(model_name: str) -> "SentenceTransformer":
-    # Imported here so importing this module (tests, tooling) stays fast;
-    # torch only loads when a model is actually needed.
-    from sentence_transformers import SentenceTransformer
 
-    logger.info("embedding_model_loading", extra={"model": model_name})
-    model = SentenceTransformer(model_name)
-    model.max_seq_length = 512
-    return model
+
+_MODEL_LOCK = threading.Lock()
+_MODELS: dict[str, "SentenceTransformer"] = {}
+
+
+def _load_model(model_name: str) -> "SentenceTransformer":
+    with _MODEL_LOCK:
+        model = _MODELS.get(model_name)
+        if model is None:
+            from sentence_transformers import SentenceTransformer
+
+            logger.info("embedding_model_loading", extra={"model": model_name})
+            model = SentenceTransformer(model_name)
+            model.max_seq_length = 512
+            _MODELS[model_name] = model
+        return model
 
 
 class EmbeddingService:
