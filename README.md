@@ -1,6 +1,6 @@
 <div align="center">
 
-# exomemri
+# exomemri.com
 
 ### **Never lose anything you learn online again.**
 
