@@ -115,7 +115,12 @@ describe('combined note editor (all phases)', () => {
   })
 
   it('keeps node attributes from the contract', () => {
-    const json = makeEditor(FULL_DOC).getJSON() as { content: Array<Record<string, any>> }
+    interface JsonNode {
+      type: string
+      attrs?: Record<string, unknown>
+      content?: JsonNode[]
+    }
+    const json = makeEditor(FULL_DOC).getJSON() as { content: JsonNode[] }
     const byType = (type: string) => json.content.find(node => node.type === type)
     expect(byType('callout')?.attrs).toMatchObject({ emoji: '💡', variant: 'warning' })
     expect(byType('toggle')?.attrs).toMatchObject({ open: false })
