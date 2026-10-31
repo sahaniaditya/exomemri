@@ -33,15 +33,23 @@ export async function forwardToBackend(
 
   if (res.status === 204) return new NextResponse(null, { status: 204 })
 
-  const contentType = res.headers.get('content-type') ?? ''
-  if (!contentType.includes('json')) {
+  // Parse by content, not by header: a JSON body is relayed as JSON whatever its content-type.
+  const text = await res.text()
+  try {
+    return NextResponse.json(JSON.parse(text), { status: res.status })
+  } catch {
+    // Not JSON. A failing upstream must still answer the browser with JSON; only a
+    // successful non-JSON body (the Markdown export) is passed through as text.
+    if (!res.ok) {
+      return NextResponse.json({ detail: 'Invalid response from server' }, { status: res.status })
+    }
     const headers: Record<string, string> = {}
+    const contentType = res.headers.get('content-type')
     if (contentType) headers['content-type'] = contentType
     const disposition = res.headers.get('content-disposition')
     if (disposition) headers['content-disposition'] = disposition
-    return new NextResponse(await res.text(), { status: res.status, headers })
+    return new NextResponse(text, { status: res.status, headers })
   }
-  return NextResponse.json(await res.json(), { status: res.status })
 }
 
 /** Forward one request. `body` (when given) is sent as JSON. */
