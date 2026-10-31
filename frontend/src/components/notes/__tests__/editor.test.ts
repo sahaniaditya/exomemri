@@ -49,7 +49,7 @@ describe('buildNoteExtensions', () => {
     const first = editor.getJSON().content?.[0]
     expect(first?.type).toBe('heading')
     expect(first?.attrs?.level).toBe(level)
-    expect(first?.content?.[0].text).toBe('Title')
+    expect((first?.content?.[0] as { text?: string }).text).toBe('Title')
   })
 
   it('does not create a level 4 heading', () => {
