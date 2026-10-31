@@ -37,7 +37,7 @@ const MIN_FALLBACK_CHARS = 200
 function roleOf(el: Element): string {
   const key = el.getAttribute("data-chatgpt-search-unit-key") ?? ""
   const fromKey = ROLE_FROM_KEY.exec(key)
-  if (fromKey) return fromKey[1]
+  if (fromKey?.[1]) return fromKey[1]
 
   const legacy = el.getAttribute("data-message-author-role")
   if (legacy) return legacy
