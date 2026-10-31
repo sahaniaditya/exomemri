@@ -146,7 +146,7 @@
   --callout-accent: var(--note-callout-danger);
 }
 
-:global(.ProseMirror) .note-callout-emoji {
+:global(.ProseMirror .note-callout-emoji) {
   flex: none;
   width: 1.6rem;
   font-size: 1.25rem;
@@ -156,20 +156,20 @@
   user-select: none;
 }
 
-:global(.ProseMirror[contenteditable='false']) .note-callout-emoji {
+:global(.ProseMirror[contenteditable='false'] .note-callout-emoji) {
   cursor: default;
 }
 
-:global(.ProseMirror) .note-callout-body {
+:global(.ProseMirror .note-callout-body) {
   flex: 1;
   min-width: 0;
 }
 
-:global(.ProseMirror) .note-callout-body > :first-child {
+:global(.ProseMirror .note-callout-body > :first-child) {
   margin-top: 0;
 }
 
-:global(.ProseMirror) .note-callout-body > :last-child {
+:global(.ProseMirror .note-callout-body > :last-child) {
   margin-bottom: 0;
 }
 
@@ -181,7 +181,7 @@
   padding-left: 1.5rem;
 }
 
-:global(.ProseMirror) .note-toggle-arrow {
+:global(.ProseMirror .note-toggle-arrow) {
   position: absolute;
   top: 0.15rem;
   left: 0;
@@ -195,7 +195,7 @@
   cursor: pointer;
 }
 
-:global(.ProseMirror) .note-toggle-arrow::before {
+:global(.ProseMirror .note-toggle-arrow)::before {
   content: '';
   display: block;
   margin: auto;
@@ -205,15 +205,15 @@
   transition: transform 0.12s ease;
 }
 
-:global(.ProseMirror) .note-toggle-arrow:hover {
+:global(.ProseMirror .note-toggle-arrow):hover {
   background: var(--avatar-bg);
 }
 
-:global(.ProseMirror) [data-toggle][data-open='true'] > .note-toggle-arrow::before {
+:global(.ProseMirror [data-toggle][data-open='true'] > .note-toggle-arrow)::before {
   transform: rotate(90deg);
 }
 
-:global(.ProseMirror) [data-toggle][data-open='false'] > .note-toggle-content > :not(:first-child) {
+:global(.ProseMirror [data-toggle][data-open='false'] > .note-toggle-content > :not(:first-child)) {
   display: none;
 }
 
