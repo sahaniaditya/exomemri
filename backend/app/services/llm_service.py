@@ -26,6 +26,10 @@ from app.schemas.sources import (
     SubtopicDescription,
     TopicDescription,
 )
+from app.services.note_assist_prompts import (
+    build_note_assist_system,
+    build_note_assist_user,
+)
 from app.services.pipeline.catalog import topics_from_source_catalog
 from app.services.pipeline.windows import split_for_llm
 from app.services.space_service import slugify
@@ -430,3 +434,17 @@ class LLMService:
                 )
             )
         return merge_extracted_concepts(mapped)
+
+    async def note_assist(
+        self, *, action: str, text: str, instruction: str | None = None
+    ) -> str:
+        """One-shot plain-text assist for a note (summarize/rewrite/expand/continue/ask)."""
+        resp = await self._client.messages.create(
+            model=self._model,
+            max_tokens=1200,
+            system=build_note_assist_system(action, instruction),
+            messages=[
+                {"role": "user", "content": build_note_assist_user(action, text, instruction)}
+            ],
+        )
+        return resp.content[0].text.strip()

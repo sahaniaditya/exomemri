@@ -13,11 +13,10 @@ export type NoteParams = { params: Promise<{ spaceId: string; noteId: string }> 
 export const notesEndpoint = (spaceId: string, suffix = '') =>
   `/v1/spaces/${spaceId}/notes${suffix}`
 
-/** Forward one request. `body` (when given) is sent as JSON. */
-export async function proxy(
+/** Forward one request with a raw `RequestInit`. Status and body pass through. */
+export async function forwardToBackend(
   endpoint: string,
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
-  body?: unknown
+  init: RequestInit = {}
 ): Promise<NextResponse> {
   const token = (await cookies()).get('atlas_token')?.value ?? ''
   if (!token) {
@@ -26,11 +25,7 @@ export async function proxy(
 
   let res: Response
   try {
-    res = await apiFetch(
-      endpoint,
-      { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) },
-      token
-    )
+    res = await apiFetch(endpoint, init, token)
   } catch (error) {
     console.error('Notes BFF upstream failure:', error)
     return NextResponse.json({ detail: 'The service is unavailable.' }, { status: 502 })
@@ -47,6 +42,18 @@ export async function proxy(
     return new NextResponse(await res.text(), { status: res.status, headers })
   }
   return NextResponse.json(await res.json(), { status: res.status })
+}
+
+/** Forward one request. `body` (when given) is sent as JSON. */
+export function proxy(
+  endpoint: string,
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  body?: unknown
+): Promise<NextResponse> {
+  return forwardToBackend(endpoint, {
+    method,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  })
 }
 
 /** Parse the JSON request body, or answer 400 for malformed input. */

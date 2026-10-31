@@ -754,6 +754,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/spaces/{space_id}/notes/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Note Ai Assist */
+        post: operations["note_ai_assist_v1_spaces__space_id__notes_ai_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/spaces/{space_id}/notes/pages": {
         parameters: {
             query?: never;
@@ -938,6 +955,58 @@ export interface paths {
         put?: never;
         /** Trash Workspace Note */
         post: operations["trash_workspace_note_v1_spaces__space_id__notes__note_id__trash_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/{note_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Versions */
+        get: operations["list_versions_v1_spaces__space_id__notes__note_id__versions_get"];
+        put?: never;
+        /** Create Version */
+        post: operations["create_version_v1_spaces__space_id__notes__note_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/{note_id}/versions/{version_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Version */
+        get: operations["get_version_v1_spaces__space_id__notes__note_id__versions__version_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/{note_id}/versions/{version_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Version */
+        post: operations["restore_version_v1_spaces__space_id__notes__note_id__versions__version_id__restore_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1138,6 +1207,15 @@ export interface components {
              */
             title: string;
         };
+        /** CreateNoteVersionRequest */
+        CreateNoteVersionRequest: {
+            /**
+             * Reason
+             * @default idle
+             * @enum {string}
+             */
+            reason: "idle" | "manual";
+        };
         /**
          * CreateSpaceRequest
          * @description Payload for creating a Learning Space, e.g. ``{"name": "Claude Code"}``.
@@ -1270,6 +1348,25 @@ export interface components {
         MessageResponse: {
             /** Message */
             message: string;
+        };
+        /** NoteAiRequest */
+        NoteAiRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "summarize" | "rewrite" | "expand" | "continue" | "ask";
+            /** Instruction */
+            instruction?: string | null;
+            /** Note Id */
+            note_id?: string | null;
+            /** Text */
+            text: string;
+        };
+        /** NoteAiResponse */
+        NoteAiResponse: {
+            /** Text */
+            text: string;
         };
         /**
          * NoteImageUploadRequest
@@ -1404,6 +1501,52 @@ export interface components {
         NoteTreeResponse: {
             /** Items */
             items?: components["schemas"]["NoteTreeItem"][];
+        };
+        /** NoteVersionListResponse */
+        NoteVersionListResponse: {
+            /** Items */
+            items?: components["schemas"]["NoteVersionSummary"][];
+        };
+        /** NoteVersionResponse */
+        NoteVersionResponse: {
+            /** Content */
+            content?: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "idle" | "manual" | "pre_restore";
+            /** Title */
+            title: string;
+        };
+        /**
+         * NoteVersionSummary
+         * @description A version without its content, for listings.
+         */
+        NoteVersionSummary: {
+            /** Created At */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "idle" | "manual" | "pre_restore";
+            /** Title */
+            title: string;
         };
         /** OkResponse */
         OkResponse: {
@@ -4016,6 +4159,43 @@ export interface operations {
             };
         };
     };
+    note_ai_assist_v1_spaces__space_id__notes_ai_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteAiRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteAiResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_workspace_note_v1_spaces__space_id__notes_pages_post: {
         parameters: {
             query?: never;
@@ -4482,6 +4662,148 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_versions_v1_spaces__space_id__notes__note_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteVersionListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_version_v1_spaces__space_id__notes__note_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateNoteVersionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteVersionSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_version_v1_spaces__space_id__notes__note_id__versions__version_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteVersionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_version_v1_spaces__space_id__notes__note_id__versions__version_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpaceNotePageResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

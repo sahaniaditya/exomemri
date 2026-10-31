@@ -15,6 +15,7 @@ from app.repositories.concept_repo import ConceptRepo
 from app.repositories.coverage_repo import CoverageRepo
 from app.repositories.credits_repo import CreditsRepo
 from app.repositories.note_repo import NoteRepo
+from app.repositories.note_version_repo import NoteVersionRepo
 from app.repositories.note_workspace_repo import NoteWorkspaceRepo
 from app.repositories.profile_repo import ProfileRepo
 from app.repositories.profile_settings_repo import ProfileSettingsRepo
@@ -34,8 +35,10 @@ from app.services.credits_service import CreditsService
 from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
+from app.services.note_ai_service import NoteAiService
 from app.services.note_index_service import NoteIndexService
 from app.services.note_service import NoteService
+from app.services.note_version_service import NoteVersionService
 from app.services.note_workspace_service import NoteWorkspaceService
 from app.services.pipeline_service import PipelineService
 from app.services.plan_service import PlanService
@@ -332,3 +335,23 @@ def get_pipeline_service(
     return PipelineService(
         concepts, extracts, embeddings, llm, chunks, space_service, coverage
     )
+
+def get_note_version_repo() -> NoteVersionRepo:
+    return NoteVersionRepo(get_service_client())
+
+
+def get_note_version_service(
+    versions: NoteVersionRepo = Depends(get_note_version_repo),
+    space_notes: SpaceNoteRepo = Depends(get_space_note_repo),
+    space_service: SpaceService = Depends(get_space_service),
+) -> NoteVersionService:
+    return NoteVersionService(versions, space_notes, space_service)
+
+
+def get_note_ai_service(
+    space_service: SpaceService = Depends(get_space_service),
+    space_notes: SpaceNoteRepo = Depends(get_space_note_repo),
+    llm: LLMService = Depends(get_llm_service),
+    credits: CreditsService = Depends(get_credits_service),
+) -> NoteAiService:
+    return NoteAiService(space_service, space_notes, llm, credits)
