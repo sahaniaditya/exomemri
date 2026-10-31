@@ -17,6 +17,7 @@ class SpaceNoteRepo:
             .select("*")
             .eq("space_id", space_id)
             .eq("user_id", user_id)
+            .is_("deleted_at", "null")
             .order("sort_order")
             .order("created_at")
             .execute()

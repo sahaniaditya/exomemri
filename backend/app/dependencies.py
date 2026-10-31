@@ -15,6 +15,8 @@ from app.repositories.concept_repo import ConceptRepo
 from app.repositories.coverage_repo import CoverageRepo
 from app.repositories.credits_repo import CreditsRepo
 from app.repositories.note_repo import NoteRepo
+from app.repositories.note_version_repo import NoteVersionRepo
+from app.repositories.note_workspace_repo import NoteWorkspaceRepo
 from app.repositories.profile_repo import ProfileRepo
 from app.repositories.profile_settings_repo import ProfileSettingsRepo
 from app.repositories.review_repo import ReviewRepo
@@ -33,7 +35,11 @@ from app.services.credits_service import CreditsService
 from app.services.embedding_service import EmbeddingService
 from app.services.extract_service import ExtractService
 from app.services.llm_service import LLMService
+from app.services.note_ai_service import NoteAiService
+from app.services.note_index_service import NoteIndexService
 from app.services.note_service import NoteService
+from app.services.note_version_service import NoteVersionService
+from app.services.note_workspace_service import NoteWorkspaceService
 from app.services.pipeline_service import PipelineService
 from app.services.plan_service import PlanService
 from app.services.profile_service import ProfileService
@@ -112,14 +118,33 @@ def get_space_note_repo() -> SpaceNoteRepo:
     return SpaceNoteRepo(get_service_client())
 
 
+def get_note_workspace_repo() -> NoteWorkspaceRepo:
+    return NoteWorkspaceRepo(get_service_client())
+
+
+def get_note_index_service(
+    repo: NoteWorkspaceRepo = Depends(get_note_workspace_repo),
+) -> NoteIndexService:
+    return NoteIndexService(repo)
+
+
 def get_note_service(
     notes: NoteRepo = Depends(get_note_repo),
     space_notes: SpaceNoteRepo = Depends(get_space_note_repo),
     space_service: SpaceService = Depends(get_space_service),
     storage: StorageRepo = Depends(get_storage_repo),
     settings: Settings = Depends(get_settings),
+    indexer: NoteIndexService = Depends(get_note_index_service),
 ) -> NoteService:
-    return NoteService(notes, space_notes, space_service, storage, settings)
+    return NoteService(notes, space_notes, space_service, storage, settings, indexer)
+
+
+def get_note_workspace_service(
+    space_service: SpaceService = Depends(get_space_service),
+    repo: NoteWorkspaceRepo = Depends(get_note_workspace_repo),
+    indexer: NoteIndexService = Depends(get_note_index_service),
+) -> NoteWorkspaceService:
+    return NoteWorkspaceService(space_service, repo, indexer)
 
 
 def get_credits_repo() -> CreditsRepo:
@@ -310,3 +335,24 @@ def get_pipeline_service(
     return PipelineService(
         concepts, extracts, embeddings, llm, chunks, space_service, coverage
     )
+
+def get_note_version_repo() -> NoteVersionRepo:
+    return NoteVersionRepo(get_service_client())
+
+
+def get_note_version_service(
+    versions: NoteVersionRepo = Depends(get_note_version_repo),
+    space_notes: SpaceNoteRepo = Depends(get_space_note_repo),
+    space_service: SpaceService = Depends(get_space_service),
+    indexer: NoteIndexService = Depends(get_note_index_service),
+) -> NoteVersionService:
+    return NoteVersionService(versions, space_notes, space_service, indexer)
+
+
+def get_note_ai_service(
+    space_service: SpaceService = Depends(get_space_service),
+    space_notes: SpaceNoteRepo = Depends(get_space_note_repo),
+    llm: LLMService = Depends(get_llm_service),
+    credits: CreditsService = Depends(get_credits_service),
+) -> NoteAiService:
+    return NoteAiService(space_service, space_notes, llm, credits)
