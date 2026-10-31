@@ -2,6 +2,9 @@ import { Node, mergeAttributes, type CommandProps } from '@tiptap/core'
 import { TextSelection, type EditorState } from '@tiptap/pm/state'
 import { CALLOUT_VARIANTS, DEFAULT_CALLOUT_EMOJI, type CalloutVariant } from '@/lib/notes/palette'
 
+/** Fired on the editor DOM when a callout's emoji is clicked; detail is `{ pos }`. */
+export const CALLOUT_EMOJI_EVENT = 'note:callout-emoji'
+
 export interface CalloutAttrs {
   emoji: string
   variant: CalloutVariant
@@ -14,10 +17,10 @@ declare module '@tiptap/core' {
       setCallout: (attrs?: Partial<CalloutAttrs>) => ReturnType
       /** Insert an empty callout at the cursor (used by the slash menu). */
       insertCallout: (attrs?: Partial<CalloutAttrs>) => ReturnType
-      /** Change the variant of the callout around the cursor. */
-      setCalloutVariant: (variant: CalloutVariant) => ReturnType
-      /** Change the emoji of the callout around the cursor. */
-      setCalloutEmoji: (emoji: string) => ReturnType
+      /** Change the variant of the callout around the cursor (or the one at `pos`). */
+      setCalloutVariant: (variant: CalloutVariant, pos?: number) => ReturnType
+      /** Change the emoji of the callout around the cursor (or the one at `pos`). */
+      setCalloutEmoji: (emoji: string, pos?: number) => ReturnType
     }
   }
 }
@@ -80,7 +83,7 @@ export const Callout = Node.create({
         const pos = typeof getPos === 'function' ? getPos() : undefined
         if (pos === undefined) return
         editor.view.dom.dispatchEvent(
-          new CustomEvent('note:callout-emoji', { bubbles: true, detail: { pos } }),
+          new CustomEvent(CALLOUT_EMOJI_EVENT, { bubbles: true, detail: { pos } }),
         )
       })
       return {
@@ -97,7 +100,11 @@ export const Callout = Node.create({
   },
 
   addCommands() {
-    const find = (state: EditorState) => {
+    const find = (state: EditorState, pos?: number) => {
+      if (pos !== undefined) {
+        const node = state.doc.nodeAt(pos)
+        return node?.type.name === this.name ? { node, pos } : null
+      }
       const { $from } = state.selection
       for (let d = $from.depth; d > 0; d--) {
         if ($from.node(d).type.name === this.name) {
@@ -107,9 +114,9 @@ export const Callout = Node.create({
       return null
     }
     const update =
-      (patch: Partial<CalloutAttrs>) =>
+      (patch: Partial<CalloutAttrs>, pos?: number) =>
       ({ state, tr, dispatch }: CommandProps) => {
-        const found = find(state)
+        const found = find(state, pos)
         if (!found) return false
         if (dispatch) tr.setNodeMarkup(found.pos, undefined, { ...found.node.attrs, ...patch })
         return true
@@ -127,8 +134,8 @@ export const Callout = Node.create({
             attrs: { emoji: DEFAULT_CALLOUT_EMOJI, variant: 'info', ...attrs },
             content: [{ type: 'paragraph' }],
           }),
-      setCalloutVariant: (variant) => update({ variant }),
-      setCalloutEmoji: (emoji) => update({ emoji }),
+      setCalloutVariant: (variant, pos) => update({ variant }, pos),
+      setCalloutEmoji: (emoji, pos) => update({ emoji }, pos),
     }
   },
 

@@ -1,0 +1,456 @@
+/*
+ * Styles for the Phase 2 note blocks and their floating tools.
+ * Palette variables live on :root / .dark so stored colours (CSS variables) adapt to the theme.
+ * Block styles target ProseMirror output, hence :global; menus use local classes.
+ */
+
+:global(:root) {
+  --note-text-gray: #6b6a62;
+  --note-text-red: #c53a3a;
+  --note-text-orange: #b5623c;
+  --note-text-green: #2c5d4f;
+  --note-text-blue: #2f6fa3;
+  --note-text-purple: #7a4fb0;
+  --note-hl-yellow: #f7e08a;
+  --note-hl-red: #f6c4c0;
+  --note-hl-orange: #f4d3be;
+  --note-hl-green: #cde3d3;
+  --note-hl-blue: #c6dcf1;
+  --note-hl-purple: #ddd0f0;
+  --note-callout-info: #2f6fa3;
+  --note-callout-success: #2c5d4f;
+  --note-callout-warning: #b7791f;
+  --note-callout-danger: #c53a3a;
+}
+
+:global(.dark) {
+  --note-text-gray: #a1a1aa;
+  --note-text-red: #f08a8a;
+  --note-text-orange: #e09a6e;
+  --note-text-green: #8fbfad;
+  --note-text-blue: #7fb2e5;
+  --note-text-purple: #b99be3;
+  --note-hl-yellow: rgba(234, 196, 60, 0.38);
+  --note-hl-red: rgba(240, 120, 120, 0.34);
+  --note-hl-orange: rgba(224, 154, 110, 0.36);
+  --note-hl-green: rgba(120, 190, 160, 0.32);
+  --note-hl-blue: rgba(110, 160, 225, 0.34);
+  --note-hl-purple: rgba(170, 130, 225, 0.34);
+  --note-callout-info: #7fb2e5;
+  --note-callout-success: #8fbfad;
+  --note-callout-warning: #e3b75b;
+  --note-callout-danger: #f08a8a;
+}
+
+/* ---------- Task list ---------- */
+
+:global(.ProseMirror) ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+
+:global(.ProseMirror) ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+:global(.ProseMirror) ul[data-type='taskList'] li > label {
+  flex: none;
+  margin-top: 0.3em;
+  user-select: none;
+}
+
+:global(.ProseMirror) ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+:global(.ProseMirror) ul[data-type='taskList'] input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--forest);
+  cursor: pointer;
+}
+
+:global(.ProseMirror[contenteditable='false']) ul[data-type='taskList'] input[type='checkbox'] {
+  cursor: default;
+}
+
+:global(.ProseMirror) ul[data-type='taskList'] li[data-checked='true'] > div > p {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* ---------- Table ---------- */
+
+:global(.ProseMirror) table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75rem 0;
+  overflow: hidden;
+}
+
+:global(.ProseMirror) th,
+:global(.ProseMirror) td {
+  position: relative;
+  min-width: 4rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  vertical-align: top;
+  text-align: left;
+}
+
+:global(.ProseMirror) th {
+  background: var(--bubble-bg);
+  font-weight: 600;
+}
+
+:global(.ProseMirror) th > p,
+:global(.ProseMirror) td > p {
+  margin: 0;
+}
+
+:global(.ProseMirror) .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--forest-rgb), 0.14);
+  pointer-events: none;
+}
+
+/* ---------- Callout ---------- */
+
+:global(.ProseMirror) [data-callout] {
+  --callout-accent: var(--note-callout-info);
+  display: flex;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--callout-accent) 35%, transparent);
+  border-left: 4px solid var(--callout-accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--callout-accent) 10%, transparent);
+}
+
+:global(.ProseMirror) [data-callout][data-variant='success'] {
+  --callout-accent: var(--note-callout-success);
+}
+
+:global(.ProseMirror) [data-callout][data-variant='warning'] {
+  --callout-accent: var(--note-callout-warning);
+}
+
+:global(.ProseMirror) [data-callout][data-variant='danger'] {
+  --callout-accent: var(--note-callout-danger);
+}
+
+:global(.ProseMirror) .note-callout-emoji {
+  flex: none;
+  width: 1.6rem;
+  font-size: 1.25rem;
+  line-height: 1.5;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+:global(.ProseMirror[contenteditable='false']) .note-callout-emoji {
+  cursor: default;
+}
+
+:global(.ProseMirror) .note-callout-body {
+  flex: 1;
+  min-width: 0;
+}
+
+:global(.ProseMirror) .note-callout-body > :first-child {
+  margin-top: 0;
+}
+
+:global(.ProseMirror) .note-callout-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Toggle ---------- */
+
+:global(.ProseMirror) [data-toggle] {
+  position: relative;
+  margin: 0.4rem 0;
+  padding-left: 1.5rem;
+}
+
+:global(.ProseMirror) .note-toggle-arrow {
+  position: absolute;
+  top: 0.15rem;
+  left: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+:global(.ProseMirror) .note-toggle-arrow::before {
+  content: '';
+  display: block;
+  margin: auto;
+  border-style: solid;
+  border-width: 0.3rem 0 0.3rem 0.5rem;
+  border-color: transparent transparent transparent currentColor;
+  transition: transform 0.12s ease;
+}
+
+:global(.ProseMirror) .note-toggle-arrow:hover {
+  background: var(--avatar-bg);
+}
+
+:global(.ProseMirror) [data-toggle][data-open='true'] > .note-toggle-arrow::before {
+  transform: rotate(90deg);
+}
+
+:global(.ProseMirror) [data-toggle][data-open='false'] > .note-toggle-content > :not(:first-child) {
+  display: none;
+}
+
+:global(.ProseMirror) [data-toggle-summary] {
+  font-weight: 600;
+}
+
+/* ---------- Marks ---------- */
+
+:global(.ProseMirror) mark {
+  padding: 0 0.1em;
+  border-radius: 3px;
+  color: inherit;
+}
+
+/* ---------- Block handle and drop indicator (created by the ProseMirror plugin) ---------- */
+
+:global(.note-block-handle) {
+  position: fixed;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: -0.15em;
+  line-height: 1;
+  cursor: grab;
+}
+
+:global(.note-block-handle:hover) {
+  background: var(--avatar-bg);
+  color: var(--ink);
+}
+
+:global(.note-block-handle:active) {
+  cursor: grabbing;
+}
+
+:global(.note-drop-indicator) {
+  position: fixed;
+  z-index: 40;
+  display: none;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--forest);
+  pointer-events: none;
+}
+
+/* ---------- Floating menus ---------- */
+
+.menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 6px 24px rgba(var(--ink-rgb), 0.14);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.9rem;
+  height: 1.9rem;
+  padding: 0 0.45rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn:hover,
+.btnOn {
+  background: var(--avatar-bg);
+}
+
+.btnOn {
+  color: var(--forest);
+}
+
+.btn:focus-visible,
+.item:focus-visible,
+.swatch:focus-visible,
+.emoji:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 1px;
+}
+
+.sep {
+  width: 1px;
+  height: 1.2rem;
+  margin: 0 2px;
+  background: var(--color-border);
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 11rem;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: 0 6px 24px rgba(var(--ink-rgb), 0.14);
+}
+
+.anchor {
+  position: relative;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover,
+.itemOn {
+  background: var(--avatar-bg);
+}
+
+.itemDanger {
+  color: var(--note-callout-danger);
+}
+
+.itemIcon {
+  display: inline-block;
+  width: 1.4rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1.6rem);
+  gap: 4px;
+  padding: 4px;
+}
+
+.swatch {
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.swatchOn {
+  box-shadow: 0 0 0 2px var(--forest);
+}
+
+.linkRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.linkInput {
+  width: 14rem;
+  height: 1.9rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--paper);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.linkInputBad {
+  border-color: var(--note-callout-danger);
+}
+
+.error {
+  padding: 0 0.4rem;
+  color: var(--note-callout-danger);
+  font-size: 0.75rem;
+}
+
+.floating {
+  position: fixed;
+  z-index: 60;
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 2rem);
+  gap: 2px;
+  padding: 4px;
+}
+
+.emoji {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.emoji:hover {
+  background: var(--avatar-bg);
+}
+
+.variantDot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--dot, var(--note-callout-info));
+}

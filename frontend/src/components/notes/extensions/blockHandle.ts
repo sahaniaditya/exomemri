@@ -165,7 +165,8 @@ export const BlockHandle = Extension.create({
 
   addProseMirrorPlugins() {
     const editor = this.editor
-    return [createHandlePlugin(editor.commands.moveBlockTo.bind(editor.commands))]
+    // Resolve `editor.commands` at call time: the object captures the state it was created with.
+    return [createHandlePlugin((from, to) => editor.commands.moveBlockTo(from, to))]
   },
 })
 
@@ -209,9 +210,10 @@ class HandleView {
       el: HTMLElement,
       type: K,
       fn: (e: HTMLElementEventMap[K]) => void,
+      capture = false,
     ) => {
-      el.addEventListener(type, fn as EventListener)
-      this.listeners.push(() => el.removeEventListener(type, fn as EventListener))
+      el.addEventListener(type, fn as EventListener, capture)
+      this.listeners.push(() => el.removeEventListener(type, fn as EventListener, capture))
     }
     const dom = view.dom as HTMLElement
     on(dom, 'mousemove', (e) => this.onMouseMove(e))
@@ -224,8 +226,11 @@ class HandleView {
     on(this.handle, 'click', () => this.openMenu())
     on(this.handle, 'dragstart', (e) => this.onDragStart(e))
     on(this.handle, 'dragend', () => this.endDrag())
-    on(dom, 'dragover', (e) => this.onDragOver(e))
-    on(dom, 'drop', (e) => this.onDrop(e))
+    // Capture on the parent so we run before ProseMirror's own drop/dragover handlers (and the
+    // drop cursor) on `dom`; while our drag is active they must not see the event.
+    const host = dom.parentElement ?? dom
+    on(host, 'dragover', (e) => this.onDragOver(e), true)
+    on(host, 'drop', (e) => this.onDrop(e), true)
     window.addEventListener('scroll', this.hideBound, true)
   }
 
@@ -297,6 +302,7 @@ class HandleView {
   private onDragOver(e: DragEvent) {
     if (this.dragIndex < 0) return
     e.preventDefault()
+    e.stopImmediatePropagation()
     const rects = this.blockRects()
     this.slot = dropSlotForY(rects, e.clientY)
     const dom = (this.view.dom as HTMLElement).getBoundingClientRect()
@@ -310,7 +316,7 @@ class HandleView {
   private onDrop(e: DragEvent) {
     if (this.dragIndex < 0) return
     e.preventDefault()
-    e.stopPropagation()
+    e.stopImmediatePropagation()
     const from = this.dragIndex
     const to = slotToTargetIndex(from, this.slot < 0 ? from : this.slot)
     this.endDrag()
