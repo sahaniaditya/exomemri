@@ -424,6 +424,10 @@
   .sidebarOpen {
     transform: translateX(0);
   }
+  /* The fixed Pages button sits over the top-left of the bar; leave room for it. */
+  .topbar {
+    padding-left: 104px;
+  }
   .drawerToggle {
     display: inline-flex;
     position: fixed;
