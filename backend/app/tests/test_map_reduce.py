@@ -43,6 +43,15 @@ async def test_embed_documents_batches_upstream_calls(
         hf_embedding_model = "fake-model"
         hf_embedding_dimension = 8
 
+    class _FakeModel:
+        def get_sentence_embedding_dimension(self) -> int:
+            return 8
+
+    # Hermetic: never download a real model from the Hugging Face hub.
+    monkeypatch.setattr(
+        "app.services.embedding_service._load_model", lambda _name: _FakeModel()
+    )
+
     service = EmbeddingService(_Settings())  # type: ignore[arg-type]
 
     async def fake_embed(texts: list[str]) -> list[list[float]]:
