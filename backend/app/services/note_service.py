@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from functools import partial
 from uuid import UUID, uuid4
 
@@ -39,6 +40,43 @@ ALLOWED_NOTE_IMAGE_TYPES: dict[str, str] = {
 }
 
 EMPTY_DOC: dict = {"type": "doc", "content": [{"type": "paragraph"}]}
+
+
+class NoteConflictError(ConflictError):
+    """The note changed since the client last saw it (optimistic concurrency)."""
+
+    code = "note_conflict"
+
+
+def _parse_timestamp(value: str | None) -> datetime | None:
+    """Parse an ISO timestamp; naive values are treated as UTC. ``None`` if unparseable."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+def check_expected_updated_at(row: dict, expected: str | None) -> None:
+    """Raise ``NoteConflictError`` when ``expected`` differs from the stored ``updated_at``.
+
+    A ``None`` expectation skips the check (legacy / "keep my version" behaviour).
+    Timestamps are compared as datetimes because Supabase and the client's echo may be
+    formatted differently.
+    """
+    if expected is None:
+        return
+    current = row.get("updated_at")
+    want, have = _parse_timestamp(expected), _parse_timestamp(current)
+    if want is not None and have is not None and want == have:
+        return
+    if want is None and have is None and expected == current:
+        return
+    raise NoteConflictError(
+        "This page was changed elsewhere.", detail={"updated_at": current}
+    )
 
 
 class NoteService:
@@ -118,6 +156,18 @@ class NoteService:
         await anyio.to_thread.run_sync(
             partial(self._spaces.require_owned_source, user, source_id)
         )
+        if payload.expected_updated_at is not None:
+            current = await anyio.to_thread.run_sync(
+                partial(
+                    self._notes.get,
+                    source_id=str(source_id),
+                    note_id=str(note_id),
+                    user_id=str(user.id),
+                )
+            )
+            if not current:
+                raise NotFoundError("Note page not found.", detail={"note_id": str(note_id)})
+            check_expected_updated_at(current, payload.expected_updated_at)
         row = await anyio.to_thread.run_sync(
             partial(
                 self._notes.update,
@@ -233,6 +283,18 @@ class NoteService:
         await anyio.to_thread.run_sync(
             partial(self._spaces.require_owned_space, user, space_id)
         )
+        if payload.expected_updated_at is not None:
+            current = await anyio.to_thread.run_sync(
+                partial(
+                    self._space_notes.get,
+                    space_id=str(space_id),
+                    note_id=str(note_id),
+                    user_id=str(user.id),
+                )
+            )
+            if not current:
+                raise NotFoundError("Note page not found.", detail={"note_id": str(note_id)})
+            check_expected_updated_at(current, payload.expected_updated_at)
         row = await anyio.to_thread.run_sync(
             partial(
                 self._space_notes.update,

@@ -1730,6 +1730,11 @@ export interface components {
             content?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Expected Updated At
+             * @description Last known updated_at; a mismatch yields 409 note_conflict.
+             */
+            expected_updated_at?: string | null;
             /** Title */
             title?: string | null;
         };
