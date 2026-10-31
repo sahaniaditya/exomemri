@@ -1,0 +1,220 @@
+/* Version history panel, doc preview and AI assist card. */
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  width: min(720px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  color: var(--ink);
+  border-left: 1px solid var(--line);
+  box-shadow: -24px 0 60px -40px rgba(27, 26, 22, 0.5);
+}
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.panelTitle {
+  margin: 0;
+  font-family: var(--font-newsreader), serif;
+  font-size: 20px;
+  font-weight: 500;
+}
+.panelBody {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+}
+@media (max-width: 640px) {
+  .panelBody {
+    grid-template-columns: 1fr;
+    grid-template-rows: 40% 1fr;
+  }
+}
+.versionList {
+  overflow: auto;
+  border-right: 1px solid var(--line);
+  padding: 8px;
+}
+.versionItems {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.versionItem {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.versionItem:hover {
+  background: var(--paper);
+}
+.versionItemActive {
+  border-color: var(--sage);
+  background: var(--paper);
+}
+.versionTitle {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.versionMeta {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.previewPane {
+  overflow: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.preview {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.preview p {
+  margin: 0 0 0.75em;
+}
+.preview pre {
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--paper);
+}
+.preview blockquote {
+  margin: 0 0 0.75em;
+  padding-left: 12px;
+  border-left: 3px solid var(--line);
+  color: var(--muted);
+}
+.previewMuted {
+  color: var(--muted);
+}
+.status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.statusError {
+  margin: 0;
+  font-size: 13px;
+  color: var(--clay);
+}
+.confirmRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.primaryButton {
+  padding: 7px 14px;
+  border: 1px solid var(--forest);
+  border-radius: 4px;
+  background: var(--forest);
+  color: var(--on-accent);
+  font-size: 13px;
+  cursor: pointer;
+}
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.ghostButton {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+.ghostButton:hover:not(:disabled) {
+  background: var(--paper);
+}
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--forest);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.aiRoot {
+  display: contents;
+}
+.aiBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+}
+.aiBarLabel {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.aiCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--sage);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--ink);
+}
+.aiCardLabel {
+  font-size: 13px;
+  color: var(--muted);
+}
+.aiInput {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+}
+.aiResult {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.aiActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
