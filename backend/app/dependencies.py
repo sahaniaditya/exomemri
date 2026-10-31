@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from uuid import UUID
 
 from fastapi import Depends, Header
-
-from functools import lru_cache
 
 from app.config import Settings, get_settings
 from app.errors import AuthError

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from functools import lru_cache
-from typing import TYPE_CHECKING
 import threading
+from typing import TYPE_CHECKING
 
 from app.config import Settings
 from app.errors import AppError
@@ -35,10 +34,10 @@ class EmbeddingProviderError(AppError):
 
 
 _MODEL_LOCK = threading.Lock()
-_MODELS: dict[str, "SentenceTransformer"] = {}
+_MODELS: dict[str, SentenceTransformer] = {}
 
 
-def _load_model(model_name: str) -> "SentenceTransformer":
+def _load_model(model_name: str) -> SentenceTransformer:
     with _MODEL_LOCK:
         model = _MODELS.get(model_name)
         if model is None:
