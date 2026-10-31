@@ -1,17 +1,17 @@
 'use client'
 
 /**
- * Space-scoped named note pages. Header + empty state match the space-notes
- * plate design (numbered title, outlined + New page, muted empty copy).
+ * Space-scoped named note pages: a list of rows that open each note on its own page.
+ * Header + empty state match the space-notes plate design (numbered title, outlined
+ * + New page, muted empty copy).
  */
-import { useCallback, useState } from 'react'
-import NotePageEditor from './NotePageEditor'
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import styles from './dashboard.module.css'
-import {
-  EMPTY_NOTE_DOC,
-  notesApiBase,
-  type NotePage,
-} from '@/lib/notes'
+import noteStyles from '@/components/notes/notes.module.css'
+import { relativeTime } from '@/lib/dashboard-data'
+import { notesApiBase, type NotePage } from '@/lib/notes'
 
 interface SpaceNotesProps {
   spaceId: string
@@ -26,38 +26,14 @@ export default function SpaceNotes({
   initialNotes,
   loadError = false,
 }: SpaceNotesProps) {
-  const scope = { kind: 'space' as const, spaceId }
-  const apiBase = notesApiBase(scope)
+  const router = useRouter()
+  const apiBase = notesApiBase({ kind: 'space', spaceId })
   const [pages, setPages] = useState<NotePage[]>(initialNotes)
-  const [openIds, setOpenIds] = useState<Set<string>>(
-    () => (initialNotes[0] ? new Set([initialNotes[0].id]) : new Set())
-  )
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [renameError, setRenameError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [listError, setListError] = useState<string | null>(null)
-  const [drafts, setDrafts] = useState<Record<string, Record<string, unknown>>>({})
-
-  const handleDraft = useCallback((pageId: string, content: Record<string, unknown>) => {
-    setDrafts(prev => ({ ...prev, [pageId]: content }))
-  }, [])
-
-  const handleSaved = useCallback((saved: NotePage) => {
-    setDrafts(prev => ({ ...prev, [saved.id]: saved.content }))
-    setPages(prev => prev.map(item => (item.id === saved.id ? saved : item)))
-  }, [])
-
-  function toggle(id: string) {
-    if (renamingId === id) return
-    setOpenIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
   function startRename(page: NotePage) {
     setRenamingId(page.id)
     setRenameValue(page.title)
@@ -87,10 +63,7 @@ export default function SpaceNotes({
         return
       }
       const page = (await res.json()) as NotePage
-      setDrafts(prev => ({ ...prev, [page.id]: page.content ?? EMPTY_NOTE_DOC }))
-      setPages(prev => [...prev, page])
-      setOpenIds(prev => new Set(prev).add(page.id))
-      startRename(page)
+      router.push(`/dashboard/spaces/${spaceId}/notes/${page.id}`)
     } catch {
       setListError('Could not reach the server. Please try again.')
     } finally {
@@ -155,17 +128,7 @@ export default function SpaceNotes({
         setListError('Could not delete the page. Please try again.')
         return
       }
-      setDrafts(prev => {
-        const next = { ...prev }
-        delete next[page.id]
-        return next
-      })
       setPages(prev => prev.filter(item => item.id !== page.id))
-      setOpenIds(prev => {
-        const next = new Set(prev)
-        next.delete(page.id)
-        return next
-      })
       if (renamingId === page.id) setRenamingId(null)
     } catch {
       setListError('Could not reach the server. Please try again.')
@@ -214,63 +177,54 @@ export default function SpaceNotes({
       ) : (
         <div className={styles.notesPages}>
           {pages.map(page => {
-            const open = openIds.has(page.id)
             const editing = renamingId === page.id
             return (
               <div key={page.id} className={styles.folderGroup}>
-                <div className={styles.folderHead}>
+                <div className={noteStyles.noteRow}>
                   {editing ? (
-                    <>
-                      <span className={styles.folderChevron} aria-hidden="true">
-                        {open ? '▾' : '▸'}
-                      </span>
-                      <span className={styles.folderRename}>
-                        <input
-                          className={styles.folderRenameInput}
-                          value={renameValue}
-                          maxLength={120}
-                          onChange={event => setRenameValue(event.target.value)}
-                          onKeyDown={event => {
-                            if (event.key === 'Enter') {
-                              event.preventDefault()
-                              void submitRename(page.id)
-                            }
-                            if (event.key === 'Escape') setRenamingId(null)
-                          }}
-                          aria-label="Page name"
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          className={styles.folderAction}
-                          disabled={busyId === page.id}
-                          onClick={() => void submitRename(page.id)}
-                        >
-                          Save
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.folderAction}
-                          onClick={() => setRenamingId(null)}
-                        >
-                          Cancel
-                        </button>
-                      </span>
-                    </>
-                  ) : (
-                    <>
+                    <span className={styles.folderRename}>
+                      <input
+                        className={styles.folderRenameInput}
+                        value={renameValue}
+                        maxLength={120}
+                        onChange={event => setRenameValue(event.target.value)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            void submitRename(page.id)
+                          }
+                          if (event.key === 'Escape') setRenamingId(null)
+                        }}
+                        aria-label="Page name"
+                        autoFocus
+                      />
                       <button
                         type="button"
-                        className={styles.folderToggle}
-                        aria-expanded={open}
-                        aria-controls={`note-body-${page.id}`}
-                        onClick={() => toggle(page.id)}
+                        className={styles.folderAction}
+                        disabled={busyId === page.id}
+                        onClick={() => void submitRename(page.id)}
                       >
-                        <span className={styles.folderChevron} aria-hidden="true">
-                          {open ? '▾' : '▸'}
-                        </span>
-                        <span className={styles.folderTitle}>{page.title}</span>
+                        Save
                       </button>
+                      <button
+                        type="button"
+                        className={styles.folderAction}
+                        onClick={() => setRenamingId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/dashboard/spaces/${spaceId}/notes/${page.id}`}
+                        className={noteStyles.noteRowLink}
+                      >
+                        <span className={noteStyles.noteRowTitle}>{page.title}</span>
+                        <span className={noteStyles.noteRowTime}>
+                          {relativeTime(page.updated_at)}
+                        </span>
+                      </Link>
                       <div className={styles.folderActions}>
                         <button
                           type="button"
@@ -294,20 +248,6 @@ export default function SpaceNotes({
                 </div>
                 {renameError && editing ? (
                   <div className={styles.folderError}>{renameError}</div>
-                ) : null}
-                {open ? (
-                  <NotePageEditor
-                    scope={scope}
-                    pageId={page.id}
-                    initialContent={
-                      drafts[page.id] ?? page.content ?? EMPTY_NOTE_DOC
-                    }
-                    savedContent={page.content ?? EMPTY_NOTE_DOC}
-                    savedAt={page.updated_at}
-                    editable
-                    onDraft={handleDraft}
-                    onSaved={handleSaved}
-                  />
                 ) : null}
               </div>
             )

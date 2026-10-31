@@ -71,6 +71,11 @@ class UpdateNotePageRequest(BaseModel):
 
     title: str | None = Field(default=None, min_length=1, max_length=MAX_NOTE_TITLE_LENGTH)
     content: dict[str, Any] | None = None
+    expected_updated_at: str | None = Field(
+        default=None,
+        max_length=64,
+        description="Last known updated_at; a mismatch yields 409 note_conflict.",
+    )
 
     @field_validator("title")
     @classmethod

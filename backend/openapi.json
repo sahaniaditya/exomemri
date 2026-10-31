@@ -2060,6 +2060,19 @@
             ],
             "title": "Content"
           },
+          "expected_updated_at": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last known updated_at; a mismatch yields 409 note_conflict.",
+            "title": "Expected Updated At"
+          },
           "title": {
             "anyOf": [
               {
