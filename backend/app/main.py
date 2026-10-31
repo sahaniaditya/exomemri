@@ -13,6 +13,8 @@ from app.routers import auth as auth_router
 from app.routers import coverage as coverage_router
 from app.routers import credits as credits_router
 from app.routers import graph as graph_router
+from app.routers import note_ai as note_ai_router
+from app.routers import note_versions as note_versions_router
 from app.routers import plan as plan_router
 from app.routers import profile as profile_router
 from app.routers import reviews as reviews_router
@@ -61,6 +63,8 @@ def create_app() -> FastAPI:
     app.include_router(session_router.router, prefix=API_PREFIX)
     app.include_router(spaces_router.router, prefix=API_PREFIX)
     app.include_router(sources_router.router, prefix=API_PREFIX)
+    app.include_router(note_versions_router.router, prefix=API_PREFIX)
+    app.include_router(note_ai_router.router, prefix=API_PREFIX)
     app.include_router(graph_router.router, prefix=API_PREFIX)
     app.include_router(coverage_router.router, prefix=API_PREFIX)
     app.include_router(credits_router.router, prefix=API_PREFIX)
