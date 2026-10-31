@@ -28,6 +28,7 @@ from app.schemas.notes import (
 )
 from app.schemas.spaces import ArtifactUrlResponse
 from app.services.capture_service import ARTIFACT_URL_TTL_SECONDS, is_note_image_key
+from app.services.note_index_service import NoteIndexService
 from app.services.space_service import SpaceService
 
 logger = logging.getLogger(__name__)
@@ -87,7 +88,9 @@ class NoteService:
         spaces: SpaceService,
         storage: StorageRepo,
         settings: Settings,
+        indexer: NoteIndexService | None = None,
     ) -> None:
+        self._indexer = indexer
         self._notes = notes
         self._space_notes = space_notes
         self._spaces = spaces
@@ -270,6 +273,7 @@ class NoteService:
             "space_note_page_created",
             extra={"space_id": str(space_id), "note_id": note_id},
         )
+        await self._reindex(user, note_id, EMPTY_DOC)
         return self._to_space_page(row)
 
     async def update_space_page(
@@ -307,6 +311,8 @@ class NoteService:
         )
         if not row:
             raise NotFoundError("Note page not found.", detail={"note_id": str(note_id)})
+        if payload.content is not None:
+            await self._reindex(user, str(note_id), payload.content)
         return self._to_space_page(row)
 
     async def delete_space_page(
@@ -362,6 +368,18 @@ class NoteService:
         path = f"users/{user.id}/spaces/{space_id}/{clean}"
         url = await self._storage.create_signed_url(path, ARTIFACT_URL_TTL_SECONDS)
         return ArtifactUrlResponse(url=url, expires_in=ARTIFACT_URL_TTL_SECONDS)
+
+    async def _reindex(self, user: User, note_id: str, content: dict) -> None:
+        """Refresh search text and links; the indexer swallows its own failures."""
+        if self._indexer is not None:
+            await anyio.to_thread.run_sync(
+                partial(
+                    self._indexer.refresh,
+                    user_id=str(user.id),
+                    note_id=note_id,
+                    content=content,
+                )
+            )
 
     def _mint_image_key(
         self, *, prefix: str, payload: NoteImageUploadRequest

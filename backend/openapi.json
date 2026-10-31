@@ -383,6 +383,32 @@
         "title": "CreateSpaceRequest",
         "type": "object"
       },
+      "CreateWorkspacePageRequest": {
+        "description": "Create a blank page, optionally under a root page.",
+        "properties": {
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "title": {
+            "default": "Untitled",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "CreateWorkspacePageRequest",
+        "type": "object"
+      },
       "CreditsBalance": {
         "description": "Remaining quota for the authenticated user.",
         "properties": {
@@ -528,6 +554,36 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "IncomingNoteLink": {
+        "properties": {
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "IncomingNoteLink",
+        "type": "object"
+      },
       "InviteCollaboratorRequest": {
         "properties": {
           "username": {
@@ -646,6 +702,26 @@
         "title": "NoteImageUploadResponse",
         "type": "object"
       },
+      "NoteLinksResponse": {
+        "properties": {
+          "incoming": {
+            "items": {
+              "$ref": "#/components/schemas/IncomingNoteLink"
+            },
+            "title": "Incoming",
+            "type": "array"
+          },
+          "outgoing": {
+            "items": {
+              "$ref": "#/components/schemas/OutgoingNoteLink"
+            },
+            "title": "Outgoing",
+            "type": "array"
+          }
+        },
+        "title": "NoteLinksResponse",
+        "type": "object"
+      },
       "NotePageListResponse": {
         "description": "All notebook pages on a capture, ordered by ``sort_order``.",
         "properties": {
@@ -707,6 +783,192 @@
         "title": "NotePageResponse",
         "type": "object"
       },
+      "NoteSearchHit": {
+        "properties": {
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "snippet": {
+            "default": "",
+            "title": "Snippet",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "NoteSearchHit",
+        "type": "object"
+      },
+      "NoteSearchResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NoteSearchHit"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "NoteSearchResponse",
+        "type": "object"
+      },
+      "NoteTrashItem": {
+        "properties": {
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "NoteTrashItem",
+        "type": "object"
+      },
+      "NoteTrashResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NoteTrashItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "NoteTrashResponse",
+        "type": "object"
+      },
+      "NoteTreeItem": {
+        "description": "A page in the sidebar tree (no content).",
+        "properties": {
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "sort_order"
+        ],
+        "title": "NoteTreeItem",
+        "type": "object"
+      },
+      "NoteTreeResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NoteTreeItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "NoteTreeResponse",
+        "type": "object"
+      },
       "OkResponse": {
         "properties": {
           "ok": {
@@ -729,6 +991,138 @@
           "has_completed_onboarding"
         ],
         "title": "OnboardingStatusResponse",
+        "type": "object"
+      },
+      "OutgoingNoteLink": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "source",
+              "note"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "title"
+        ],
+        "title": "OutgoingNoteLink",
+        "type": "object"
+      },
+      "PatchNotePageRequest": {
+        "description": "Partial update. Fields that are omitted are untouched; ``null`` clears the nullable ones.",
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "cover_key": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Key"
+          },
+          "expected_updated_at": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Updated At"
+          },
+          "full_width": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Width"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "PatchNotePageRequest",
         "type": "object"
       },
       "PlanItem": {
@@ -2302,6 +2696,103 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkspacePageResponse": {
+        "description": "One note page with its content and workspace fields.",
+        "properties": {
+          "content": {
+            "additionalProperties": true,
+            "title": "Content",
+            "type": "object"
+          },
+          "cover_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Key"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "full_width": {
+            "default": false,
+            "title": "Full Width",
+            "type": "boolean"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "space_id": {
+            "format": "uuid",
+            "title": "Space Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "space_id",
+          "title",
+          "sort_order"
+        ],
+        "title": "WorkspacePageResponse",
         "type": "object"
       }
     }
@@ -5087,6 +5578,290 @@
         ]
       }
     },
+    "/v1/spaces/{space_id}/notes/pages": {
+      "post": {
+        "operationId": "create_workspace_note_v1_spaces__space_id__notes_pages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkspacePageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspacePageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Workspace Note",
+        "tags": [
+          "note-workspace"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/notes/search": {
+      "get": {
+        "operationId": "search_notes_v1_spaces__space_id__notes_search_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Notes",
+        "tags": [
+          "note-workspace"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/notes/trash": {
+      "get": {
+        "operationId": "list_note_trash_v1_spaces__space_id__notes_trash_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteTrashResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Note Trash",
+        "tags": [
+          "note-workspace"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/notes/trash/{note_id}": {
+      "delete": {
+        "operationId": "delete_trashed_note_v1_spaces__space_id__notes_trash__note_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Trashed Note",
+        "tags": [
+          "note-workspace"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/notes/tree": {
+      "get": {
+        "operationId": "get_note_tree_v1_spaces__space_id__notes_tree_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteTreeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Note Tree",
+        "tags": [
+          "note-workspace"
+        ]
+      }
+    },
     "/v1/spaces/{space_id}/notes/{note_id}": {
       "delete": {
         "operationId": "delete_space_note_v1_spaces__space_id__notes__note_id__delete",
@@ -5139,6 +5914,136 @@
         "summary": "Delete Space Note",
         "tags": [
           "spaces"
+        ]
+      },
+      "get": {
+        "operationId": "get_workspace_note_v1_spaces__space_id__notes__note_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspacePageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Workspace Note",
+        "tags": [
+          "note-workspace"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_workspace_note_v1_spaces__space_id__notes__note_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchNotePageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspacePageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Workspace Note",
+        "tags": [
+          "note-workspace"
         ]
       },
       "put": {
@@ -5209,6 +6114,302 @@
         "summary": "Update Space Note",
         "tags": [
           "spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/notes/{note_id}/duplicate": {
+      "post": {
+        "operationId": "duplicate_workspace_note_v1_spaces__space_id__notes__note_id__duplicate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspacePageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Duplicate Workspace Note",
+        "tags": [
+          "note-workspace"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/notes/{note_id}/export.md": {
+      "get": {
+        "operationId": "export_workspace_note_v1_spaces__space_id__notes__note_id__export_md_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Workspace Note",
+        "tags": [
+          "note-workspace"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/notes/{note_id}/links": {
+      "get": {
+        "operationId": "get_workspace_note_links_v1_spaces__space_id__notes__note_id__links_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteLinksResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Workspace Note Links",
+        "tags": [
+          "note-workspace"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/notes/{note_id}/restore": {
+      "post": {
+        "operationId": "restore_workspace_note_v1_spaces__space_id__notes__note_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspacePageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Restore Workspace Note",
+        "tags": [
+          "note-workspace"
+        ]
+      }
+    },
+    "/v1/spaces/{space_id}/notes/{note_id}/trash": {
+      "post": {
+        "operationId": "trash_workspace_note_v1_spaces__space_id__notes__note_id__trash_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trash Workspace Note",
+        "tags": [
+          "note-workspace"
         ]
       }
     },

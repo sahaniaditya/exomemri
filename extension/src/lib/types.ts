@@ -754,7 +754,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/spaces/{space_id}/notes/{note_id}": {
+    "/v1/spaces/{space_id}/notes/pages": {
         parameters: {
             query?: never;
             header?: never;
@@ -762,11 +762,183 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        /** Create Workspace Note */
+        post: operations["create_workspace_note_v1_spaces__space_id__notes_pages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Notes */
+        get: operations["search_notes_v1_spaces__space_id__notes_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/trash": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Note Trash */
+        get: operations["list_note_trash_v1_spaces__space_id__notes_trash_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/trash/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Trashed Note */
+        delete: operations["delete_trashed_note_v1_spaces__space_id__notes_trash__note_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Note Tree */
+        get: operations["get_note_tree_v1_spaces__space_id__notes_tree_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Workspace Note */
+        get: operations["get_workspace_note_v1_spaces__space_id__notes__note_id__get"];
         /** Update Space Note */
         put: operations["update_space_note_v1_spaces__space_id__notes__note_id__put"];
         post?: never;
         /** Delete Space Note */
         delete: operations["delete_space_note_v1_spaces__space_id__notes__note_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Workspace Note */
+        patch: operations["patch_workspace_note_v1_spaces__space_id__notes__note_id__patch"];
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/{note_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duplicate Workspace Note */
+        post: operations["duplicate_workspace_note_v1_spaces__space_id__notes__note_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/{note_id}/export.md": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Workspace Note */
+        get: operations["export_workspace_note_v1_spaces__space_id__notes__note_id__export_md_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/{note_id}/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Workspace Note Links */
+        get: operations["get_workspace_note_links_v1_spaces__space_id__notes__note_id__links_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/{note_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Workspace Note */
+        post: operations["restore_workspace_note_v1_spaces__space_id__notes__note_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/spaces/{space_id}/notes/{note_id}/trash": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trash Workspace Note */
+        post: operations["trash_workspace_note_v1_spaces__space_id__notes__note_id__trash_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -977,6 +1149,19 @@ export interface components {
             name: string;
         };
         /**
+         * CreateWorkspacePageRequest
+         * @description Create a blank page, optionally under a root page.
+         */
+        CreateWorkspacePageRequest: {
+            /** Parent Id */
+            parent_id?: string | null;
+            /**
+             * Title
+             * @default Untitled
+             */
+            title: string;
+        };
+        /**
          * CreditsBalance
          * @description Remaining quota for the authenticated user.
          */
@@ -1051,6 +1236,18 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** IncomingNoteLink */
+        IncomingNoteLink: {
+            /** Icon */
+            icon?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+        };
         /** InviteCollaboratorRequest */
         InviteCollaboratorRequest: {
             /** Username */
@@ -1098,6 +1295,13 @@ export interface components {
             /** Upload Url */
             upload_url: string;
         };
+        /** NoteLinksResponse */
+        NoteLinksResponse: {
+            /** Incoming */
+            incoming?: components["schemas"]["IncomingNoteLink"][];
+            /** Outgoing */
+            outgoing?: components["schemas"]["OutgoingNoteLink"][];
+        };
         /**
          * NotePageListResponse
          * @description All notebook pages on a capture, ordered by ``sort_order``.
@@ -1132,6 +1336,75 @@ export interface components {
             /** Updated At */
             updated_at?: string | null;
         };
+        /** NoteSearchHit */
+        NoteSearchHit: {
+            /** Icon */
+            icon?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Snippet
+             * @default
+             */
+            snippet: string;
+            /** Title */
+            title: string;
+        };
+        /** NoteSearchResponse */
+        NoteSearchResponse: {
+            /** Items */
+            items?: components["schemas"]["NoteSearchHit"][];
+        };
+        /** NoteTrashItem */
+        NoteTrashItem: {
+            /** Deleted At */
+            deleted_at?: string | null;
+            /** Icon */
+            icon?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Parent Id */
+            parent_id?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** NoteTrashResponse */
+        NoteTrashResponse: {
+            /** Items */
+            items?: components["schemas"]["NoteTrashItem"][];
+        };
+        /**
+         * NoteTreeItem
+         * @description A page in the sidebar tree (no content).
+         */
+        NoteTreeItem: {
+            /** Icon */
+            icon?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Parent Id */
+            parent_id?: string | null;
+            /** Sort Order */
+            sort_order: number;
+            /** Title */
+            title: string;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** NoteTreeResponse */
+        NoteTreeResponse: {
+            /** Items */
+            items?: components["schemas"]["NoteTreeItem"][];
+        };
         /** OkResponse */
         OkResponse: {
             /**
@@ -1144,6 +1417,45 @@ export interface components {
         OnboardingStatusResponse: {
             /** Has Completed Onboarding */
             has_completed_onboarding: boolean;
+        };
+        /** OutgoingNoteLink */
+        OutgoingNoteLink: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "source" | "note";
+        };
+        /**
+         * PatchNotePageRequest
+         * @description Partial update. Fields that are omitted are untouched; ``null`` clears the nullable ones.
+         */
+        PatchNotePageRequest: {
+            /** Content */
+            content?: {
+                [key: string]: unknown;
+            } | null;
+            /** Cover Key */
+            cover_key?: string | null;
+            /** Expected Updated At */
+            expected_updated_at?: string | null;
+            /** Full Width */
+            full_width?: boolean | null;
+            /** Icon */
+            icon?: string | null;
+            /** Parent Id */
+            parent_id?: string | null;
+            /** Sort Order */
+            sort_order?: number | null;
+            /** Title */
+            title?: string | null;
         };
         /** PlanItem */
         PlanItem: {
@@ -1833,6 +2145,45 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * WorkspacePageResponse
+         * @description One note page with its content and workspace fields.
+         */
+        WorkspacePageResponse: {
+            /** Content */
+            content?: {
+                [key: string]: unknown;
+            };
+            /** Cover Key */
+            cover_key?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Full Width
+             * @default false
+             */
+            full_width: boolean;
+            /** Icon */
+            icon?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Parent Id */
+            parent_id?: string | null;
+            /** Sort Order */
+            sort_order: number;
+            /**
+             * Space Id
+             * Format: uuid
+             */
+            space_id: string;
+            /** Title */
+            title: string;
+            /** Updated At */
+            updated_at?: string | null;
         };
     };
     responses: never;
@@ -3665,6 +4016,210 @@ export interface operations {
             };
         };
     };
+    create_workspace_note_v1_spaces__space_id__notes_pages_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorkspacePageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_notes_v1_spaces__space_id__notes_search_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteSearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_note_trash_v1_spaces__space_id__notes_trash_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteTrashResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_trashed_note_v1_spaces__space_id__notes_trash__note_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_note_tree_v1_spaces__space_id__notes_tree_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteTreeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_workspace_note_v1_spaces__space_id__notes__note_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_space_note_v1_spaces__space_id__notes__note_id__put: {
         parameters: {
             query?: never;
@@ -3704,6 +4259,210 @@ export interface operations {
         };
     };
     delete_space_note_v1_spaces__space_id__notes__note_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_workspace_note_v1_spaces__space_id__notes__note_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchNotePageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    duplicate_workspace_note_v1_spaces__space_id__notes__note_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_workspace_note_v1_spaces__space_id__notes__note_id__export_md_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_workspace_note_links_v1_spaces__space_id__notes__note_id__links_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteLinksResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_workspace_note_v1_spaces__space_id__notes__note_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                space_id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trash_workspace_note_v1_spaces__space_id__notes__note_id__trash_post: {
         parameters: {
             query?: never;
             header?: {
