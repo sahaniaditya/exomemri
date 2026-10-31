@@ -1,18 +1,31 @@
-import type { Extension, Mark, Node } from '@tiptap/core'
+import type { AnyExtension } from '@tiptap/core'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
 import { NoteCodeBlock } from '@/components/dashboard/NoteCodeBlockView'
 import type { NotesScope } from '@/lib/notes'
 import { SlashExtension } from '../slash/slashExtension'
+import { aiSlashItems } from '../slash/items-ai'
 import { basicSlashItems } from '../slash/items-basic'
+import { blockSlashItems } from '../slash/items-blocks'
+import { captureSlashItems } from '../slash/items-capture'
 import type { SlashItem } from '../slash/types'
+import { blockExtensions } from './blocks'
+import { captureExtensions } from './captureExtensions'
 import { NoteImage } from './noteImage'
 
-export type NoteExtension = Extension | Node | Mark
+/** Every slash item the full-page editor offers, in menu order. */
+export const allSlashItems: SlashItem[] = [
+  ...basicSlashItems,
+  ...blockSlashItems,
+  ...captureSlashItems,
+  ...aiSlashItems,
+]
+
+export type NoteExtension = AnyExtension
 
 export interface BuildNoteExtensionsOptions {
-  /** Slash items; defaults to the basic set. Later phases pass the concatenated list. */
+  /** Slash items; defaults to every phase's items. */
   slashItems?: SlashItem[]
 }
 
@@ -42,6 +55,9 @@ export function buildNoteExtensions(
     }),
     NoteImage.configure({ inline: false, allowBase64: false }),
     Placeholder.configure({ placeholder: notePlaceholder(scope) }),
-    SlashExtension.configure({ items: options.slashItems ?? basicSlashItems }),
+    ...blockExtensions(),
+    // Capture embeds and @ mentions need a space to list captures from.
+    ...(scope.kind === 'space' ? captureExtensions({ spaceId: scope.spaceId }) : []),
+    SlashExtension.configure({ items: options.slashItems ?? allSlashItems }),
   ]
 }

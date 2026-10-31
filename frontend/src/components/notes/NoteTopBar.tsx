@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import styles from './notes.module.css'
 
@@ -13,6 +14,8 @@ interface NoteTopBarProps {
   onRetry?: () => void
   fullWidth: boolean
   onToggleFullWidth: () => void
+  /** Extra controls (history, export) placed before the width toggle. */
+  actions?: ReactNode
 }
 
 export default function NoteTopBar({
@@ -24,6 +27,7 @@ export default function NoteTopBar({
   onRetry,
   fullWidth,
   onToggleFullWidth,
+  actions,
 }: NoteTopBarProps) {
   return (
     <header className={styles.topbar}>
@@ -52,6 +56,7 @@ export default function NoteTopBar({
           Retry
         </button>
       ) : null}
+      {actions}
       <button
         type="button"
         className={styles.widthToggle}

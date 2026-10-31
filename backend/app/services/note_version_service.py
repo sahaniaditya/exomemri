@@ -20,6 +20,7 @@ from app.schemas.note_versions import (
     VersionReason,
 )
 from app.schemas.notes import SpaceNotePageResponse
+from app.services.note_index_service import NoteIndexService
 from app.services.note_service import EMPTY_DOC
 from app.services.space_service import SpaceService
 
@@ -32,10 +33,12 @@ class NoteVersionService:
         versions: NoteVersionRepo,
         space_notes: SpaceNoteRepo,
         spaces: SpaceService,
+        indexer: NoteIndexService | None = None,
     ) -> None:
         self._versions = versions
         self._space_notes = space_notes
         self._spaces = spaces
+        self._indexer = indexer
 
     async def create_snapshot(
         self, *, user: User, space_id: UUID, note_id: UUID, reason: VersionReason
@@ -93,6 +96,16 @@ class NoteVersionService:
         )
         if not row:
             raise NotFoundError("Note page not found.", detail={"note_id": str(note_id)})
+        if self._indexer is not None:
+            # Search text and links must describe the restored content; the indexer never raises.
+            await anyio.to_thread.run_sync(
+                partial(
+                    self._indexer.refresh,
+                    user_id=str(user.id),
+                    note_id=str(note_id),
+                    content=row.get("content") or EMPTY_DOC,
+                )
+            )
         logger.info(
             "note_version_restored",
             extra={"note_id": str(note_id), "version_id": str(version_id)},

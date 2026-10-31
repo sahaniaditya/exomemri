@@ -46,6 +46,8 @@ export interface AutosaveApi {
   retry: () => void
   /** Resend the local version, ignoring the server's newer one. */
   keepMine: () => void
+  /** Adopt a newer `updated_at` written by another control (icon, cover, width) so the next save is not a false conflict. */
+  adoptUpdatedAt: (updatedAt: string | null) => void
 }
 
 type SaveOutcome = 'ok' | 'conflict' | 'auth' | 'failed'
@@ -277,6 +279,10 @@ export function useAutosave(options: AutosaveOptions): AutosaveApi {
     }
   }, [clearTimers, flush])
 
+  const adoptUpdatedAt = useCallback((updatedAt: string | null) => {
+    if (updatedAt) expectedRef.current = updatedAt
+  }, [])
+
   return {
     status,
     lastSavedAt,
@@ -286,5 +292,6 @@ export function useAutosave(options: AutosaveOptions): AutosaveApi {
     flush: flushNow,
     retry,
     keepMine,
+    adoptUpdatedAt,
   }
 }

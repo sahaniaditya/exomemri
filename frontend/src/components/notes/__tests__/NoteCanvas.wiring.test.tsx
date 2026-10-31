@@ -25,6 +25,16 @@ vi.mock('../NoteEditorCore', () => ({
   },
 }))
 
+// Panels and tools mounted by the canvas have their own tests; stub them so these tests stay on autosave.
+vi.mock('../AiAssistMenu', () => ({ default: () => null }))
+vi.mock('../BacklinksPanel', () => ({ default: () => null }))
+vi.mock('../LinkPicker', () => ({ default: () => null }))
+vi.mock('../NoteBlockTools', () => ({ default: () => null }))
+vi.mock('../NoteHeaderMeta', () => ({ default: () => null }))
+vi.mock('../OutlinePanel', () => ({ default: () => null }))
+vi.mock('../VersionHistory', () => ({ default: () => null }))
+vi.mock('../hooks/useIdleSnapshot', () => ({ useIdleSnapshot: () => undefined }))
+
 import NoteCanvas from '../NoteCanvas'
 
 const NOTE = {

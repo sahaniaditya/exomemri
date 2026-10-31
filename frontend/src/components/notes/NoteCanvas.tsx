@@ -3,9 +3,11 @@
 /**
  * The full-page note: top bar, large title, editor, autosave and conflict handling.
  */
-import { useCallback, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { Editor } from '@tiptap/react'
 import { type NotePage } from '@/lib/notes'
+import { exportMarkdownUrl, patchPage } from '@/lib/notes/client'
+import type { WorkspacePage } from '@/lib/notes/types'
 import {
   readFullWidth,
   serverFullWidth,
@@ -13,8 +15,17 @@ import {
   writeFullWidth,
 } from '@/lib/notes/fullWidthPref'
 import { useAutosave, SESSION_EXPIRED_MESSAGE, type AutosaveField } from './hooks/useAutosave'
+import { useIdleSnapshot } from './hooks/useIdleSnapshot'
+import AiAssistMenu from './AiAssistMenu'
+import BacklinksPanel from './BacklinksPanel'
+import LinkPicker from './LinkPicker'
+import NoteBlockTools from './NoteBlockTools'
 import NoteEditorCore from './NoteEditorCore'
+import NoteHeaderMeta from './NoteHeaderMeta'
 import NoteTopBar from './NoteTopBar'
+import { useNotesWorkspace } from './NotesWorkspaceContext'
+import OutlinePanel from './OutlinePanel'
+import VersionHistory from './VersionHistory'
 import styles from './notes.module.css'
 
 export const MAX_TITLE_LENGTH = 120
@@ -22,7 +33,8 @@ export const MAX_TITLE_LENGTH = 120
 interface NoteCanvasProps {
   spaceId: string
   spaceName: string
-  note: NotePage
+  /** The workspace fields are absent for pages loaded through the legacy list. */
+  note: NotePage & Partial<Pick<WorkspacePage, 'icon' | 'cover_key' | 'full_width'>>
   /** Overridable for tests. */
   onReload?: () => void
 }
@@ -38,6 +50,13 @@ export default function NoteCanvas({ spaceId, spaceName, note, onReload }: NoteC
   const [title, setTitle] = useState(note.title)
   const fullWidth = useSyncExternalStore(subscribeFullWidth, readFullWidth, serverFullWidth)
   const editorRef = useRef<Editor | null>(null)
+  const [editor, setEditor] = useState<Editor | null>(null)
+  const [outlineDoc, setOutlineDoc] = useState<unknown>(note.content)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [dirtySinceSnapshot, setDirtySinceSnapshot] = useState(false)
+  const [savedAtMs, setSavedAtMs] = useState<number | null>(null)
+  const workspace = useNotesWorkspace()
+  const patchTree = workspace?.tree.patchLocal
   const titleRef = useRef(note.title)
   const savedTitleRef = useRef(note.title)
 
@@ -46,9 +65,15 @@ export default function NoteCanvas({ spaceId, spaceName, note, onReload }: NoteC
     return editorRef.current?.getJSON()
   }, [])
 
-  const handleSaved = useCallback((saved: NotePage) => {
-    savedTitleRef.current = saved.title
-  }, [])
+  const handleSaved = useCallback(
+    (saved: NotePage) => {
+      savedTitleRef.current = saved.title
+      setSavedAtMs(Date.now())
+      setDirtySinceSnapshot(true)
+      patchTree?.(saved.id, { title: saved.title })
+    },
+    [patchTree]
+  )
 
   const autosave = useAutosave({
     endpoint: `/api/spaces/${spaceId}/notes/${note.id}`,
@@ -56,13 +81,41 @@ export default function NoteCanvas({ spaceId, spaceName, note, onReload }: NoteC
     read,
     onSaved: handleSaved,
   })
-  const { markDirty, flush } = autosave
+  const { markDirty, flush, adoptUpdatedAt } = autosave
 
-  const handleEditorReady = useCallback((editor: Editor | null) => {
-    editorRef.current = editor
+  const handleEditorReady = useCallback((next: Editor | null) => {
+    editorRef.current = next
+    setEditor(next)
   }, [])
 
-  const handleContentChange = useCallback(() => markDirty('content'), [markDirty])
+  const handleContentChange = useCallback(() => {
+    markDirty('content')
+    const current = editorRef.current
+    if (current) setOutlineDoc(current.getJSON())
+  }, [markDirty])
+
+  useIdleSnapshot({
+    spaceId,
+    noteId: note.id,
+    dirtySinceSnapshot,
+    lastSavedAt: savedAtMs,
+    onSnapshotted: () => setDirtySinceSnapshot(false),
+  })
+
+  // The page's saved width (server) is the source of truth; the local store drives rendering.
+  useEffect(() => {
+    if (typeof note.full_width === 'boolean') writeFullWidth(note.full_width)
+  }, [note.full_width])
+
+  /** Icon, cover and width are saved by `NoteHeaderMeta`; keep autosave and the tree in step. */
+  const handleMetaSaved = useCallback(
+    (page: WorkspacePage) => {
+      adoptUpdatedAt(page.updated_at)
+      writeFullWidth(page.full_width)
+      patchTree?.(page.id, { icon: page.icon })
+    },
+    [adoptUpdatedAt, patchTree]
+  )
 
   function handleTitleChange(value: string) {
     setTitle(value)
@@ -81,7 +134,12 @@ export default function NoteCanvas({ spaceId, spaceName, note, onReload }: NoteC
   }
 
   function toggleFullWidth() {
-    writeFullWidth(!fullWidth)
+    const next = !fullWidth
+    writeFullWidth(next)
+    // Persist per page too; a failure only means the preference stays on this device.
+    patchPage(spaceId, note.id, { full_width: next })
+      .then(page => adoptUpdatedAt(page.updated_at))
+      .catch(error => console.error('Saving page width failed:', error))
   }
 
   const reload = onReload ?? (() => window.location.reload())
@@ -116,6 +174,20 @@ export default function NoteCanvas({ spaceId, spaceName, note, onReload }: NoteC
         onRetry={autosave.status === 'error' && !isAuthError ? autosave.retry : undefined}
         fullWidth={fullWidth}
         onToggleFullWidth={toggleFullWidth}
+        actions={
+          <>
+            <button type="button" className={styles.widthToggle} onClick={() => setHistoryOpen(true)}>
+              History
+            </button>
+            <a
+              className={styles.widthToggle}
+              href={exportMarkdownUrl(spaceId, note.id)}
+              download={`${title.trim() || 'Untitled'}.md`}
+            >
+              Export
+            </a>
+          </>
+        }
       />
 
       {autosave.status === 'conflict' ? (
@@ -132,7 +204,16 @@ export default function NoteCanvas({ spaceId, spaceName, note, onReload }: NoteC
         </div>
       ) : null}
 
+      <div className={styles.pageRow}>
       <main className={`${styles.body} ${fullWidth ? styles.bodyWide : ''}`} data-full-width={fullWidth}>
+        <NoteHeaderMeta
+          spaceId={spaceId}
+          noteId={note.id}
+          icon={note.icon ?? null}
+          coverKey={note.cover_key ?? null}
+          fullWidth={fullWidth}
+          onSaved={handleMetaSaved}
+        />
         <label htmlFor="note-title" className={styles.srOnly}>
           Page title
         </label>
@@ -158,7 +239,24 @@ export default function NoteCanvas({ spaceId, spaceName, note, onReload }: NoteC
           onBlur={flush}
           onEditorReady={handleEditorReady}
         />
+        <NoteBlockTools editor={editor} />
+        <LinkPicker editor={editor} spaceId={spaceId} />
+        <AiAssistMenu editor={editor} spaceId={spaceId} noteId={note.id} />
       </main>
+      <aside className={styles.sidePanel} aria-label="Page outline and links">
+        <OutlinePanel doc={outlineDoc} editor={editor} />
+        <BacklinksPanel spaceId={spaceId} noteId={note.id} refreshKey={autosave.lastSavedAt} />
+      </aside>
+      </div>
+
+      <VersionHistory
+        open={historyOpen}
+        spaceId={spaceId}
+        noteId={note.id}
+        onClose={() => setHistoryOpen(false)}
+        // A restore rewrites the page on the server; reloading is the clean way to pick it up.
+        onRestored={() => reload()}
+      />
     </div>
   )
 }

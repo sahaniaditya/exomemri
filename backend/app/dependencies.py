@@ -344,8 +344,9 @@ def get_note_version_service(
     versions: NoteVersionRepo = Depends(get_note_version_repo),
     space_notes: SpaceNoteRepo = Depends(get_space_note_repo),
     space_service: SpaceService = Depends(get_space_service),
+    indexer: NoteIndexService = Depends(get_note_index_service),
 ) -> NoteVersionService:
-    return NoteVersionService(versions, space_notes, space_service)
+    return NoteVersionService(versions, space_notes, space_service, indexer)
 
 
 def get_note_ai_service(

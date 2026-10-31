@@ -1068,3 +1068,30 @@
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ---- Integration: page row with a side panel ---- */
+.pageRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+.pageRow > .body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.sidePanel {
+  flex: 0 0 220px;
+  position: sticky;
+  top: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 16px 0 0;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+}
+@media (max-width: 1100px) {
+  .sidePanel {
+    display: none;
+  }
+}

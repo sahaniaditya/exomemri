@@ -1,6 +1,6 @@
 /** Server-side loaders for the notes workspace (server components only). */
 import { apiFetch } from '@/lib/api'
-import type { NoteTreeItem } from './types'
+import type { NoteTreeItem, WorkspacePage } from './types'
 
 /** The sidebar tree for a space. `error` distinguishes "empty" from "failed". */
 export async function loadNoteTree(
@@ -18,5 +18,21 @@ export async function loadNoteTree(
   } catch (error) {
     console.error('Failed to load note tree:', error)
     return { items: [], error: true }
+  }
+}
+
+/** One page with content and its workspace fields (icon, cover, width). `null` when missing. */
+export async function loadNotePage(
+  token: string,
+  spaceId: string,
+  noteId: string
+): Promise<WorkspacePage | null> {
+  try {
+    const res = await apiFetch(`/v1/spaces/${spaceId}/notes/${noteId}`, {}, token)
+    if (!res.ok) return null
+    return (await res.json()) as WorkspacePage
+  } catch (error) {
+    console.error('Failed to load note page:', error)
+    return null
   }
 }

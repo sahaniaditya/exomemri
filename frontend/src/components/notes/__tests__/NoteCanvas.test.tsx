@@ -5,6 +5,16 @@ import { FULL_WIDTH_STORAGE_KEY } from '@/lib/notes/fullWidthPref'
 import type { NotePage } from '@/lib/notes'
 import { installLayoutStubs, jsonResponse } from './jsdomStubs'
 
+// Panels and tools mounted by the canvas have their own tests; stub them so these tests stay on autosave.
+vi.mock('../AiAssistMenu', () => ({ default: () => null }))
+vi.mock('../BacklinksPanel', () => ({ default: () => null }))
+vi.mock('../LinkPicker', () => ({ default: () => null }))
+vi.mock('../NoteBlockTools', () => ({ default: () => null }))
+vi.mock('../NoteHeaderMeta', () => ({ default: () => null }))
+vi.mock('../OutlinePanel', () => ({ default: () => null }))
+vi.mock('../VersionHistory', () => ({ default: () => null }))
+vi.mock('../hooks/useIdleSnapshot', () => ({ useIdleSnapshot: () => undefined }))
+
 const NOTE: NotePage = {
   id: 'n1',
   title: 'Original title',
