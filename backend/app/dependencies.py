@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from uuid import UUID
 
 from fastapi import Depends, Header
@@ -259,8 +260,15 @@ def get_extract_service(storage: StorageRepo = Depends(get_storage_repo)) -> Ext
 def get_llm_service(settings: Settings = Depends(get_settings)) -> LLMService:
     return LLMService(settings)
 
-def get_embedding_service(settings: Settings = Depends(get_settings)) -> EmbeddingService:
-    return EmbeddingService(settings)
+
+
+@lru_cache(maxsize=1)
+def _shared_embedding_service() -> EmbeddingService:
+    return EmbeddingService(get_settings())
+
+
+def get_embedding_service() -> EmbeddingService:
+    return _shared_embedding_service()
 
 def get_chunk_repo() -> ChunkRepo:
     return ChunkRepo(get_service_client())

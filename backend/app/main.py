@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings, get_settings
+from app.dependencies import _shared_embedding_service
 from app.errors import register_exception_handlers
 from app.logging import RequestIdMiddleware, configure_logging
 from app.request_limits import MaxBodySizeMiddleware
@@ -25,6 +30,15 @@ from app.routers import sources as sources_router
 from app.routers import spaces as spaces_router
 
 API_PREFIX = "/v1"
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Load the local embedding model before the app accepts traffic, so the
+    # first user request doesn't pay for it. Runs in a thread to keep the
+    # event loop free. If the model can't load, startup fails fast.
+    await asyncio.to_thread(_shared_embedding_service)
+    yield
 
 
 def _configure_cors(app: FastAPI, settings: Settings) -> None:
@@ -52,6 +66,7 @@ def create_app() -> FastAPI:
         title="exomemri Capture API",
         version="0.1.0",
         description="Phase 0 thin capture endpoint: writes raw artifacts to Supabase Storage.",
+        lifespan=lifespan,
     )
 
     app.add_middleware(RequestIdMiddleware)

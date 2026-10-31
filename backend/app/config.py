@@ -36,14 +36,14 @@ class Settings(BaseSettings):
     storage_bucket: str = "atlas-artifacts"
 
     anthropic_api_key: str
-    anthropic_model_name: str = "claude-haiku-4-5"
+    anthropic_model_name: str = "claude-haiku-5-5"
 
     # Password-reset email redirect origin (scheme + host, no trailing slash).
     # Optional: falls back to the first CORS_WEB_ORIGINS entry, then localhost.
     frontend_url: str = ""
 
     # Hugging Face Inference API (chunk/query embeddings for RAG chat).
-    hf_token: str
+  
     hf_embedding_model: str = "BAAI/bge-small-en-v1.5"
     # Fixed to match source_chunks.embedding VECTOR(384); changing this
     # requires a matching Supabase migration.
